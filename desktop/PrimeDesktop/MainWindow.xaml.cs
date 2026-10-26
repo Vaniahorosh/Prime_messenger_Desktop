@@ -14,8 +14,14 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
-        TrayService = new SystemTrayService(this);        Loaded += (s, e) =>
+        App.Log("MainWindow Initialized");
+        Closing += (s, e) => App.Log($"MainWindow Closing (Cancel={e.Cancel})");
+        Closed += (s, e) => App.Log("MainWindow Closed");
+
+        TrayService = new SystemTrayService(this);
+        Loaded += (s, e) =>
         {
+            App.Log("MainWindow Loaded");
             if (DataContext is MainViewModel vm && vm.Settings.EnableScreenshotProtection)
             {
                 SecurityManager.SetScreenshotProtection(this, true);

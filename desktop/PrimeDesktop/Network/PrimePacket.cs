@@ -460,4 +460,199 @@ public class PrimePacket
         }
     }
 
+    // ==========================================
+    // Photo & Collage (0x02 TYPE_PHOTO)
+    // ==========================================
+    public static byte[] BuildPhotoPayload(string msgId, byte[] photoBytes, string caption = "")
+    {
+        string prefix = $"{msgId}:::";
+        byte[] prefixBytes = Encoding.UTF8.GetBytes(prefix);
+
+        byte[] trailer = Array.Empty<byte>();
+        if (!string.IsNullOrEmpty(caption))
+        {
+            byte[] capBytes = Encoding.UTF8.GetBytes(caption);
+            trailer = new byte[capBytes.Length + 9];
+            Buffer.BlockCopy(capBytes, 0, trailer, 0, capBytes.Length);
+            BinaryPrimitives.WriteInt32BigEndian(trailer.AsSpan(capBytes.Length, 4), capBytes.Length);
+            byte[] magic = Encoding.UTF8.GetBytes("|PRM|");
+            Buffer.BlockCopy(magic, 0, trailer, capBytes.Length + 4, 5);
+        }
+
+        byte[] result = new byte[prefixBytes.Length + photoBytes.Length + trailer.Length];
+        Buffer.BlockCopy(prefixBytes, 0, result, 0, prefixBytes.Length);
+        Buffer.BlockCopy(photoBytes, 0, result, prefixBytes.Length, photoBytes.Length);
+        if (trailer.Length > 0)
+        {
+            Buffer.BlockCopy(trailer, 0, result, prefixBytes.Length + photoBytes.Length, trailer.Length);
+        }
+        return result;
+    }
+
+    public static byte[] BuildCollagePayload(string msgId, List<(byte[] data, string ext, bool isVideo)> items, string caption = "")
+    {
+        var sizesSb = new StringBuilder();
+        for (int i = 0; i < items.Count; i++)
+        {
+            if (i > 0) sizesSb.Append(",");
+            var it = items[i];
+            sizesSb.Append(it.isVideo ? "1" : "0")
+                   .Append("|").Append(it.data.Length)
+                   .Append("|00:00")
+                   .Append("|").Append(string.IsNullOrWhiteSpace(it.ext) ? "jpg" : it.ext.TrimStart('.'));
+        }
+
+        string header = $"{msgId}:::MULTI:{items.Count}:::{caption}:::SIZES:{sizesSb}:::HEADER_END:::";
+        byte[] headerBytes = Encoding.UTF8.GetBytes(header);
+
+        int totalLen = headerBytes.Length;
+        foreach (var it in items) totalLen += it.data.Length;
+
+        byte[] result = new byte[totalLen];
+        Buffer.BlockCopy(headerBytes, 0, result, 0, headerBytes.Length);
+        int offset = headerBytes.Length;
+        foreach (var it in items)
+        {
+            Buffer.BlockCopy(it.data, 0, result, offset, it.data.Length);
+            offset += it.data.Length;
+        }
+        return result;
+    }
+
+    public class ParsedPhotoResult
+    {
+        public string MsgId { get; set; } = Guid.NewGuid().ToString();
+        public string Caption { get; set; } = string.Empty;
+        public bool IsCollage { get; set; }
+        public List<byte[]> Items { get; set; } = new();
+    }
+
+    public static ParsedPhotoResult ParsePhotoPayload(byte[] payload)
+    {
+        var result = new ParsedPhotoResult();
+        if (payload == null || payload.Length == 0) return result;
+
+        string metaCheck = Encoding.UTF8.GetString(payload, 0, Math.Min(payload.Length, 350));
+        if (metaCheck.Contains(":::MULTI:"))
+        {
+            int tagIdx = -1;
+            byte[] tagBytes = Encoding.UTF8.GetBytes(":::HEADER_END:::");
+            for (int i = 0; i <= payload.Length - tagBytes.Length; i++)
+            {
+                bool match = true;
+                for (int j = 0; j < tagBytes.Length; j++)
+                {
+                    if (payload[i + j] != tagBytes[j]) { match = false; break; }
+                }
+                if (match) { tagIdx = i; break; }
+            }
+
+            if (tagIdx != -1)
+            {
+                string headerStr = Encoding.UTF8.GetString(payload, 0, tagIdx);
+                int bodyStart = tagIdx + tagBytes.Length;
+
+                int sep = headerStr.IndexOf(":::");
+                if (sep != -1) result.MsgId = headerStr.Substring(0, sep);
+
+                int sizesIdx = headerStr.IndexOf(":::SIZES:");
+                if (sizesIdx != -1)
+                {
+                    string sizesPart = headerStr.Substring(sizesIdx + 9);
+                    int endSizes = sizesPart.IndexOf(":::");
+                    if (endSizes != -1) sizesPart = sizesPart.Substring(0, endSizes);
+
+                    string[] itemMetas = sizesPart.Split(',');
+                    int curOffset = bodyStart;
+                    foreach (var m in itemMetas)
+                    {
+                        var parts = m.Trim().Split('|');
+                        int pSize = parts.Length >= 2 ? int.Parse(parts[1]) : int.Parse(parts[0]);
+                        if (curOffset + pSize <= payload.Length)
+                        {
+                            byte[] itBytes = new byte[pSize];
+                            Buffer.BlockCopy(payload, curOffset, itBytes, 0, pSize);
+                            curOffset += pSize;
+                            result.Items.Add(itBytes);
+                        }
+                    }
+                }
+
+                int multiIdx = headerStr.IndexOf(":::MULTI:");
+                if (multiIdx != -1 && sizesIdx != -1 && sizesIdx > multiIdx)
+                {
+                    string multiSub = headerStr.Substring(multiIdx + 9, sizesIdx - (multiIdx + 9));
+                    int col = multiSub.IndexOf(":::");
+                    if (col != -1) result.Caption = multiSub.Substring(col + 3);
+                }
+
+                result.IsCollage = result.Items.Count > 1;
+                return result;
+            }
+        }
+
+        int sepIdx = -1;
+        for (int i = 0; i < Math.Min(payload.Length, 120); i++)
+        {
+            if (payload[i] == ':' && i + 2 < payload.Length && payload[i + 1] == ':' && payload[i + 2] == ':')
+            {
+                sepIdx = i;
+                break;
+            }
+        }
+
+        byte[] photoBytes = payload;
+        if (sepIdx != -1)
+        {
+            result.MsgId = Encoding.UTF8.GetString(payload, 0, sepIdx);
+            photoBytes = new byte[payload.Length - (sepIdx + 3)];
+            Buffer.BlockCopy(payload, sepIdx + 3, photoBytes, 0, photoBytes.Length);
+        }
+
+        if (photoBytes.Length > 9)
+        {
+            byte[] magic = Encoding.UTF8.GetBytes("|PRM|");
+            bool hasMagic = true;
+            for (int i = 0; i < 5; i++)
+            {
+                if (photoBytes[photoBytes.Length - 5 + i] != magic[i]) { hasMagic = false; break; }
+            }
+            if (hasMagic)
+            {
+                int capLen = BinaryPrimitives.ReadInt32BigEndian(photoBytes.AsSpan(photoBytes.Length - 9, 4));
+                if (capLen > 0 && capLen < photoBytes.Length - 9)
+                {
+                    result.Caption = Encoding.UTF8.GetString(photoBytes, photoBytes.Length - 9 - capLen, capLen);
+                    byte[] cleanPhoto = new byte[photoBytes.Length - 9 - capLen];
+                    Buffer.BlockCopy(photoBytes, 0, cleanPhoto, 0, cleanPhoto.Length);
+                    photoBytes = cleanPhoto;
+                }
+            }
+        }
+
+        result.Items.Add(photoBytes);
+        result.IsCollage = false;
+        return result;
+    }
+
+    // ==========================================
+    // Typing, Edit, Delete
+    // ==========================================
+    public static byte[] BuildTypingPayload(string state = "STATE:TYPING")
+        => Encoding.UTF8.GetBytes(state);
+
+    public static byte[] BuildEditMessagePayload(string msgId, string newText)
+        => Encoding.UTF8.GetBytes($"{msgId}:::{newText}");
+
+    public static (string msgId, string newText) ParseEditMessagePayload(byte[] payload)
+    {
+        string raw = Encoding.UTF8.GetString(payload);
+        int sep = raw.IndexOf(":::");
+        if (sep != -1)
+        {
+            return (raw.Substring(0, sep).Trim(), raw.Substring(sep + 3));
+        }
+        return (raw, "");
+    }
+
 }

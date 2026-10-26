@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 
 using System.Collections.Concurrent;
 
@@ -212,6 +212,8 @@ public class CompanionBridgeService : IPrimeNetworkService
         _ = DisconnectAsync(peerIdOrIp);
 
     }
+
+    public void RegisterPeerAddress(string peerId, string rawHardwareAddress) { }
 
     public async Task<bool> ConnectAsync(string peerIdOrIp)
 

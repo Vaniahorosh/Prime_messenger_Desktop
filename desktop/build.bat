@@ -18,7 +18,6 @@ dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=
 
 if %ERRORLEVEL% neq 0 (
     echo [ERROR] PrimeDesktop build failed.
-    pause
     exit /b 1
 )
 
@@ -43,5 +42,3 @@ if %ERRORLEVEL% equ 0 (
 ) else (
     echo [ERROR] PrimeSetup build failed.
 )
-
-pause

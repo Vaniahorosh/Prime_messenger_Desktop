@@ -70,26 +70,25 @@ public class MainViewModel : ViewModelBase
         get => _selectedChat;
 
         set
-
         {
             if (SetProperty(ref _selectedChat, value))
-
             {
                 if (_selectedChat != null)
-
                 {
                     _selectedChat.UnreadCount = 0;
-
                     _ = _storageService.SaveChatsAsync(_allChats);
 
+                    if (Settings != null && Settings.AutoConnectBluetooth && _selectedChat.IsBluetoothDevice && 
+                        !_selectedChat.IsOnline && _selectedChat.ConnectionState != DeviceConnectionState.Connecting &&
+                        !_selectedChat.PeerId.StartsWith("peer_prime"))
+                    {
+                        _ = ConnectSelectedChatAsync();
+                    }
                 }
 
                 OnPropertyChanged(nameof(HasSelectedChat));
-
                 CommandManager.InvalidateRequerySuggested();
-
             }
-
         }
 
     }
@@ -353,6 +352,8 @@ public class MainViewModel : ViewModelBase
     public ICommand ForwardMessageCommand { get; }
 
     public ICommand OpenPhotoEditorCommand { get; }
+
+    public ICommand OpenFileAttachmentCommand { get; }
 
     public ICommand OpenFileCommand { get; }
 
@@ -675,6 +676,34 @@ public class MainViewModel : ViewModelBase
 
             ViewedPhotoPath = null;
 
+        });
+
+        OpenFileAttachmentCommand = new RelayCommand(param =>
+        {
+            string? path = param as string;
+            if (param is ChatMessage msg)
+            {
+                path = msg.FilePath;
+            }
+            if (!string.IsNullOrEmpty(path) && File.Exists(path))
+            {
+                try
+                {
+                    System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                    {
+                        FileName = path,
+                        UseShellExecute = true
+                    });
+                }
+                catch
+                {
+                    try
+                    {
+                        System.Diagnostics.Process.Start("explorer.exe", $"/select,\"{path}\"");
+                    }
+                    catch { }
+                }
+            }
         });
 
         SaveViewedPhotoCommand = new RelayCommand(() =>
@@ -1070,83 +1099,124 @@ public class MainViewModel : ViewModelBase
     }
 
     private async Task InitializeAsync()
-
     {
-        Settings = await _storageService.LoadSettingsAsync();
-
-        ThemeManager.ApplyAccentColor(Settings.AccentColorHex);
-
-        var chats = await _storageService.LoadChatsAsync();
-
-        foreach (var c in chats)
-
+        try
         {
-            if (string.IsNullOrEmpty(c.AvatarPath))
+            App.Log("[Init] Starting InitializeAsync...");
+            Settings = await _storageService.LoadSettingsAsync();
 
+            Application.Current?.Dispatcher?.Invoke(() =>
             {
-                c.AvatarPath = AvatarManager.GetAvatarPath(c.DeviceAddress);
+                ThemeManager.ApplyAccentColor(Settings.AccentColorHex);
+            });
 
-            }
+            var chats = await _storageService.LoadChatsAsync();
+            App.Log($"[Init] Loaded {chats.Count} chats from storage.");
 
-            _allChats.Add(c);
-
-        }
-
-        if (_allChats.Count == 0 && !_storageService.HasChatsFile)
-
-        {
-            // Seed a welcome demo chat so the UI looks active right away
-
-            var welcomeChat = new ChatItem
-
+            Application.Current?.Dispatcher?.Invoke(() =>
             {
-                DisplayName = "Команда Прайм",
+                foreach (var c in chats)
+                {
+                    if (string.IsNullOrEmpty(c.AvatarPath))
+                    {
+                        c.AvatarPath = AvatarManager.GetAvatarPath(c.DeviceAddress);
+                    }
+                    if (!string.IsNullOrWhiteSpace(c.DeviceAddress) && !string.IsNullOrWhiteSpace(c.PeerId))
+                    {
+                        _bluetoothService.RegisterPeerAddress(c.PeerId, c.DeviceAddress);
+                    }
+                    _allChats.Add(c);
+                }
 
-                Username = "prime_support",
+                if (_allChats.Count == 0 && !_storageService.HasChatsFile)
+                {
+                    var welcomeChat = new ChatItem
+                    {
+                        DisplayName = "Команда Прайм",
+                        Username = "prime_support",
+                        PeerId = "peer_prime_support",
+                        LastMessage = "Всё нужное без лишнего!",
+                        LastMessageTime = DateTime.Now.ToString("HH:mm"),
+                        IsOnline = true
+                    };
 
-                PeerId = "peer_prime_support",
-
-                LastMessage = "Всё нужное без лишнего!",
-
-                LastMessageTime = DateTime.Now.ToString("HH:mm"),
-
-                IsOnline = true
-
-            };
-
-            welcomeChat.Messages.Add(new ChatMessage
-
-            {
-                Sender = "Команда Прайм",
-
-                Text = @"Добро пожаловать в компьютерную версию мессенджера «Прайм»!
+                    welcomeChat.Messages.Add(new ChatMessage
+                    {
+                        Sender = "Команда Прайм",
+                        Text = @"Добро пожаловать в компьютерную версию мессенджера «Прайм»!
 
 Всё нужное без лишнего!
 
 Поддерживается прямое защищенное общение по Bluetooth без серверов.",
+                        IsFromMe = false,
+                        FormattedTime = DateTime.Now.ToString("HH:mm")
+                    });
 
-                IsFromMe = false,
+                    _allChats.Add(welcomeChat);
+                }
 
-                FormattedTime = DateTime.Now.ToString("HH:mm")
-
+                ApplySearchFilter();
+                SelectedChat = _filteredChats.FirstOrDefault();
             });
 
-            _allChats.Add(welcomeChat);
+            // Start background servers
+            _bluetoothService.MyDisplayName = Settings.MyDisplayName;
+            _bluetoothService.MyUsername = Settings.MyUsername;
+            App.Log($"[Init] Starting Bluetooth RFCOMM server for '{Settings.MyDisplayName}'...");
+            await _bluetoothService.StartServerAsync();
 
+            // Automatically discover paired Bluetooth devices and add them to chats if not present
+            var paired = await _bluetoothService.DiscoverDevicesAsync();
+            App.Log($"[Init] Discovered {paired.Count} paired devices.");
+            Application.Current?.Dispatcher?.Invoke(() =>
+            {
+                foreach (var dev in paired)
+                {
+                    if (!string.IsNullOrWhiteSpace(dev.DeviceAddress) && !string.IsNullOrWhiteSpace(dev.PeerId))
+                    {
+                        _bluetoothService.RegisterPeerAddress(dev.PeerId, dev.DeviceAddress);
+
+                        var existing = _allChats.FirstOrDefault(c => c.PeerId.Equals(dev.PeerId, StringComparison.OrdinalIgnoreCase));
+                        if (existing != null && string.IsNullOrWhiteSpace(existing.DeviceAddress))
+                        {
+                            existing.DeviceAddress = dev.DeviceAddress;
+                        }
+                    }
+
+                    if (!_allChats.Any(c => c.PeerId.Equals(dev.PeerId, StringComparison.OrdinalIgnoreCase) ||
+                                            (!string.IsNullOrEmpty(dev.DeviceAddress) && c.DeviceAddress.Equals(dev.DeviceAddress, StringComparison.OrdinalIgnoreCase))))
+                    {
+                        _allChats.Add(dev);
+                        App.Log($"[Init] Added paired device '{dev.DisplayName}' ({dev.PeerId}) to chat list.");
+                    }
+                }
+                ApplySearchFilter();
+
+                // If AutoConnectBluetooth is on, connect to paired devices
+                if (Settings.AutoConnectBluetooth)
+                {
+                    var candidates = _allChats.Where(c => c.IsBluetoothDevice && !c.PeerId.StartsWith("peer_prime")).ToList();
+                    var target = candidates.FirstOrDefault();
+                    if (target != null)
+                    {
+                        SelectedChat = target;
+                    }
+
+                    foreach (var chat in candidates)
+                    {
+                        string addr = !string.IsNullOrWhiteSpace(chat.DeviceAddress) ? chat.DeviceAddress : chat.PeerId;
+                        App.Log($"[Init] Auto-connecting to paired device '{chat.DisplayName}' (PeerId={chat.PeerId}, Addr={addr})...");
+                        _ = _bluetoothService.ConnectAsync(addr);
+                    }
+                }
+            });
+
+            App.Log("[Init] InitializeAsync completed successfully.");
         }
-
-        ApplySearchFilter();
-
-        SelectedChat = _filteredChats.FirstOrDefault();
-
-        // Start background servers
-
-        _bluetoothService.MyDisplayName = Settings.MyDisplayName;
-
-        _bluetoothService.MyUsername = Settings.MyUsername;
-
-        await _bluetoothService.StartServerAsync();
-
+        catch (Exception ex)
+        {
+            App.Log($"[Init FATAL ERROR] InitializeAsync crashed: {ex}");
+        }
     }
 
     private void ApplySearchFilter()
@@ -1231,6 +1301,8 @@ public async Task SendTextMessageAsync()
 
             targetMsg.Text = text;
 
+            targetMsg.IsEdited = true;
+
             targetChat.LastMessage = text;
 
             byte[] editPayload = System.Text.Encoding.UTF8.GetBytes($"{targetMsg.Id}:::{text}");
@@ -1297,19 +1369,19 @@ public async Task SendTextMessageAsync()
             reply?.Text);
 
         try
-
         {
+            if (targetChat.IsBluetoothDevice && !targetChat.IsOnline && !targetChat.PeerId.StartsWith("peer_prime"))
+            {
+                StatusMessage = $"Подключение к {targetChat.DisplayName}...";
+                await _bluetoothService.ConnectAsync(targetChat.DeviceAddress);
+            }
+
             await _bluetoothService.SendPacketAsync(targetChat.DeviceAddress, PacketType.Text, payload);
-
             message.IsDelivered = true;
-
         }
-
         catch (Exception ex)
-
         {
             StatusMessage = $"Sending failed: {ex.Message}";
-
         }
 
         await _storageService.SaveChatsAsync(_allChats);
@@ -1431,111 +1503,134 @@ public async Task SendTextMessageAsync()
     }
 
     public async Task SendAttachmentAsync(PacketType type)
-
     {
         var targetChat = SelectedChat;
         if (targetChat == null) return;
 
         var dialog = new OpenFileDialog();
-
         if (type == PacketType.Photo)
-
         {
-            dialog.Title = "Выберите изображение";
-
+            dialog.Title = "Выберите изображение (одно или несколько для коллажа)";
             dialog.Filter = "Изображения|*.png;*.jpg;*.jpeg;*.webp;*.bmp|Все файлы|*.*";
-
+            dialog.Multiselect = true;
         }
-
         else
-
         {
             dialog.Title = "Выберите файл для отправки";
-
             dialog.Filter = "Все файлы|*.*";
-
+            dialog.Multiselect = false;
         }
 
-        if (dialog.ShowDialog() == true)
+        if (dialog.ShowDialog() != true) return;
 
+        string targetAddr = !string.IsNullOrWhiteSpace(targetChat.DeviceAddress) ? targetChat.DeviceAddress : targetChat.PeerId;
+
+        // Auto-connect if disconnected
+        if (targetChat.IsBluetoothDevice && !targetChat.IsOnline && !targetChat.PeerId.StartsWith("peer_prime"))
         {
-            string filePath = dialog.FileName;
+            StatusMessage = $"Подключение к {targetChat.DisplayName}...";
+            await _bluetoothService.ConnectAsync(targetAddr);
+        }
 
-            string fileName = Path.GetFileName(filePath);
-
-            byte[] fileBytes = await File.ReadAllBytesAsync(filePath);
+        // Multi-photo / collage
+        if (type == PacketType.Photo && dialog.FileNames.Length > 1)
+        {
+            var items = new List<(byte[] data, string ext, bool isVideo)>();
+            var collagePaths = new List<string>();
+            foreach (var fn in dialog.FileNames)
+            {
+                byte[] data = await File.ReadAllBytesAsync(fn);
+                string ext = Path.GetExtension(fn).TrimStart('.');
+                items.Add((data, ext, false));
+                collagePaths.Add(fn);
+            }
 
             var message = new ChatMessage
-
             {
                 Sender = Settings.MyDisplayName,
-
-                Text = fileName,
-
-                FilePath = filePath,
-
-                FileName = fileName,
-
-                FileSizeBytes = fileBytes.Length,
-
-                Type = type,
-
+                Text = "",
+                FilePath = collagePaths.FirstOrDefault(),
+                CollagePaths = collagePaths,
+                Type = PacketType.Photo,
                 IsFromMe = true,
-
                 FormattedTime = DateTime.Now.ToString("HH:mm")
-
             };
 
             targetChat.Messages.Add(message);
-
-            targetChat.LastMessage = type == PacketType.Photo ? "📷 Фотография" : $"📎 {fileName}";
-
+            targetChat.LastMessage = "📷 Коллаж";
             targetChat.LastMessageTime = message.FormattedTime;
 
             try
-
             {
-                await _bluetoothService.SendPacketAsync(targetChat.DeviceAddress, type, fileBytes);
-
+                byte[] payload = PrimePacket.BuildCollagePayload(message.Id, items, "");
+                await _bluetoothService.SendPacketAsync(targetAddr, PacketType.Photo, payload);
                 message.IsDelivered = true;
-
             }
-
             catch (Exception ex)
-
             {
-                StatusMessage = $"Attachment send failed: {ex.Message}";
-
+                StatusMessage = $"Collage send failed: {ex.Message}";
             }
 
             await _storageService.SaveChatsAsync(_allChats);
-
+            return;
         }
 
+        // Single file or single photo
+        string filePath = dialog.FileName;
+        string fileName = Path.GetFileName(filePath);
+        byte[] fileBytes = await File.ReadAllBytesAsync(filePath);
+
+        var singleMsg = new ChatMessage
+        {
+            Sender = Settings.MyDisplayName,
+            Text = fileName,
+            FilePath = filePath,
+            FileName = fileName,
+            FileSizeBytes = fileBytes.Length,
+            Type = type,
+            IsFromMe = true,
+            FormattedTime = DateTime.Now.ToString("HH:mm")
+        };
+
+        targetChat.Messages.Add(singleMsg);
+        targetChat.LastMessage = type == PacketType.Photo ? "📷 Фотография" : $"📎 {fileName}";
+        targetChat.LastMessageTime = singleMsg.FormattedTime;
+
+        try
+        {
+            byte[] payload = (type == PacketType.Photo)
+                ? PrimePacket.BuildPhotoPayload(singleMsg.Id, fileBytes, "")
+                : PrimePacket.BuildFilePayload(singleMsg.Id, fileName, fileBytes);
+
+            await _bluetoothService.SendPacketAsync(targetAddr, type, payload);
+            singleMsg.IsDelivered = true;
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Attachment send failed: {ex.Message}";
+        }
+
+        await _storageService.SaveChatsAsync(_allChats);
     }
 
-    private void NotifyTyping()
+    private DateTime _lastTypingSentTime = DateTime.MinValue;
 
+    private void NotifyTyping()
     {
         if (SelectedChat == null) return;
+        if ((DateTime.UtcNow - _lastTypingSentTime).TotalSeconds < 2.5) return;
+        _lastTypingSentTime = DateTime.UtcNow;
 
         _ = Task.Run(async () =>
-
         {
             try
-
             {
-                byte[] empty = Array.Empty<byte>();
-
-                
-                    await _bluetoothService.SendPacketAsync(SelectedChat.DeviceAddress, PacketType.Typing, empty);
-
+                string targetAddr = !string.IsNullOrWhiteSpace(SelectedChat.DeviceAddress) ? SelectedChat.DeviceAddress : SelectedChat.PeerId;
+                byte[] typingPayload = PrimePacket.BuildTypingPayload("STATE:TYPING");
+                await _bluetoothService.SendPacketAsync(targetAddr, PacketType.Typing, typingPayload);
             }
-
             catch { }
-
         });
-
     }
 
     public async Task ScanDevicesAsync()
@@ -1580,23 +1675,20 @@ public async Task SendTextMessageAsync()
     }
 
     public async Task ConnectSelectedChatAsync()
-
     {
         if (SelectedChat == null) return;
 
         StatusMessage = $"Connecting to {SelectedChat.DisplayName}...";
-
-        await _bluetoothService.ConnectAsync(SelectedChat.DeviceAddress);
-
+        string addr = !string.IsNullOrWhiteSpace(SelectedChat.DeviceAddress) ? SelectedChat.DeviceAddress : SelectedChat.PeerId;
+        await _bluetoothService.ConnectAsync(addr);
     }
 
     public async Task DisconnectSelectedChatAsync()
-
     {
         if (SelectedChat == null) return;
 
-        await _bluetoothService.DisconnectAsync(SelectedChat.DeviceAddress);
-
+        string addr = !string.IsNullOrWhiteSpace(SelectedChat.DeviceAddress) ? SelectedChat.DeviceAddress : SelectedChat.PeerId;
+        await _bluetoothService.DisconnectAsync(addr);
     }
 
     public async Task ConnectWifiCompanionAsync()
@@ -1892,46 +1984,135 @@ public async Task SendTextMessageAsync()
                     break;
 
                 case PacketType.Photo:
+                    var photoResult = PrimePacket.ParsePhotoPayload(payload);
+                    string mediaDir = StorageService.MediaDirectory;
+                    Directory.CreateDirectory(mediaDir);
 
-                case PacketType.File:
-
-                    string ext = (type == PacketType.Photo) ? ".jpg" : ".bin";
-
-                    string savedName = $"media_{DateTime.Now:yyyyMMdd_HHmmss}_{Guid.NewGuid().ToString().Substring(0, 6)}{ext}";
-
-                    string savedPath = Path.Combine(StorageService.MediaDirectory, savedName);
-
-                    File.WriteAllBytes(savedPath, payload);
-
-                    var fileMsg = new ChatMessage
-
+                    var photoMsg = new ChatMessage
                     {
+                        Id = photoResult.MsgId,
                         Sender = chat.DisplayName,
-
-                        Text = savedName,
-
-                        FilePath = savedPath,
-
-                        FileName = savedName,
-
-                        FileSizeBytes = payload.Length,
-
-                        Type = type,
-
+                        Text = photoResult.Caption,
+                        Type = PacketType.Photo,
                         IsFromMe = false,
-
                         FormattedTime = DateTime.Now.ToString("HH:mm")
-
                     };
 
-                    chat.Messages.Add(fileMsg);
+                    if (photoResult.IsCollage)
+                    {
+                        for (int i = 0; i < photoResult.Items.Count; i++)
+                        {
+                            string cPath = Path.Combine(mediaDir, $"collage_{photoResult.MsgId}_{i}.jpg");
+                            File.WriteAllBytes(cPath, photoResult.Items[i]);
+                            photoMsg.CollagePaths.Add(cPath);
+                        }
+                        photoMsg.FilePath = photoMsg.CollagePaths.FirstOrDefault();
+                        chat.LastMessage = string.IsNullOrWhiteSpace(photoResult.Caption) ? "📷 Коллаж" : $"📷 {photoResult.Caption}";
+                    }
+                    else if (photoResult.Items.Count > 0)
+                    {
+                        string sPath = Path.Combine(mediaDir, $"photo_{photoResult.MsgId}.jpg");
+                        File.WriteAllBytes(sPath, photoResult.Items[0]);
+                        photoMsg.FilePath = sPath;
+                        photoMsg.FileName = Path.GetFileName(sPath);
+                        photoMsg.FileSizeBytes = photoResult.Items[0].Length;
+                        chat.LastMessage = string.IsNullOrWhiteSpace(photoResult.Caption) ? "📷 Фотография" : $"📷 {photoResult.Caption}";
+                    }
 
-                    chat.LastMessage = (type == PacketType.Photo) ? "📷 Фотография" : "📎 Файл";
-
-                    chat.LastMessageTime = fileMsg.FormattedTime;
-
+                    chat.Messages.Add(photoMsg);
+                    chat.LastMessageTime = photoMsg.FormattedTime;
                     if (SelectedChat != chat) chat.UnreadCount++;
 
+                    _ = Task.Run(async () =>
+                    {
+                        try
+                        {
+                            byte[] ackPayload = System.Text.Encoding.UTF8.GetBytes(photoResult.MsgId);
+                            string addr = !string.IsNullOrWhiteSpace(chat.DeviceAddress) ? chat.DeviceAddress : chat.PeerId;
+                            await _bluetoothService.SendPacketAsync(addr, PacketType.ReadReceipt, ackPayload);
+                        }
+                        catch { }
+                    });
+                    break;
+
+                case PacketType.File:
+                    var (fMsgId, fName, fDuration, fIsVoice, fBytes) = PrimePacket.ParseFilePayload(payload);
+                    string fDir = StorageService.MediaDirectory;
+                    Directory.CreateDirectory(fDir);
+                    string fPath = Path.Combine(fDir, $"file_{DateTime.Now:yyyyMMdd_HHmmss}_{fName}");
+                    File.WriteAllBytes(fPath, fBytes);
+
+                    var incomingFileMsg = new ChatMessage
+                    {
+                        Id = fMsgId,
+                        Sender = chat.DisplayName,
+                        Text = fName,
+                        FilePath = fPath,
+                        FileName = fName,
+                        FileSizeBytes = fBytes.Length,
+                        Duration = fDuration,
+                        Type = fIsVoice ? PacketType.Voice : PacketType.File,
+                        IsFromMe = false,
+                        FormattedTime = DateTime.Now.ToString("HH:mm")
+                    };
+
+                    chat.Messages.Add(incomingFileMsg);
+                    chat.LastMessage = fIsVoice ? "🎤 Голосовое сообщение" : $"📎 {fName}";
+                    chat.LastMessageTime = incomingFileMsg.FormattedTime;
+                    if (SelectedChat != chat) chat.UnreadCount++;
+
+                    _ = Task.Run(async () =>
+                    {
+                        try
+                        {
+                            byte[] ackPayload = System.Text.Encoding.UTF8.GetBytes(fMsgId);
+                            string addr = !string.IsNullOrWhiteSpace(chat.DeviceAddress) ? chat.DeviceAddress : chat.PeerId;
+                            await _bluetoothService.SendPacketAsync(addr, PacketType.ReadReceipt, ackPayload);
+                        }
+                        catch { }
+                    });
+                    break;
+
+                case PacketType.Typing:
+                    string typingData = System.Text.Encoding.UTF8.GetString(payload).Trim();
+                    bool isTypingState = typingData.Contains("TYPING");
+                    chat.IsTyping = isTypingState;
+                    if (isTypingState)
+                    {
+                        var timer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(3.5) };
+                        timer.Tick += (s, e) =>
+                        {
+                            chat.IsTyping = false;
+                            timer.Stop();
+                        };
+                        timer.Start();
+                    }
+                    break;
+
+                case PacketType.Edit:
+                    var (editId, editText) = PrimePacket.ParseEditMessagePayload(payload);
+                    var msgToEdit = chat.Messages.FirstOrDefault(m => m.Id == editId);
+                    if (msgToEdit != null)
+                    {
+                        msgToEdit.Text = editText;
+                        msgToEdit.IsEdited = true;
+                        if (chat.Messages.LastOrDefault() == msgToEdit)
+                        {
+                            chat.LastMessage = editText;
+                        }
+                    }
+                    break;
+
+                case PacketType.DeleteMessage:
+                    string delId = PrimePacket.ParseDeleteMessagePayload(payload);
+                    var msgToDelete = chat.Messages.FirstOrDefault(m => m.Id == delId);
+                    if (msgToDelete != null)
+                    {
+                        chat.Messages.Remove(msgToDelete);
+                        var newLast = chat.Messages.LastOrDefault();
+                        chat.LastMessage = newLast?.Text ?? "";
+                        chat.LastMessageTime = newLast?.FormattedTime ?? "";
+                    }
                     break;
 
                 case PacketType.Voice:
@@ -2003,17 +2184,19 @@ public async Task SendTextMessageAsync()
                     break;
 
                 case PacketType.Avatar:
-
-                    string aDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "PrimeDesktop", "Avatars");
-
-                    Directory.CreateDirectory(aDir);
-
-                    string aPath = Path.Combine(aDir, $"avatar_{chat.PeerId}.png");
-
-                    File.WriteAllBytes(aPath, payload);
-
-                    chat.AvatarPath = aPath;
-
+                    try
+                    {
+                        string aDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "PrimeDesktop", "Avatars");
+                        Directory.CreateDirectory(aDir);
+                        string safeKey = AvatarManager.GetSafePeerKey(chat.PeerId);
+                        string aPath = Path.Combine(aDir, $"avatar_{safeKey}.png");
+                        File.WriteAllBytes(aPath, payload);
+                        chat.AvatarPath = aPath;
+                    }
+                    catch (Exception avEx)
+                    {
+                        App.Log($"[Avatar ERROR] Failed to save avatar for '{chat.PeerId}': {avEx.Message}");
+                    }
                     break;
 
                 case PacketType.ReadReceipt:
@@ -2095,59 +2278,6 @@ public async Task SendTextMessageAsync()
                     MainWindow.TrayService?.ShowNotification("Прайм Мессенджер", $"Собеседник {chat.DisplayName} удалил чат.");
 
                     StatusMessage = $"Собеседник {chat.DisplayName} удалил чат. Устройство забыто";
-
-                    break;
-
-                case PacketType.Edit:
-
-                    string editRaw = System.Text.Encoding.UTF8.GetString(payload);
-
-                    int eSep = editRaw.IndexOf(":::");
-
-                    if (eSep != -1)
-
-                    {
-                        string eId = editRaw.Substring(0, eSep);
-
-                        string eText = editRaw.Substring(eSep + 3);
-
-                        var toEdit = chat.Messages.FirstOrDefault(m => m.Id == eId);
-
-                        if (toEdit != null)
-
-                        {
-                            toEdit.Text = eText;
-
-                            chat.LastMessage = chat.Messages.LastOrDefault()?.Text ?? "";
-
-                        }
-
-                    }
-
-                    break;
-
-                case PacketType.DeleteMessage:
-
-                    string delMsgId = System.Text.Encoding.UTF8.GetString(payload).Trim();
-
-                    var toDelete = chat.Messages.FirstOrDefault(m => m.Id == delMsgId);
-
-                    if (toDelete != null)
-
-                    {
-                        chat.Messages.Remove(toDelete);
-
-                        chat.LastMessage = chat.Messages.LastOrDefault()?.Text ?? "";
-
-                    }
-
-                    break;
-
-                case PacketType.Typing:
-
-                    chat.IsTyping = true;
-
-                    Task.Delay(3000).ContinueWith(_ => Application.Current.Dispatcher.Invoke(() => chat.IsTyping = false));
 
                     break;
 

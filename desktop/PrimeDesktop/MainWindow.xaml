@@ -615,13 +615,47 @@
 
 
 
-                                            <!-- File Attachment Banner -->
+                                            <!-- File Attachment Card -->
 
-                                            <Border Background="#20000000" CornerRadius="6" Padding="8,4" Margin="0,0,0,6"
+                                            <Border Background="#20000000" BorderBrush="#35FFFFFF" BorderThickness="1" CornerRadius="8" Padding="8,6" Margin="0,0,0,6"
 
-                                                    Visibility="{Binding HasAttachment, Converter={StaticResource BoolToVis}}">
+                                                    Cursor="Hand" Visibility="{Binding IsFile, Converter={StaticResource BoolToVis}}">
 
-                                                <TextBlock Text="{Binding FileName}" Foreground="{DynamicResource AccentBrush}" FontSize="12" FontWeight="SemiBold"/>
+                                                <Border.InputBindings>
+
+                                                    <MouseBinding Gesture="LeftClick"
+
+                                                                  Command="{Binding DataContext.OpenFileAttachmentCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+
+                                                                  CommandParameter="{Binding}"/>
+
+                                                </Border.InputBindings>
+
+                                                <Grid>
+
+                                                    <Grid.ColumnDefinitions>
+
+                                                        <ColumnDefinition Width="Auto"/>
+
+                                                        <ColumnDefinition Width="*"/>
+
+                                                    </Grid.ColumnDefinitions>
+
+                                                    <Border Grid.Column="0" Width="34" Height="34" CornerRadius="6" Background="#25FFFFFF" Margin="0,0,10,0">
+
+                                                        <TextBlock Text="📄" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+
+                                                    </Border>
+
+                                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+
+                                                        <TextBlock Text="{Binding FileName}" Foreground="{DynamicResource AccentBrush}" FontSize="12" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" MaxWidth="280"/>
+
+                                                        <TextBlock Text="{Binding FormattedFileSize}" Foreground="{StaticResource TextSecondaryBrush}" FontSize="10" Margin="0,2,0,0"/>
+
+                                                    </StackPanel>
+
+                                                </Grid>
 
                                             </Border>
 
@@ -681,11 +715,11 @@
 
 
 
-                                            <!-- Photo Attachment Preview -->
+                                            <!-- Single Photo Attachment Preview -->
 
                                             <Border CornerRadius="8" Margin="0,0,0,6" MaxHeight="280" ClipToBounds="True" Cursor="Hand"
 
-                                                    Visibility="{Binding IsPhoto, Converter={StaticResource BoolToVis}}">
+                                                    Visibility="{Binding IsSinglePhoto, Converter={StaticResource BoolToVis}}">
 
                                                 <Border.InputBindings>
 
@@ -703,9 +737,59 @@
 
 
 
+                                            <!-- Collage / Multi-Photo Attachment Preview -->
+
+                                            <Border CornerRadius="8" Margin="0,0,0,6" ClipToBounds="True" MaxWidth="360"
+
+                                                    Visibility="{Binding IsCollage, Converter={StaticResource BoolToVis}}">
+
+                                                <ItemsControl ItemsSource="{Binding CollagePaths}">
+
+                                                    <ItemsControl.ItemsPanel>
+
+                                                        <ItemsPanelTemplate>
+
+                                                            <UniformGrid Columns="2"/>
+
+                                                        </ItemsPanelTemplate>
+
+                                                    </ItemsControl.ItemsPanel>
+
+                                                    <ItemsControl.ItemTemplate>
+
+                                                        <DataTemplate>
+
+                                                            <Border CornerRadius="6" Margin="2" Height="130" ClipToBounds="True" Cursor="Hand" Background="#1A222D">
+
+                                                                <Border.InputBindings>
+
+                                                                    <MouseBinding Gesture="LeftClick"
+
+                                                                                  Command="{Binding DataContext.OpenPhotoViewerCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+
+                                                                                  CommandParameter="{Binding}"/>
+
+                                                                </Border.InputBindings>
+
+                                                                <Image Source="{Binding}" Stretch="UniformToFill" RenderOptions.BitmapScalingMode="HighQuality"/>
+
+                                                            </Border>
+
+                                                        </DataTemplate>
+
+                                                    </ItemsControl.ItemTemplate>
+
+                                                </ItemsControl>
+
+                                            </Border>
+
+
+
                                             <!-- Message Text -->
 
-                                            <TextBlock Text="{Binding Text}" Foreground="{StaticResource TextPrimaryBrush}" FontSize="13" TextWrapping="Wrap"/>
+                                            <TextBlock Text="{Binding Text}" Foreground="{StaticResource TextPrimaryBrush}" FontSize="13" TextWrapping="Wrap"
+
+                                                       Visibility="{Binding HasText, Converter={StaticResource BoolToVis}}"/>
 
 
 
@@ -736,6 +820,10 @@
                                             <!-- Time & Delivery Status Ticks -->
 
                                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,4,0,0">
+
+                                                <TextBlock Text="изм." Foreground="{StaticResource TextMutedBrush}" FontSize="9" Margin="0,0,4,0" VerticalAlignment="Center"
+
+                                                           Visibility="{Binding IsEdited, Converter={StaticResource BoolToVis}}"/>
 
                                                 <TextBlock Text="{Binding FormattedTime}" Foreground="{StaticResource TextMutedBrush}" FontSize="10" VerticalAlignment="Center"/>
 

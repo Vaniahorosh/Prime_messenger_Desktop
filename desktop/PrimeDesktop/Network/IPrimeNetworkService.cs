@@ -17,6 +17,7 @@ public interface IPrimeNetworkService
     Task<bool> ConnectAsync(string deviceAddressOrIp);
     Task DisconnectAsync(string deviceAddressOrIp);
     void ForgetDevice(string deviceAddressOrIp);
+    void RegisterPeerAddress(string peerId, string rawHardwareAddress);
 
     Task SendPacketAsync(string targetAddress, PacketType type, byte[] payload);
     Task<List<ChatItem>> DiscoverDevicesAsync();

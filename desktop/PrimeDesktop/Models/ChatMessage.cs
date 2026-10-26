@@ -93,6 +93,22 @@ public class ChatMessage : INotifyPropertyChanged
     public string? FileName { get; set; }
     public long FileSizeBytes { get; set; }
     public string Duration { get; set; } = "0:00";
+    public List<string> CollagePaths { get; set; } = new();
+
+    [JsonIgnore]
+    public bool IsCollage => CollagePaths != null && CollagePaths.Count > 1;
+
+    [JsonIgnore]
+    public string FormattedFileSize
+    {
+        get
+        {
+            if (FileSizeBytes <= 0) return "";
+            if (FileSizeBytes < 1024) return $"{FileSizeBytes} B";
+            if (FileSizeBytes < 1024 * 1024) return $"{FileSizeBytes / 1024.0:F1} KB";
+            return $"{FileSizeBytes / (1024.0 * 1024.0):F1} MB";
+        }
+    }
 
     [JsonIgnore]
     public bool IsPlaying
@@ -113,7 +129,13 @@ public class ChatMessage : INotifyPropertyChanged
     public bool HasAttachment => !string.IsNullOrEmpty(FilePath);
 
     [JsonIgnore]
+    public bool HasText => !string.IsNullOrWhiteSpace(Text);
+
+    [JsonIgnore]
     public bool IsPhoto => Type == PacketType.Photo;
+
+    [JsonIgnore]
+    public bool IsSinglePhoto => IsPhoto && !IsCollage;
 
     [JsonIgnore]
     public bool IsFile => Type == PacketType.File && !IsVideoNote;

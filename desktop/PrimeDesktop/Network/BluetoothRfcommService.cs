@@ -32,8 +32,8 @@ public class BluetoothRfcommService : IPrimeNetworkService
     private RfcommServiceProvider? _rfcommProvider;
 
     // Strict internal mapping between Opaque Peer ID and physical hardware address
-    private readonly ConcurrentDictionary<string, string> _peerToHardwareAddress = new();
-    private readonly ConcurrentDictionary<string, string> _hardwareAddressToPeer = new();
+    private readonly ConcurrentDictionary<string, string> _peerToHardwareAddress = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<string, string> _hardwareAddressToPeer = new(StringComparer.OrdinalIgnoreCase);
 
     private readonly ConcurrentDictionary<string, StreamSocket> _activeSockets = new();
     private readonly ConcurrentDictionary<string, Stream> _activeStreams = new();
@@ -50,19 +50,57 @@ public class BluetoothRfcommService : IPrimeNetworkService
     public string MyDisplayName { get; set; } = Environment.MachineName;
     public string MyUsername { get; set; } = "prime_desktop";
 
+    public static string NormalizeMacAddress(string? addressOrId)
+    {
+        if (string.IsNullOrWhiteSpace(addressOrId)) return string.Empty;
+
+        string cleaned = addressOrId.Trim().Trim('(', ')', '[', ']');
+
+        int lastHyphen = cleaned.LastIndexOf('-');
+        if (lastHyphen >= 0 && lastHyphen < cleaned.Length - 1 && cleaned.Contains('#'))
+        {
+            cleaned = cleaned.Substring(lastHyphen + 1);
+        }
+
+        string hexOnly = cleaned.Replace(":", "").Replace("-", "");
+        if (hexOnly.Length == 12 && ulong.TryParse(hexOnly, System.Globalization.NumberStyles.HexNumber, null, out ulong mac))
+        {
+            return $"{((mac >> 40) & 0xFF):X2}:{((mac >> 32) & 0xFF):X2}:{((mac >> 24) & 0xFF):X2}:{((mac >> 16) & 0xFF):X2}:{((mac >> 8) & 0xFF):X2}:{(mac & 0xFF):X2}";
+        }
+
+        return cleaned.ToUpperInvariant();
+    }
+
+    public string ResolveHardwareAddress(string peerIdOrAddress)
+    {
+        if (_peerToHardwareAddress.TryGetValue(peerIdOrAddress, out var mapped))
+        {
+            return mapped;
+        }
+        return NormalizeMacAddress(peerIdOrAddress);
+    }
+
+    public void RegisterPeerAddress(string peerId, string rawHardwareAddress)
+    {
+        string norm = NormalizeMacAddress(rawHardwareAddress);
+        if (!string.IsNullOrEmpty(norm) && !string.IsNullOrEmpty(peerId))
+        {
+            _peerToHardwareAddress[peerId] = norm;
+            _hardwareAddressToPeer[norm] = peerId;
+        }
+    }
+
     private string GetOrCreatePeerId(string rawHardwareAddress)
     {
-        return _hardwareAddressToPeer.GetOrAdd(rawHardwareAddress, addr =>
-        {
-            string peerId = DeviceAnonymizer.GetOpaquePeerId(addr);
-            _peerToHardwareAddress[peerId] = addr;
-            return peerId;
-        });
+        string norm = NormalizeMacAddress(rawHardwareAddress);
+        string peerId = _hardwareAddressToPeer.GetOrAdd(norm, addr => DeviceAnonymizer.GetOpaquePeerId(addr));
+        _peerToHardwareAddress[peerId] = norm;
+        return peerId;
     }
 
     private void RecordActivity(string rawAddress)
     {
-        _lastActivityTime[rawAddress] = DateTime.UtcNow;
+        _lastActivityTime[NormalizeMacAddress(rawAddress)] = DateTime.UtcNow;
     }
 
     /// <summary>
@@ -91,19 +129,21 @@ public class BluetoothRfcommService : IPrimeNetworkService
                 _rfcommProvider.ServiceId.AsString(),
                 SocketProtectionLevel.BluetoothEncryptionAllowNullAuthentication);
 
-            // Populate SDP Service Record
+            // Populate SDP Service Record (0x25 = SDP Text String with 1-byte length)
             using (var writer = new DataWriter())
             {
-                writer.WriteByte(0x0C); // SDP String type
+                writer.WriteByte(0x25); // SDP String type: Type 4, 1-byte length follows
                 writer.WriteByte((byte)"PrimeChat".Length);
                 writer.WriteString("PrimeChat");
                 _rfcommProvider.SdpRawAttributes.Add(0x0100, writer.DetachBuffer());
             }
 
             _rfcommProvider.StartAdvertising(_serverListener, true);
+            App.Log("[Bluetooth] RFCOMM Server started advertising.");
         }
         catch (Exception ex)
         {
+            App.Log($"[Bluetooth ERROR] Failed to start server: {ex.Message}");
             ErrorOccurred?.Invoke("LocalServer", $"Failed to start Bluetooth RFCOMM server: {ex.Message}");
         }
     }
@@ -130,13 +170,25 @@ public class BluetoothRfcommService : IPrimeNetworkService
     private void OnConnectionReceived(StreamSocketListener sender, StreamSocketListenerConnectionReceivedEventArgs args)
     {
         var socket = args.Socket;
-        string rawAddress = socket.Information.RemoteAddress.CanonicalName;
+        string rawAddress = NormalizeMacAddress(socket.Information.RemoteAddress.CanonicalName);
         string peerId = GetOrCreatePeerId(rawAddress);
         string friendlyName = DeviceAnonymizer.SanitizeDisplayName(socket.Information.RemoteHostName?.DisplayName, rawAddress);
+
+        App.Log($"[Bluetooth] ConnectionReceived from '{rawAddress}' ({socket.Information.RemoteAddress.CanonicalName})");
+
+        _peerToHardwareAddress[peerId] = rawAddress;
+        _hardwareAddressToPeer[rawAddress] = peerId;
 
         _manuallyDisconnected.TryRemove(rawAddress, out _);
         _manuallyDisconnected.TryRemove(peerId, out _);
         _retryCounts.TryRemove(rawAddress, out _);
+
+        // Clean up any stale active socket for this device
+        if (_activeSockets.TryGetValue(rawAddress, out var existingSocket))
+        {
+            App.Log($"[Bluetooth] Disconnecting previous stale socket for '{rawAddress}'");
+            DisconnectInternal(rawAddress);
+        }
 
         _activeSockets[rawAddress] = socket;
         var inStream = socket.InputStream.AsStreamForRead();
@@ -157,24 +209,33 @@ public class BluetoothRfcommService : IPrimeNetworkService
                 byte[] handshake = PrimePacket.BuildHandshakePayload(MyDisplayName, MyUsername, isAck: false);
                 await SendPacketAsync(peerId, PacketType.Text, handshake);
                 await SendPacketAsync(peerId, PacketType.Presence, System.Text.Encoding.UTF8.GetBytes("ONLINE"));
+                App.Log($"[Bluetooth] Sent initial handshake to '{peerId}' ({rawAddress})");
             }
-            catch { }
+            catch (Exception ex)
+            {
+                App.Log($"[Bluetooth ERROR] Failed to send initial handshake to '{peerId}': {ex.Message}");
+            }
         });
 
         StartReading(peerId, rawAddress, inStream);
     }
 
-    public async Task<bool> ConnectAsync(string peerIdOrAddress)
-    {
-        string rawAddress = peerIdOrAddress;
-        if (_peerToHardwareAddress.TryGetValue(peerIdOrAddress, out var mapped))
-        {
-            rawAddress = mapped;
-        }
+    public Task<bool> ConnectAsync(string peerIdOrAddress) => ConnectAsync(peerIdOrAddress, forceClient: false);
 
+    public async Task<bool> ConnectAsync(string peerIdOrAddress, bool forceClient)
+    {
+        string rawAddress = ResolveHardwareAddress(peerIdOrAddress);
         string peerId = GetOrCreatePeerId(rawAddress);
+        App.Log($"[Bluetooth] ConnectAsync called: '{peerIdOrAddress}' -> raw='{rawAddress}', peerId='{peerId}', forceClient={forceClient}");
         _manuallyDisconnected.TryRemove(rawAddress, out _);
         _manuallyDisconnected.TryRemove(peerId, out _);
+
+        // If already connected, do not re-connect
+        if (_activeSockets.ContainsKey(rawAddress) && _activeStreams.ContainsKey(rawAddress))
+        {
+            App.Log($"[Bluetooth] ConnectAsync: Already connected to '{rawAddress}'");
+            return true;
+        }
 
         try
         {
@@ -187,29 +248,81 @@ public class BluetoothRfcommService : IPrimeNetworkService
             }
             else
             {
-                device = await BluetoothDevice.FromIdAsync(rawAddress);
+                device = await BluetoothDevice.FromIdAsync(peerIdOrAddress);
             }
 
             if (device == null)
             {
+                App.Log($"[Bluetooth ERROR] Device not found for '{rawAddress}'");
                 ConnectionStateChanged?.Invoke(peerId, DeviceConnectionState.Disconnected, "Устройство не найдено");
                 ErrorOccurred?.Invoke(peerId, "Bluetooth device not found.");
                 return false;
             }
 
-            var rfcommServices = await device.GetRfcommServicesForIdAsync(RfcommServiceId.FromUuid(PrimeServiceUuid));
+            // Always standardize rawAddress from the resolved BluetoothDevice
+            string normMac = NormalizeMacAddress(device.BluetoothAddress.ToString("X12"));
+            if (!string.IsNullOrEmpty(normMac))
+            {
+                rawAddress = normMac;
+                _peerToHardwareAddress[peerId] = rawAddress;
+                _hardwareAddressToPeer[rawAddress] = peerId;
+            }
+
+            // Role arbitration matching Android BluetoothConnectionManager
+            if (!forceClient && !IsClientInitiator(MyDisplayName, device.Name))
+            {
+                App.Log($"[Bluetooth] Role arbitration: Local='{MyDisplayName}' vs Remote='{device.Name}' -> Acting as server, waiting 3.5s...");
+                ConnectionStateChanged?.Invoke(peerId, DeviceConnectionState.Connecting, "Ожидание входящего подключения...");
+                await Task.Delay(3500);
+
+                if (_activeSockets.ContainsKey(rawAddress) && _activeStreams.ContainsKey(rawAddress))
+                {
+                    App.Log($"[Bluetooth] Connected via incoming socket while waiting.");
+                    return true;
+                }
+
+                if (_manuallyDisconnected.ContainsKey(rawAddress) || _manuallyDisconnected.ContainsKey(peerId))
+                {
+                    return false;
+                }
+                App.Log($"[Bluetooth] 3.5s timeout expired, proceeding as client initiator...");
+            }
+
+            // CRITICAL FIX: Query RFCOMM services with Uncached mode first to avoid stale cached RFCOMM channels
+            App.Log($"[Bluetooth] Querying RFCOMM services for '{rawAddress}' (Uncached)...");
+            var rfcommServices = await device.GetRfcommServicesForIdAsync(
+                RfcommServiceId.FromUuid(PrimeServiceUuid),
+                BluetoothCacheMode.Uncached);
+
             if (rfcommServices.Services.Count == 0)
             {
+                App.Log($"[Bluetooth] Uncached query returned 0 services, trying Cached...");
+                rfcommServices = await device.GetRfcommServicesForIdAsync(
+                    RfcommServiceId.FromUuid(PrimeServiceUuid),
+                    BluetoothCacheMode.Cached);
+            }
+
+            if (rfcommServices.Services.Count == 0)
+            {
+                App.Log($"[Bluetooth ERROR] Prime Messenger service not found on '{rawAddress}'");
                 ConnectionStateChanged?.Invoke(peerId, DeviceConnectionState.Disconnected, device.Name);
                 ErrorOccurred?.Invoke(peerId, "Prime Messenger service not available on device.");
                 return false;
             }
 
+            // Clean up any stale active socket before creating a new one
+            if (_activeSockets.TryGetValue(rawAddress, out var existingSocket))
+            {
+                DisconnectInternal(rawAddress);
+            }
+
             var service = rfcommServices.Services[0];
+            App.Log($"[Bluetooth] Connecting StreamSocket to '{service.ConnectionHostName?.DisplayName}' : '{service.ConnectionServiceName}'...");
             var socket = new StreamSocket();
             await socket.ConnectAsync(service.ConnectionHostName, service.ConnectionServiceName, SocketProtectionLevel.BluetoothEncryptionAllowNullAuthentication);
+            App.Log($"[Bluetooth] StreamSocket connected successfully!");
 
-            string addressKey = device.DeviceId;
+            string addressKey = rawAddress;
             _peerToHardwareAddress[peerId] = addressKey;
             _hardwareAddressToPeer[addressKey] = peerId;
 
@@ -244,11 +357,7 @@ public class BluetoothRfcommService : IPrimeNetworkService
 
     public Task DisconnectAsync(string peerId)
     {
-        string rawAddress = peerId;
-        if (_peerToHardwareAddress.TryGetValue(peerId, out var mapped))
-        {
-            rawAddress = mapped;
-        }
+        string rawAddress = ResolveHardwareAddress(peerId);
 
         _manuallyDisconnected[rawAddress] = true;
         _manuallyDisconnected[peerId] = true;
@@ -262,12 +371,9 @@ public class BluetoothRfcommService : IPrimeNetworkService
 
     public void ForgetDevice(string peerIdOrAddress)
     {
-        string rawAddress = peerIdOrAddress;
-        if (_peerToHardwareAddress.TryRemove(peerIdOrAddress, out var mapped))
-        {
-            rawAddress = mapped;
-        }
+        string rawAddress = ResolveHardwareAddress(peerIdOrAddress);
 
+        _peerToHardwareAddress.TryRemove(peerIdOrAddress, out _);
         _hardwareAddressToPeer.TryRemove(rawAddress, out _);
         _manuallyDisconnected[rawAddress] = true;
         _manuallyDisconnected[peerIdOrAddress] = true;
@@ -349,11 +455,7 @@ public class BluetoothRfcommService : IPrimeNetworkService
 
     public async Task SendPacketAsync(string targetPeerId, PacketType type, byte[] payload)
     {
-        string rawAddress = targetPeerId;
-        if (_peerToHardwareAddress.TryGetValue(targetPeerId, out var mapped))
-        {
-            rawAddress = mapped;
-        }
+        string rawAddress = ResolveHardwareAddress(targetPeerId);
 
         if (!_activeStreams.TryGetValue(rawAddress, out var stream))
         {
@@ -388,9 +490,10 @@ public class BluetoothRfcommService : IPrimeNetworkService
                     continue;
                 }
 
+                BluetoothDevice? btDev = null;
                 try
                 {
-                    var btDev = await BluetoothDevice.FromIdAsync(dev.Id);
+                    btDev = await BluetoothDevice.FromIdAsync(dev.Id);
                     if (btDev != null)
                     {
                         var cod = btDev.ClassOfDevice;
@@ -411,14 +514,19 @@ public class BluetoothRfcommService : IPrimeNetworkService
                 }
                 catch { }
 
-                string peerId = GetOrCreatePeerId(dev.Id);
-                string cleanName = DeviceAnonymizer.SanitizeDisplayName(dev.Name, dev.Id);
-                string cleanUser = DeviceAnonymizer.SanitizeUsername(null, dev.Id);
+                string normMac = btDev != null
+                    ? NormalizeMacAddress(btDev.BluetoothAddress.ToString("X12"))
+                    : NormalizeMacAddress(dev.Id);
+
+                string peerId = GetOrCreatePeerId(normMac);
+                string cleanName = DeviceAnonymizer.SanitizeDisplayName(dev.Name, normMac);
+                string cleanUser = DeviceAnonymizer.SanitizeUsername(null, normMac);
 
                 result.Add(new ChatItem
                 {
                     Id = peerId,
                     PeerId = peerId,
+                    DeviceAddress = normMac,
                     DisplayName = cleanName,
                     Username = cleanUser,
                     IsBluetoothDevice = true,
@@ -448,6 +556,7 @@ public class BluetoothRfcommService : IPrimeNetworkService
                     if (packet == null) break;
 
                     RecordActivity(rawAddress);
+                    App.Log($"[Bluetooth] Received packet {packet.Type} ({packet.Payload?.Length ?? 0} bytes) from '{peerId}' ({rawAddress})");
 
                     // Automatically reply to PING with ACK to maintain link
                     if (packet.Type == PacketType.Ping)
@@ -458,16 +567,25 @@ public class BluetoothRfcommService : IPrimeNetworkService
                         });
                     }
 
-                    PacketReceived?.Invoke(peerId, packet.Type, packet.Payload);
+                    try
+                    {
+                        PacketReceived?.Invoke(peerId, packet.Type, packet.Payload ?? Array.Empty<byte>());
+                    }
+                    catch (Exception handlerEx)
+                    {
+                        App.Log($"[Bluetooth ERROR] PacketReceived handler threw exception for '{peerId}': {handlerEx.Message}");
+                    }
                 }
             }
             catch (OperationCanceledException) { }
             catch (Exception ex)
             {
+                App.Log($"[Bluetooth ERROR] Read exception for '{rawAddress}': {ex.Message}");
                 ErrorOccurred?.Invoke(peerId, $"Read error: {ex.Message}");
             }
             finally
             {
+                App.Log($"[Bluetooth] Read loop finished for '{rawAddress}', closing connection");
                 DisconnectInternal(rawAddress);
                 ConnectionStateChanged?.Invoke(peerId, DeviceConnectionState.Disconnected, "не в сети");
 
