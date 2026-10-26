@@ -14,7 +14,7 @@ if %ERRORLEVEL% neq 0 (
 set ROOT=%~dp0
 cd /d "%ROOT%PrimeDesktop"
 echo Restoring packages and building PrimeDesktop Release...
-dotnet publish -c Release -r win-x64 --self-contained false -o "%ROOT%bin\Release"
+dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -o "%ROOT%bin\Release"
 
 if %ERRORLEVEL% neq 0 (
     echo [ERROR] PrimeDesktop build failed.
