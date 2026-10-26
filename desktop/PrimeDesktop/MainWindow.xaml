@@ -499,9 +499,13 @@
 
                                     </Grid.Style>
 
-                                    <Border Background="{Binding IsFromMe, Converter={StaticResource MsgBubbleConverter}}"
+                                    <StackPanel>
+
+                                        <Border Background="{Binding IsFromMe, Converter={StaticResource MsgBubbleConverter}}"
 
                                             CornerRadius="14" Padding="12,8" MaxWidth="520"
+
+                                            Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=Window}}"
 
                                             ContextMenuOpening="MessageBorder_ContextMenuOpening">
 
@@ -543,27 +547,51 @@
 
                                                         <Button Content="👍" Style="{StaticResource ModernButton}" Width="28" Height="28" Padding="0" Margin="1" FontSize="14"
 
-                                                                Command="{Binding DataContext.SetReactionCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="👍"/>
+                                                                Tag="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+
+                                                                Command="{Binding PlacementTarget.Tag.SetReactionCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+
+                                                                CommandParameter="👍" Click="ReactionButton_Click"/>
 
                                                         <Button Content="❤️" Style="{StaticResource ModernButton}" Width="28" Height="28" Padding="0" Margin="1" FontSize="14"
 
-                                                                Command="{Binding DataContext.SetReactionCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="❤️"/>
+                                                                Tag="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+
+                                                                Command="{Binding PlacementTarget.Tag.SetReactionCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+
+                                                                CommandParameter="❤️" Click="ReactionButton_Click"/>
 
                                                         <Button Content="😂" Style="{StaticResource ModernButton}" Width="28" Height="28" Padding="0" Margin="1" FontSize="14"
 
-                                                                Command="{Binding DataContext.SetReactionCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="😂"/>
+                                                                Tag="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+
+                                                                Command="{Binding PlacementTarget.Tag.SetReactionCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+
+                                                                CommandParameter="😂" Click="ReactionButton_Click"/>
 
                                                         <Button Content="😮" Style="{StaticResource ModernButton}" Width="28" Height="28" Padding="0" Margin="1" FontSize="14"
 
-                                                                Command="{Binding DataContext.SetReactionCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="😮"/>
+                                                                Tag="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+
+                                                                Command="{Binding PlacementTarget.Tag.SetReactionCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+
+                                                                CommandParameter="😮" Click="ReactionButton_Click"/>
 
                                                         <Button Content="😢" Style="{StaticResource ModernButton}" Width="28" Height="28" Padding="0" Margin="1" FontSize="14"
 
-                                                                Command="{Binding DataContext.SetReactionCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="😢"/>
+                                                                Tag="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+
+                                                                Command="{Binding PlacementTarget.Tag.SetReactionCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+
+                                                                CommandParameter="😢" Click="ReactionButton_Click"/>
 
                                                         <Button Content="🙏" Style="{StaticResource ModernButton}" Width="28" Height="28" Padding="0" Margin="1" FontSize="14"
 
-                                                                Command="{Binding DataContext.SetReactionCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="🙏"/>
+                                                                Tag="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+
+                                                                Command="{Binding PlacementTarget.Tag.SetReactionCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+
+                                                                CommandParameter="🙏" Click="ReactionButton_Click"/>
 
                                                     </StackPanel>
 
@@ -571,23 +599,47 @@
 
                                                 <!-- Actions -->
 
-                                                <MenuItem Header="↩️ Ответить" Command="{Binding DataContext.ReplyToMessageCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"/>
+                                                <MenuItem Header="↩️ Ответить"
 
-                                                <MenuItem Header="📋 Копировать" Command="{Binding DataContext.CopyMessageCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"/>
+                                                          Command="{Binding PlacementTarget.Tag.ReplyToMessageCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
 
-                                                <MenuItem Header="↗️ Переслать" Command="{Binding DataContext.ForwardMessageCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"/>
+                                                          CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
 
-                                                <MenuItem Header="✏️ Редактировать" Command="{Binding DataContext.EditMessageCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"
+                                                <MenuItem Header="📋 Копировать"
 
-                                                          Visibility="{Binding IsFromMe, Converter={StaticResource BoolToVis}}"/>
+                                                          Command="{Binding PlacementTarget.Tag.CopyMessageCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
 
-                                                <MenuItem Header="🎨 Редактировать фото" Command="{Binding DataContext.OpenPhotoEditorCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding FilePath}"
+                                                          CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
 
-                                                          Visibility="{Binding IsPhoto, Converter={StaticResource BoolToVis}}"/>
+                                                <MenuItem Header="↗️ Переслать"
+
+                                                          Command="{Binding PlacementTarget.Tag.ForwardMessageCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+
+                                                          CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+
+                                                <MenuItem Header="✏️ Редактировать"
+
+                                                          Command="{Binding PlacementTarget.Tag.EditMessageCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+
+                                                          CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+
+                                                          Visibility="{Binding PlacementTarget.DataContext.IsFromMe, RelativeSource={RelativeSource AncestorType=ContextMenu}, Converter={StaticResource BoolToVis}}"/>
+
+                                                <MenuItem Header="🎨 Редактировать фото"
+
+                                                          Command="{Binding PlacementTarget.Tag.OpenPhotoEditorCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+
+                                                          CommandParameter="{Binding PlacementTarget.DataContext.FilePath, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+
+                                                          Visibility="{Binding PlacementTarget.DataContext.IsPhoto, RelativeSource={RelativeSource AncestorType=ContextMenu}, Converter={StaticResource BoolToVis}}"/>
 
                                                 <Separator Background="#2D3D52" Margin="4,2"/>
 
-                                                <MenuItem Header="🗑️ Удалить" Command="{Binding DataContext.DeleteMessageCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"
+                                                <MenuItem Header="🗑️ Удалить"
+
+                                                          Command="{Binding PlacementTarget.Tag.DeleteMessageCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+
+                                                          CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
 
                                                           Foreground="#EF4444" FontWeight="SemiBold"/>
 
@@ -831,43 +883,55 @@
 
                                             </StackPanel>
 
+                                        </StackPanel>
+
+                                    </Border>
 
 
-                                            <!-- Reaction Badge Pill (Param 6) -->
 
-                                            <Border HorizontalAlignment="Right" Margin="0,-6,0,0"
+                                    <!-- Floating Reaction Pill: cleanly floats beneath the bubble -->
 
-                                                    Background="#E61A2433" BorderBrush="{DynamicResource AccentBorderBrush}" BorderThickness="1"
+                                    <Border HorizontalAlignment="{Binding IsFromMe, Converter={StaticResource MsgAlignConverter}}"
 
-                                                    CornerRadius="10" Padding="5,1" Cursor="Hand"
+                                            Margin="8,-10,8,2"
 
-                                                    Visibility="{Binding HasReaction, Converter={StaticResource BoolToVis}}"
+                                            Background="#1E2738"
 
-                                                    ToolTip="Нажмите, чтобы переключить или снять реакцию">
+                                            BorderBrush="{DynamicResource AccentBrush}"
 
-                                                <Border.InputBindings>
+                                            BorderThickness="1.5"
 
-                                                    <MouseBinding Gesture="LeftClick"
+                                            CornerRadius="12"
 
-                                                                  Command="{Binding DataContext.ToggleReactionCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                            Padding="6,2"
 
-                                                                  CommandParameter="{Binding}"/>
+                                            Cursor="Hand"
 
-                                                </Border.InputBindings>
+                                            Visibility="{Binding HasReaction, Converter={StaticResource BoolToVis}}"
 
-                                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                            ToolTip="Нажмите, чтобы снять реакцию">
 
-                                                    <TextBlock Text="{Binding Reaction}" FontSize="13" VerticalAlignment="Center"/>
+                                        <Border.InputBindings>
 
-                                                    <TextBlock Text=" 1" FontSize="10" Foreground="{DynamicResource AccentBrush}" FontWeight="Bold" Margin="2,0,0,0" VerticalAlignment="Center"/>
+                                            <MouseBinding Gesture="LeftClick"
 
-                                                </StackPanel>
+                                                          Command="{Binding DataContext.ToggleReactionCommand, RelativeSource={RelativeSource AncestorType=Window}}"
 
-                                            </Border>
+                                                          CommandParameter="{Binding}"/>
+
+                                        </Border.InputBindings>
+
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+
+                                            <TextBlock Text="{Binding Reaction}" FontSize="14" VerticalAlignment="Center"/>
+
+                                            <TextBlock Text=" 1" FontSize="11" Foreground="{DynamicResource AccentBrush}" FontWeight="Bold" Margin="3,0,1,0" VerticalAlignment="Center"/>
 
                                         </StackPanel>
 
                                     </Border>
+
+                                </StackPanel>
 
                                 </Grid>
 

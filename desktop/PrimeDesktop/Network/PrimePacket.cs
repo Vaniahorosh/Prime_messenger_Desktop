@@ -283,13 +283,13 @@ public class PrimePacket
 
         string[] parts = raw.Split(":::");
 
-        string msgId = parts.Length > 0 ? parts[0] : "";
+        string msgId = parts.Length > 0 ? parts[0].Trim() : "";
 
-        string? reaction = parts.Length > 1 ? parts[1] : null;
+        string? reaction = parts.Length > 1 ? parts[1].Trim() : null;
 
-        if ("REMOVE".Equals(reaction, StringComparison.OrdinalIgnoreCase)) reaction = null;
+        if (string.IsNullOrWhiteSpace(reaction) || "REMOVE".Equals(reaction, StringComparison.OrdinalIgnoreCase)) reaction = null;
 
-        string author = parts.Length > 2 ? parts[2] : "";
+        string author = parts.Length > 2 ? parts[2].Trim() : "";
 
         return (msgId, reaction, author);
 

@@ -121,4 +121,40 @@ public partial class MainWindow : Window
             }
         }
     }
+
+    private void ReactionButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement fe)
+        {
+            Models.ChatMessage? msg = fe.Tag as Models.ChatMessage;
+            if (msg == null && fe is System.Windows.Controls.Button btnTag && btnTag.Tag is Models.ChatMessage mTag)
+            {
+                msg = mTag;
+            }
+            if (msg == null && DataContext is MainViewModel vmMsg)
+            {
+                msg = vmMsg.ContextMenuMessage;
+            }
+
+            if (msg != null && DataContext is MainViewModel vm)
+            {
+                vm.ContextMenuMessage = msg;
+                if (fe is System.Windows.Controls.Button btn && btn.CommandParameter is string emoji)
+                {
+                    _ = vm.SendReactionAsync(msg, emoji);
+                }
+            }
+
+            var cm = FindVisualParent<System.Windows.Controls.ContextMenu>(fe);
+            if (cm != null) cm.IsOpen = false;
+        }
+    }
+
+    private static T? FindVisualParent<T>(DependencyObject child) where T : DependencyObject
+    {
+        DependencyObject parentObject = System.Windows.Media.VisualTreeHelper.GetParent(child);
+        if (parentObject == null) return null;
+        if (parentObject is T parent) return parent;
+        return FindVisualParent<T>(parentObject);
+    }
 }

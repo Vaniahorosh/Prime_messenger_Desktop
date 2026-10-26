@@ -461,12 +461,19 @@ public class MainViewModel : ViewModelBase
         CopyMessageCommand = new RelayCommand(param =>
 
         {
-            if (param is ChatMessage msg && !string.IsNullOrEmpty(msg.Text))
+            if (param is ChatMessage msg)
 
             {
-                Clipboard.SetText(msg.Text);
+                string textToCopy = !string.IsNullOrEmpty(msg.Text) ? msg.Text :
+                                    !string.IsNullOrEmpty(msg.FileName) ? msg.FileName :
+                                    msg.FilePath ?? "";
 
-                StatusMessage = "Текст скопирован в буфер";
+                if (!string.IsNullOrEmpty(textToCopy))
+                {
+                    Clipboard.SetText(textToCopy);
+
+                    StatusMessage = "Скопировано в буфер обмена";
+                }
 
             }
 
@@ -1271,12 +1278,18 @@ public class MainViewModel : ViewModelBase
         try
 
         {
-            
-                await _bluetoothService.SendPacketAsync(SelectedChat.DeviceAddress, PacketType.Reaction, payload);
+            string targetAddr = !string.IsNullOrWhiteSpace(SelectedChat.DeviceAddress) ? SelectedChat.DeviceAddress : SelectedChat.PeerId;
+
+            await _bluetoothService.SendPacketAsync(targetAddr, PacketType.Reaction, payload);
+
+            App.Log($"[Reaction] Sent reaction '{emoji}' for msg '{message.Id}' to '{targetAddr}'");
 
         }
 
-        catch { }
+        catch (Exception ex)
+        {
+            App.Log($"[Reaction ERROR] Failed to send reaction: {ex.Message}");
+        }
 
         await _storageService.SaveChatsAsync(_allChats);
 
@@ -2160,7 +2173,19 @@ public async Task SendTextMessageAsync()
 
                     var (rxMsgId, rxEmoji, rxAuthor) = PrimePacket.ParseReactionPayload(payload);
 
+                    App.Log($"[Reaction] Received: msgId='{rxMsgId}', emoji='{rxEmoji}', author='{rxAuthor}'");
+
                     var targetMsg = chat.Messages.FirstOrDefault(m => m.Id == rxMsgId);
+
+                    if (targetMsg == null && !string.IsNullOrEmpty(rxMsgId))
+                    {
+                        targetMsg = chat.Messages.FirstOrDefault(m => m.Id.Contains(rxMsgId) || rxMsgId.Contains(m.Id));
+                    }
+
+                    if (targetMsg == null)
+                    {
+                        targetMsg = chat.Messages.LastOrDefault();
+                    }
 
                     if (targetMsg != null)
 
@@ -2168,6 +2193,8 @@ public async Task SendTextMessageAsync()
                         targetMsg.Reaction = rxEmoji;
 
                         targetMsg.ReactionAuthor = rxAuthor;
+
+                        App.Log($"[Reaction] Updated message '{targetMsg.Id}' with reaction '{rxEmoji}' by '{rxAuthor}'");
 
                     }
 
