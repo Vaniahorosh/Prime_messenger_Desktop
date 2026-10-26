@@ -1,0 +1,2224 @@
+<Window x:Class="PrimeDesktop.MainWindow"
+
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+
+        xmlns:vm="clr-namespace:PrimeDesktop.ViewModels"
+
+        xmlns:conv="clr-namespace:PrimeDesktop.Converters"
+
+        Title="Prime Desktop" Icon="Assets/prime.ico" Height="720" Width="1100"
+
+        MinHeight="550" MinWidth="850"
+
+        WindowStartupLocation="CenterScreen"
+
+        WindowStyle="None" AllowsTransparency="False"
+
+        Background="{StaticResource BackgroundBrush}">
+
+
+
+    <WindowChrome.WindowChrome>
+
+        <WindowChrome CaptionHeight="36" ResizeBorderThickness="6" GlassFrameThickness="0" CornerRadius="0"/>
+
+    </WindowChrome.WindowChrome>
+
+
+
+    <Window.DataContext>
+
+        <vm:MainViewModel/>
+
+    </Window.DataContext>
+
+
+
+    <Window.Resources>
+
+        <conv:BoolToVisibilityConverter x:Key="BoolToVis"/>
+
+        <conv:BoolToVisibilityConverter x:Key="InverseBoolToVis" Invert="True"/>
+
+        <conv:ConnectionStateColorConverter x:Key="StateColorConverter"/>
+
+        <conv:HexToBrushConverter x:Key="HexToBrush"/>
+
+        <conv:MessageAlignmentConverter x:Key="MsgAlignConverter"/>
+
+        <conv:MessageBubbleBrushConverter x:Key="MsgBubbleConverter"/>
+
+        <conv:NullToVisibilityConverter x:Key="NullToVis"/>
+
+        <conv:NotNullToVisibilityConverter x:Key="NotNullToVis"/>
+
+        <conv:EqualityToVisibilityConverter x:Key="EqualityToVis"/>
+
+    </Window.Resources>
+
+
+
+    <Grid>
+
+        <Grid.RowDefinitions>
+
+            <RowDefinition Height="36"/> <!-- Custom TitleBar -->
+
+            <RowDefinition Height="*"/>  <!-- Main Content -->
+
+        </Grid.RowDefinitions>
+
+
+
+        <!-- Custom Windows 11 TitleBar -->
+
+        <Grid Grid.Row="0" Background="{StaticResource HeaderBrush}" MouseLeftButtonDown="TitleBar_MouseDown">
+
+            <Grid.ColumnDefinitions>
+
+                <ColumnDefinition Width="Auto"/>
+
+                <ColumnDefinition Width="*"/>
+
+                <ColumnDefinition Width="Auto"/>
+
+            </Grid.ColumnDefinitions>
+
+
+
+            <!-- App Title & Official Prime Logo -->
+
+            <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="14,0,0,0">
+
+                <Image Source="Assets/prime_logo_app.png" Width="22" Height="22" Margin="0,0,8,0" RenderOptions.BitmapScalingMode="HighQuality"/>
+
+                <TextBlock Text="ПРАЙМ" Foreground="{StaticResource TextPrimaryBrush}" FontSize="13" FontWeight="Bold"/>
+
+            </StackPanel>
+
+
+
+            <!-- Window Control Buttons -->
+
+            <StackPanel Grid.Column="2" Orientation="Horizontal" WindowChrome.IsHitTestVisibleInChrome="True">
+
+                <Button Content="—" Style="{StaticResource ModernButton}" BorderThickness="0" Width="44" Height="36" Padding="0" Click="BtnMinimize_Click"/>
+
+                <Button Content="□" Style="{StaticResource ModernButton}" BorderThickness="0" Width="44" Height="36" Padding="0" Click="BtnMaximize_Click"/>
+
+                <Button Content="✕" Style="{StaticResource ModernButton}" BorderThickness="0" Width="44" Height="36" Padding="0" Click="BtnClose_Click"/>
+
+            </StackPanel>
+
+        </Grid>
+
+
+
+        <!-- 5-Column Main Layout Grid (with interactive GridSplitters) -->
+
+        <Grid Grid.Row="1" x:Name="MainContentGrid">
+
+            <Grid.ColumnDefinitions>
+
+                <ColumnDefinition Width="320" MinWidth="240" MaxWidth="500"/> <!-- Col 0: Sidebar -->
+
+                <ColumnDefinition Width="Auto"/>                               <!-- Col 1: Splitter 1 -->
+
+                <ColumnDefinition Width="*"/>                                  <!-- Col 2: Chat View -->
+
+                <ColumnDefinition Width="Auto"/>                               <!-- Col 3: Splitter 2 -->
+
+                <ColumnDefinition Width="Auto" MinWidth="0" MaxWidth="550"/>   <!-- Col 4: Profile & Info Drawer -->
+
+            </Grid.ColumnDefinitions>
+
+
+
+            <!-- Column 0: Left Sidebar -->
+
+            <Border Grid.Column="0" Background="{StaticResource SidebarBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,1,0">
+
+                <Grid>
+
+                    <Grid.RowDefinitions>
+
+                        <RowDefinition Height="Auto"/> <!-- User Header & Actions -->
+
+                        <RowDefinition Height="Auto"/> <!-- Search Box -->
+
+                        <RowDefinition Height="*"/>    <!-- Chats List -->
+
+                        <RowDefinition Height="Auto"/> <!-- Bottom Status Bar -->
+
+                    </Grid.RowDefinitions>
+
+
+
+                    <!-- User Header & Top Actions -->
+
+                    <DockPanel Grid.Row="0" Margin="14,14,14,10">
+
+                        <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
+
+                            <Button Style="{StaticResource ModernButton}" ToolTip="Поиск устройств Prime" Command="{Binding OpenDeviceDiscoveryCommand}" Margin="0,0,4,0" Width="34" Height="34" Padding="0">
+
+                                <Path Data="{StaticResource IconRefresh}" Fill="{StaticResource TextSecondaryBrush}" Width="15" Height="15" Stretch="Uniform"/>
+
+                            </Button>
+
+                            <Button Style="{StaticResource ModernButton}" ToolTip="Связка с телефоном по Wi-Fi" Command="{Binding ConnectCompanionWifiCommand}" Margin="0,0,4,0" Width="34" Height="34" Padding="0">
+
+                                <Path Data="{StaticResource IconDesktop}" Fill="{StaticResource TextSecondaryBrush}" Width="15" Height="15" Stretch="Uniform"/>
+
+                            </Button>
+
+                            <Button Style="{StaticResource ModernButton}" ToolTip="Настройки" Command="{Binding ToggleSettingsCommand}" Width="34" Height="34" Padding="0">
+
+                                <Path Data="{StaticResource IconSettings}" Fill="{StaticResource TextSecondaryBrush}" Width="16" Height="16" Stretch="Uniform"/>
+
+                            </Button>
+
+                        </StackPanel>
+
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+
+                            <Border Width="36" Height="36" CornerRadius="18" Background="{StaticResource CardBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
+
+                                <Image Source="Assets/prime_logo_app.png" Width="26" Height="26" RenderOptions.BitmapScalingMode="HighQuality"/>
+
+                            </Border>
+
+                            <StackPanel Margin="10,0,0,0" VerticalAlignment="Center">
+
+                                <TextBlock Text="{Binding Settings.MyDisplayName}" Foreground="{StaticResource TextPrimaryBrush}" FontWeight="SemiBold" FontSize="13"/>
+
+                                <TextBlock Text="ПК клиент" Foreground="{DynamicResource AccentBrush}" FontSize="10"/>
+
+                            </StackPanel>
+
+                        </StackPanel>
+
+                    </DockPanel>
+
+
+
+                    <!-- Search Box -->
+
+                    <Grid Grid.Row="1" Margin="14,0,14,10">
+
+                        <TextBox Style="{StaticResource ModernTextBox}" Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}" Padding="32,8,10,8"/>
+
+                        <Path Data="{StaticResource IconSearch}" Fill="{StaticResource TextSecondaryBrush}" Width="14" Height="14" Stretch="Uniform" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="10,0,0,0" IsHitTestVisible="False"/>
+
+                    </Grid>
+
+
+
+                    <!-- Chats List -->
+
+                    <ListBox Grid.Row="2" ItemsSource="{Binding FilteredChats}" SelectedItem="{Binding SelectedChat}"
+
+                             Background="Transparent" BorderThickness="0" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+
+                        <ListBox.ItemTemplate>
+
+                            <DataTemplate>
+
+                                <Border Padding="10,8" Margin="6,2" CornerRadius="8" Background="Transparent">
+
+                                    <Border.ContextMenu>
+
+                                        <ContextMenu Background="{StaticResource CardBrush}" BorderBrush="{StaticResource BorderBrush}">
+
+                                            <MenuItem Header="🗑️ Удалить этот чат"
+
+                                                      Command="{Binding DataContext.DeleteChatCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+
+                                                      CommandParameter="{Binding}" Foreground="#FF6B6B" FontWeight="SemiBold"/>
+
+                                        </ContextMenu>
+
+                                    </Border.ContextMenu>
+
+                                    <Grid>
+
+                                        <Grid.ColumnDefinitions>
+
+                                            <ColumnDefinition Width="Auto"/>
+
+                                            <ColumnDefinition Width="*"/>
+
+                                            <ColumnDefinition Width="Auto"/>
+
+                                        </Grid.ColumnDefinitions>
+
+
+
+                                        <!-- Avatar with State Dot -->
+
+                                        <Grid Grid.Column="0" Margin="0,0,10,0">
+
+                                            <Border Width="42" Height="42" CornerRadius="{Binding DataContext.AvatarCornerRadius, RelativeSource={RelativeSource AncestorType=Window}}" Background="{StaticResource CardBrush}">
+
+                                                <Grid>
+
+                                                    <TextBlock Text="{Binding Initials}" Foreground="{StaticResource TextPrimaryBrush}" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"
+
+                                                               Visibility="{Binding HasAvatar, Converter={StaticResource InverseBoolToVis}}"/>
+
+                                                    <Border CornerRadius="{Binding DataContext.AvatarCornerRadius, RelativeSource={RelativeSource AncestorType=Window}}" Visibility="{Binding HasAvatar, Converter={StaticResource BoolToVis}}">
+
+                                                        <Border.Background>
+
+                                                            <ImageBrush ImageSource="{Binding AvatarPath}" Stretch="UniformToFill"/>
+
+                                                        </Border.Background>
+
+                                                    </Border>
+
+                                                </Grid>
+
+                                            </Border>
+
+                                            <Ellipse Width="10" Height="10" HorizontalAlignment="Right" VerticalAlignment="Bottom"
+
+                                                     Fill="{Binding StatusColorHex, Converter={StaticResource HexToBrush}}"
+                                                     Visibility="{Binding IsOnlineIndicatorVisible, Converter={StaticResource BoolToVis}}"/>
+
+                                        </Grid>
+
+
+
+                                        <!-- Name & Last Message -->
+
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+
+                                            <TextBlock Text="{Binding DisplayName}" Foreground="{StaticResource TextPrimaryBrush}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+
+                                            <TextBlock Text="{Binding LastMessage}" Foreground="{StaticResource TextSecondaryBrush}" FontSize="12" Margin="0,2,0,0" TextTrimming="CharacterEllipsis"/>
+
+                                        </StackPanel>
+
+
+
+                                        <!-- Time & Unread Badge -->
+
+                                        <StackPanel Grid.Column="2" HorizontalAlignment="Right" VerticalAlignment="Center">
+
+                                            <TextBlock Text="{Binding LastMessageTime}" Foreground="{StaticResource TextMutedBrush}" FontSize="11"/>
+
+                                            <Border Background="{StaticResource BadgeBrush}" CornerRadius="10" MinWidth="18" Height="18" Margin="0,4,0,0"
+
+                                                    Visibility="{Binding UnreadCount, Converter={StaticResource BoolToVis}}">
+
+                                                <TextBlock Text="{Binding UnreadCount}" Foreground="White" FontSize="10" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="4,0"/>
+
+                                            </Border>
+
+                                        </StackPanel>
+
+                                    </Grid>
+
+                                </Border>
+
+                            </DataTemplate>
+
+                        </ListBox.ItemTemplate>
+
+                    </ListBox>
+
+
+
+                    <!-- Status Bar -->
+
+                    <Border Grid.Row="3" Background="{StaticResource HeaderBrush}" Padding="12,6" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,1,0,0">
+
+                        <TextBlock Text="{Binding StatusMessage}" Foreground="{StaticResource TextSecondaryBrush}" FontSize="11" TextTrimming="CharacterEllipsis"/>
+
+                    </Border>
+
+                </Grid>
+
+            </Border>
+
+            <!-- Column 1: GridSplitter 1 -->
+
+            <GridSplitter Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Stretch"
+
+                          ResizeBehavior="PreviousAndNext" Width="5" Cursor="SizeWE"
+
+                          Background="{StaticResource BorderBrush}" Opacity="0.5"/>
+
+
+
+            <!-- Column 2: Chat View -->
+
+            <Grid Grid.Column="2" Background="{StaticResource BackgroundBrush}">
+
+                <!-- Active Chat Content -->
+
+                <Grid Visibility="{Binding HasSelectedChat, Converter={StaticResource BoolToVis}}">
+
+                <Grid.RowDefinitions>
+
+                    <RowDefinition Height="60"/> <!-- Chat Header -->
+
+                    <RowDefinition Height="*"/>  <!-- Messages Scroll Area -->
+
+                    <RowDefinition Height="Auto"/> <!-- Reply Bar & Input Area (Step 4) -->
+
+                </Grid.RowDefinitions>
+
+
+
+                <!-- Chat Header -->
+
+                <Border Grid.Row="0" Background="{StaticResource HeaderBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1" Padding="16,0">
+
+                    <DockPanel VerticalAlignment="Center">
+
+                        <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
+
+                            <Button Content="Подключить" Style="{StaticResource ModernButton}" Command="{Binding ConnectChatCommand}" Margin="0,0,6,0" FontSize="12"/>
+
+                            <Button Content="Отключить" Style="{StaticResource ModernButton}" Command="{Binding DisconnectChatCommand}" Margin="0,0,6,0" FontSize="12"/>
+
+                            <Button Content="ℹ" Style="{StaticResource ModernButton}" Command="{Binding ToggleMediaDrawerCommand}" ToolTip="Профиль и медиа" Width="36" Height="34" Padding="0"/>
+
+                        </StackPanel>
+
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+
+                            <Border Width="38" Height="38" CornerRadius="{Binding HeaderAvatarCornerRadius}" Background="{StaticResource CardBrush}" Margin="0,0,12,0">
+
+                                <Grid>
+
+                                    <TextBlock Text="{Binding SelectedChat.Initials}" Foreground="{StaticResource TextPrimaryBrush}" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"
+
+                                               Visibility="{Binding SelectedChat.HasAvatar, Converter={StaticResource InverseBoolToVis}}"/>
+
+                                    <Border CornerRadius="{Binding HeaderAvatarCornerRadius}" Visibility="{Binding SelectedChat.HasAvatar, Converter={StaticResource BoolToVis}}">
+
+                                        <Border.Background>
+
+                                            <ImageBrush ImageSource="{Binding SelectedChat.AvatarPath}" Stretch="UniformToFill"/>
+
+                                        </Border.Background>
+
+                                    </Border>
+
+                                </Grid>
+
+                            </Border>
+
+                            <StackPanel VerticalAlignment="Center">
+
+                                <TextBlock Text="{Binding SelectedChat.DisplayName}" Foreground="{StaticResource TextPrimaryBrush}" FontWeight="Bold" FontSize="14"/>
+
+                                <StackPanel Orientation="Horizontal" Margin="0,2,0,0" VerticalAlignment="Center">
+
+                                    <Ellipse Width="7" Height="7" Margin="0,0,5,0" VerticalAlignment="Center"
+                                             Fill="{Binding SelectedChat.StatusColorHex, Converter={StaticResource HexToBrush}}"
+                                             Visibility="{Binding SelectedChat.IsOnlineIndicatorVisible, Converter={StaticResource BoolToVis}}"/>
+
+                                    <TextBlock Text="{Binding SelectedChat.StatusText}"
+                                               Foreground="{Binding SelectedChat.StatusColorHex, Converter={StaticResource HexToBrush}}"
+                                               FontSize="11" FontWeight="SemiBold"/>
+
+                                </StackPanel>
+
+                            </StackPanel>
+
+                        </StackPanel>
+
+                    </DockPanel>
+
+                </Border>
+
+
+
+                <!-- Wallpaper Background Layer -->
+
+                <Image Grid.Row="1" Source="{Binding Settings.ChatWallpaperPath}" Stretch="UniformToFill"
+
+                       Opacity="{Binding Settings.WallpaperOpacity}"
+
+                       Visibility="{Binding Settings.HasWallpaper, Converter={StaticResource BoolToVis}}"
+
+                       IsHitTestVisible="False"/>
+
+
+
+                <!-- Messages Scroll Area -->
+
+                <ScrollViewer Grid.Row="1" x:Name="MessagesScrollViewer" VerticalScrollBarVisibility="Auto" Padding="16">
+
+                    <ItemsControl ItemsSource="{Binding SelectedChat.Messages}">
+
+                        <ItemsControl.ItemTemplate>
+
+                            <DataTemplate>
+
+                                <Grid Margin="0,4" HorizontalAlignment="{Binding IsFromMe, Converter={StaticResource MsgAlignConverter}}">
+
+                                    <Grid.RenderTransform>
+
+                                        <TranslateTransform Y="0"/>
+
+                                    </Grid.RenderTransform>
+
+                                    <Grid.Style>
+
+                                        <Style TargetType="Grid">
+
+                                            <Style.Triggers>
+
+                                                <EventTrigger RoutedEvent="Loaded">
+
+                                                    <BeginStoryboard>
+
+                                                        <Storyboard>
+
+                                                            <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0.0" To="1.0" Duration="0:0:0.22">
+
+                                                                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+
+                                                            </DoubleAnimation>
+
+                                                            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)" From="12" To="0" Duration="0:0:0.22">
+
+                                                                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+
+                                                            </DoubleAnimation>
+
+                                                        </Storyboard>
+
+                                                    </BeginStoryboard>
+
+                                                </EventTrigger>
+
+                                            </Style.Triggers>
+
+                                        </Style>
+
+                                    </Grid.Style>
+
+                                    <Border Background="{Binding IsFromMe, Converter={StaticResource MsgBubbleConverter}}"
+
+                                            CornerRadius="14" Padding="12,8" MaxWidth="520"
+
+                                            ContextMenuOpening="MessageBorder_ContextMenuOpening">
+
+                                        <Border.InputBindings>
+
+                                            <MouseBinding Gesture="LeftDoubleClick"
+
+                                                          Command="{Binding DataContext.QuickReactionCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+
+                                                          CommandParameter="{Binding}"/>
+
+                                        </Border.InputBindings>
+
+                                        <Border.ContextMenu>
+
+                                            <ContextMenu Background="#1A2433" BorderBrush="#2D3D52" BorderThickness="1" HasDropShadow="True">
+
+                                                <ContextMenu.Resources>
+
+                                                    <Style TargetType="MenuItem">
+
+                                                        <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+
+                                                        <Setter Property="FontSize" Value="12"/>
+
+                                                        <Setter Property="Padding" Value="8,5"/>
+
+                                                        <Setter Property="Cursor" Value="Hand"/>
+
+                                                    </Style>
+
+                                                </ContextMenu.Resources>
+
+                                                <!-- Reaction Island (Top row of 6 emojis matching Android layout_message_context_menu.xml) -->
+
+                                                <Border Background="#121924" CornerRadius="8" Padding="4,3" Margin="4,2,4,6">
+
+                                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+
+                                                        <Button Content="👍" Style="{StaticResource ModernButton}" Width="28" Height="28" Padding="0" Margin="1" FontSize="14"
+
+                                                                Command="{Binding DataContext.SetReactionCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="👍"/>
+
+                                                        <Button Content="❤️" Style="{StaticResource ModernButton}" Width="28" Height="28" Padding="0" Margin="1" FontSize="14"
+
+                                                                Command="{Binding DataContext.SetReactionCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="❤️"/>
+
+                                                        <Button Content="😂" Style="{StaticResource ModernButton}" Width="28" Height="28" Padding="0" Margin="1" FontSize="14"
+
+                                                                Command="{Binding DataContext.SetReactionCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="😂"/>
+
+                                                        <Button Content="😮" Style="{StaticResource ModernButton}" Width="28" Height="28" Padding="0" Margin="1" FontSize="14"
+
+                                                                Command="{Binding DataContext.SetReactionCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="😮"/>
+
+                                                        <Button Content="😢" Style="{StaticResource ModernButton}" Width="28" Height="28" Padding="0" Margin="1" FontSize="14"
+
+                                                                Command="{Binding DataContext.SetReactionCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="😢"/>
+
+                                                        <Button Content="🙏" Style="{StaticResource ModernButton}" Width="28" Height="28" Padding="0" Margin="1" FontSize="14"
+
+                                                                Command="{Binding DataContext.SetReactionCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="🙏"/>
+
+                                                    </StackPanel>
+
+                                                </Border>
+
+                                                <!-- Actions -->
+
+                                                <MenuItem Header="↩️ Ответить" Command="{Binding DataContext.ReplyToMessageCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"/>
+
+                                                <MenuItem Header="📋 Копировать" Command="{Binding DataContext.CopyMessageCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"/>
+
+                                                <MenuItem Header="↗️ Переслать" Command="{Binding DataContext.ForwardMessageCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"/>
+
+                                                <MenuItem Header="✏️ Редактировать" Command="{Binding DataContext.EditMessageCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"
+
+                                                          Visibility="{Binding IsFromMe, Converter={StaticResource BoolToVis}}"/>
+
+                                                <MenuItem Header="🎨 Редактировать фото" Command="{Binding DataContext.OpenPhotoEditorCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding FilePath}"
+
+                                                          Visibility="{Binding IsPhoto, Converter={StaticResource BoolToVis}}"/>
+
+                                                <Separator Background="#2D3D52" Margin="4,2"/>
+
+                                                <MenuItem Header="🗑️ Удалить" Command="{Binding DataContext.DeleteMessageCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"
+
+                                                          Foreground="#EF4444" FontWeight="SemiBold"/>
+
+                                            </ContextMenu>
+
+                                        </Border.ContextMenu>
+
+                                        <StackPanel>
+
+                                            <!-- Quoted Reply Banner -->
+
+                                            <Border Background="#20FFFFFF" CornerRadius="6" Padding="8,4" Margin="0,0,0,6"
+
+                                                    Visibility="{Binding HasReply, Converter={StaticResource BoolToVis}}">
+
+                                                <StackPanel>
+
+                                                    <TextBlock Text="{Binding ReplyToSender}" Foreground="{DynamicResource AccentBrush}" FontSize="11" FontWeight="SemiBold"/>
+
+                                                    <TextBlock Text="{Binding ReplyToText}" Foreground="{StaticResource TextSecondaryBrush}" FontSize="11" TextTrimming="CharacterEllipsis"/>
+
+                                                </StackPanel>
+
+                                            </Border>
+
+
+
+                                            <!-- File Attachment Banner -->
+
+                                            <Border Background="#20000000" CornerRadius="6" Padding="8,4" Margin="0,0,0,6"
+
+                                                    Visibility="{Binding HasAttachment, Converter={StaticResource BoolToVis}}">
+
+                                                <TextBlock Text="{Binding FileName}" Foreground="{DynamicResource AccentBrush}" FontSize="12" FontWeight="SemiBold"/>
+
+                                            </Border>
+
+
+
+                                            <!-- Voice Message Player Banner -->
+
+                                            <Border Background="#25000000" CornerRadius="8" Padding="10,6" Margin="0,0,0,6"
+
+                                                    Visibility="{Binding IsVoice, Converter={StaticResource BoolToVis}}">
+
+                                                <Grid>
+
+                                                    <Grid.ColumnDefinitions>
+
+                                                        <ColumnDefinition Width="Auto"/>
+
+                                                        <ColumnDefinition Width="*"/>
+
+                                                        <ColumnDefinition Width="Auto"/>
+
+                                                    </Grid.ColumnDefinitions>
+
+                                                    <Button Grid.Column="0" Command="{Binding DataContext.PlayVoiceMessageCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+
+                                                            CommandParameter="{Binding}"
+
+                                                            Style="{StaticResource ModernButton}" Width="32" Height="32" Padding="0" Margin="0,0,8,0">
+
+                                                        <Grid>
+
+                                                            <Path Data="{StaticResource IconPlay}" Fill="{DynamicResource AccentBrush}" Width="13" Height="13" Stretch="Uniform"
+
+                                                                  Visibility="{Binding IsPlaying, Converter={StaticResource InverseBoolToVis}}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+
+                                                            <Path Data="{StaticResource IconPause}" Fill="{DynamicResource AccentBrush}" Width="13" Height="13" Stretch="Uniform"
+
+                                                                  Visibility="{Binding IsPlaying, Converter={StaticResource BoolToVis}}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+
+                                                        </Grid>
+
+                                                    </Button>
+
+                                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+
+                                                        <TextBlock Text="Голосовое сообщение" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}"/>
+
+                                                        <ProgressBar Height="4" IsIndeterminate="{Binding IsPlaying}" Background="#30FFFFFF" Foreground="{DynamicResource AccentBrush}" Margin="0,4,0,0" BorderThickness="0"/>
+
+                                                    </StackPanel>
+
+                                                    <TextBlock Grid.Column="2" Text="{Binding Duration}" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center" Margin="8,0,0,0"/>
+
+                                                </Grid>
+
+                                            </Border>
+
+
+
+                                            <!-- Photo Attachment Preview -->
+
+                                            <Border CornerRadius="8" Margin="0,0,0,6" MaxHeight="280" ClipToBounds="True" Cursor="Hand"
+
+                                                    Visibility="{Binding IsPhoto, Converter={StaticResource BoolToVis}}">
+
+                                                <Border.InputBindings>
+
+                                                    <MouseBinding Gesture="LeftClick"
+
+                                                                  Command="{Binding DataContext.OpenPhotoViewerCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+
+                                                                  CommandParameter="{Binding FilePath}"/>
+
+                                                </Border.InputBindings>
+
+                                                <Image Source="{Binding FilePath}" Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality"/>
+
+                                            </Border>
+
+
+
+                                            <!-- Message Text -->
+
+                                            <TextBlock Text="{Binding Text}" Foreground="{StaticResource TextPrimaryBrush}" FontSize="13" TextWrapping="Wrap"/>
+
+
+
+                                            <!-- Video Note Circle Playback (Param 11) -->
+
+                                            <Border Width="190" Height="190" CornerRadius="95" Margin="0,0,0,6" ClipToBounds="True"
+
+                                                    Background="#0F151F" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="2"
+
+                                                    Visibility="{Binding IsVideoNote, Converter={StaticResource BoolToVis}}">
+
+                                                <Grid>
+
+                                                    <MediaElement Source="{Binding FilePath}" LoadedBehavior="Play" UnloadedBehavior="Stop" Stretch="UniformToFill" IsMuted="False"/>
+
+                                                    <Border Background="#90000000" CornerRadius="8" Padding="6,2" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,8">
+
+                                                        <TextBlock Text="{Binding Duration, TargetNullValue='0:15'}" Foreground="White" FontSize="10" FontWeight="Bold"/>
+
+                                                    </Border>
+
+                                                </Grid>
+
+                                            </Border>
+
+
+
+                                            <!-- Time & Delivery Status Ticks -->
+
+                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,4,0,0">
+
+                                                <TextBlock Text="{Binding FormattedTime}" Foreground="{StaticResource TextMutedBrush}" FontSize="10" VerticalAlignment="Center"/>
+
+                                                <TextBlock Text="{Binding StatusTick}" Foreground="{DynamicResource AccentBrush}" FontSize="11" Margin="4,0,0,0" FontWeight="Bold" VerticalAlignment="Center"/>
+
+                                            </StackPanel>
+
+
+
+                                            <!-- Reaction Badge Pill (Param 6) -->
+
+                                            <Border HorizontalAlignment="Right" Margin="0,-6,0,0"
+
+                                                    Background="#E61A2433" BorderBrush="{DynamicResource AccentBorderBrush}" BorderThickness="1"
+
+                                                    CornerRadius="10" Padding="5,1" Cursor="Hand"
+
+                                                    Visibility="{Binding HasReaction, Converter={StaticResource BoolToVis}}"
+
+                                                    ToolTip="Нажмите, чтобы переключить или снять реакцию">
+
+                                                <Border.InputBindings>
+
+                                                    <MouseBinding Gesture="LeftClick"
+
+                                                                  Command="{Binding DataContext.ToggleReactionCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+
+                                                                  CommandParameter="{Binding}"/>
+
+                                                </Border.InputBindings>
+
+                                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+
+                                                    <TextBlock Text="{Binding Reaction}" FontSize="13" VerticalAlignment="Center"/>
+
+                                                    <TextBlock Text=" 1" FontSize="10" Foreground="{DynamicResource AccentBrush}" FontWeight="Bold" Margin="2,0,0,0" VerticalAlignment="Center"/>
+
+                                                </StackPanel>
+
+                                            </Border>
+
+                                        </StackPanel>
+
+                                    </Border>
+
+                                </Grid>
+
+                            </DataTemplate>
+
+                        </ItemsControl.ItemTemplate>
+
+                    </ItemsControl>
+
+                </ScrollViewer>
+
+                <!-- Row 2: Reply Bar & Message Input Area -->
+
+                <Border Grid.Row="2" Background="{StaticResource HeaderBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,1,0,0" Padding="14,10">
+
+                    <StackPanel>
+
+                        <!-- Active Edit Banner -->
+
+                        <Border Background="{StaticResource CardBrush}" CornerRadius="8" Padding="10,6" Margin="0,0,0,8"
+
+                                Visibility="{Binding IsEditingMessage, Converter={StaticResource BoolToVis}}">
+
+                            <DockPanel>
+
+                                <Button Content="✕" Style="{StaticResource ModernButton}" Command="{Binding CancelEditCommand}" DockPanel.Dock="Right" Width="24" Height="24" Padding="0"/>
+
+                                <StackPanel>
+
+                                    <TextBlock Text="Редактирование сообщения:" Foreground="{DynamicResource AccentBrush}" FontSize="11" FontWeight="SemiBold"/>
+
+                                    <TextBlock Text="{Binding EditingMessage.Text}" Foreground="{StaticResource TextSecondaryBrush}" FontSize="12" TextTrimming="CharacterEllipsis"/>
+
+                                </StackPanel>
+
+                            </DockPanel>
+
+                        </Border>
+
+
+
+                        <!-- Active Reply Banner -->
+
+                        <Border Background="{StaticResource CardBrush}" CornerRadius="8" Padding="10,6" Margin="0,0,0,8"
+
+                                Visibility="{Binding HasReply, Converter={StaticResource BoolToVis}}">
+
+                            <DockPanel>
+
+                                <Button Content="✕" Style="{StaticResource ModernButton}" Command="{Binding CancelReplyCommand}" DockPanel.Dock="Right" Width="24" Height="24" Padding="0"/>
+
+                                <StackPanel>
+
+                                    <TextBlock Text="Ответ на сообщение:" Foreground="{DynamicResource AccentBrush}" FontSize="11" FontWeight="SemiBold"/>
+
+                                    <TextBlock Text="{Binding ReplyMessage.Text}" Foreground="{StaticResource TextSecondaryBrush}" FontSize="12" TextTrimming="CharacterEllipsis"/>
+
+                                </StackPanel>
+
+                            </DockPanel>
+
+                        </Border>
+
+
+
+                        <!-- Input Controls Row -->
+
+                        <Grid>
+
+                            <Grid.ColumnDefinitions>
+
+                                <ColumnDefinition Width="Auto"/> <!-- Attachments -->
+
+                                <ColumnDefinition Width="*"/>    <!-- Text Box -->
+
+                                <ColumnDefinition Width="Auto"/> <!-- Send Button -->
+
+                            </Grid.ColumnDefinitions>
+
+
+
+                            <!-- Attachment Buttons -->
+
+                            <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="0,0,8,0">
+
+                                <Button Style="{StaticResource ModernButton}" ToolTip="Отправить фото" Command="{Binding AttachPhotoCommand}" Width="34" Height="36" Padding="0" Margin="0,0,3,0">
+
+                                    <Path Data="{StaticResource IconPhoto}" Fill="{StaticResource TextSecondaryBrush}" Width="15" Height="15" Stretch="Uniform"/>
+
+                                </Button>
+
+                                <Button Style="{StaticResource ModernButton}" ToolTip="Фоторедактор" Command="{Binding OpenPhotoEditorCommand}" Width="34" Height="36" Padding="0" Margin="0,0,3,0">
+
+                                    <Path Data="{StaticResource IconBrush}" Fill="{DynamicResource AccentBrush}" Width="15" Height="15" Stretch="Uniform"/>
+
+                                </Button>
+
+                                <Button Style="{StaticResource ModernButton}" ToolTip="Отправить файл" Command="{Binding AttachFileCommand}" Width="34" Height="36" Padding="0">
+
+                                    <Path Data="{StaticResource IconFile}" Fill="{StaticResource TextSecondaryBrush}" Width="15" Height="15" Stretch="Uniform"/>
+
+                                </Button>
+
+                            </StackPanel>
+
+
+
+                            <!-- Message Text Input -->
+
+                            <TextBox Grid.Column="1" x:Name="MsgInputTextBox" Style="{StaticResource ModernTextBox}"
+
+                                     Text="{Binding InputMessageText, UpdateSourceTrigger=PropertyChanged}"
+
+                                     PreviewKeyDown="MsgInputTextBox_PreviewKeyDown"
+
+                                     VerticalAlignment="Center" MinHeight="36" MaxHeight="100" TextWrapping="Wrap"/>
+
+
+
+                            <!-- Actions: Voice & Send -->
+
+                            <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="8,0,0,0">
+
+                                <Button Style="{StaticResource ModernButton}" ToolTip="Записать голосовое сообщение"
+
+                                        Command="{Binding ToggleVoiceRecordCommand}" Width="36" Height="36" Padding="0" Margin="0,0,6,0">
+
+                                    <Grid>
+
+                                        <Path Data="{StaticResource IconMic}" Fill="{StaticResource TextSecondaryBrush}" Width="15" Height="15" Stretch="Uniform"
+
+                                              Visibility="{Binding IsRecordingVoice, Converter={StaticResource InverseBoolToVis}}"
+
+                                              HorizontalAlignment="Center" VerticalAlignment="Center"/>
+
+                                        <Path Data="{StaticResource IconStop}" Fill="#FF5252" Width="14" Height="14" Stretch="Uniform"
+
+                                              Visibility="{Binding IsRecordingVoice, Converter={StaticResource BoolToVis}}"
+
+                                              HorizontalAlignment="Center" VerticalAlignment="Center"/>
+
+                                    </Grid>
+
+                                </Button>
+
+                                <Button Style="{StaticResource AccentButton}" ToolTip="Отправить (Enter)"
+
+                                        Command="{Binding SendMessageCommand}" Width="40" Height="36" Padding="0">
+
+                                    <Path Data="{StaticResource IconSend}" Fill="White" Width="16" Height="16" Stretch="Uniform"/>
+
+                                </Button>
+
+                            </StackPanel>
+
+                        </Grid>
+
+                    </StackPanel>
+
+                </Border>
+
+                </Grid>
+
+
+
+                <!-- Empty Chat Placeholder (when no chat is selected) -->
+
+                <Grid Visibility="{Binding HasSelectedChat, Converter={StaticResource InverseBoolToVis}}"
+
+                      Background="{StaticResource BackgroundBrush}">
+
+                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+
+                        <Border Width="90" Height="90" CornerRadius="45" Background="{StaticResource CardBrush}"
+
+                                BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
+
+                                Margin="0,0,0,18" HorizontalAlignment="Center">
+
+                            <Image Source="Assets/prime_logo_app.png" Width="54" Height="54" Opacity="0.8"
+
+                                   RenderOptions.BitmapScalingMode="HighQuality"/>
+
+                        </Border>
+
+                        <TextBlock Text="Выберите чат, с которым вы хотите общаться"
+
+                                   Foreground="{StaticResource TextSecondaryBrush}"
+
+                                   FontSize="16" FontWeight="SemiBold"
+
+                                   HorizontalAlignment="Center" Margin="0,0,0,8"/>
+
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+
+                            <Path Data="{StaticResource IconLock}" Fill="{DynamicResource AccentBrush}"
+
+                                  Width="12" Height="12" Stretch="Uniform" Margin="0,0,6,0" VerticalAlignment="Center"/>
+
+                            <TextBlock Text="Сквозное локальное шифрование сообщений"
+
+                                       Foreground="{StaticResource TextMutedBrush}" FontSize="12"/>
+
+                        </StackPanel>
+
+                    </StackPanel>
+
+                </Grid>
+
+            </Grid>
+
+
+
+            <!-- Column 3: GridSplitter 2 -->
+
+            <GridSplitter Grid.Column="3" HorizontalAlignment="Center" VerticalAlignment="Stretch"
+
+                          ResizeBehavior="PreviousAndNext" Width="5" Cursor="SizeWE"
+
+                          Background="{StaticResource BorderBrush}" Opacity="0.5"/>
+
+
+
+            <!-- Column 4: Profile & Info Drawer (PersonInformationActivity.kt layout) -->
+
+            <Border Grid.Column="4" Width="330" Background="{StaticResource SidebarBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1,0,0,0"
+
+                    Visibility="{Binding IsMediaDrawerOpen, Converter={StaticResource BoolToVis}}">
+
+                <Border.RenderTransform>
+
+                    <TranslateTransform X="0"/>
+
+                </Border.RenderTransform>
+
+                <Border.Style>
+
+                    <Style TargetType="Border">
+
+                        <Style.Triggers>
+
+                            <EventTrigger RoutedEvent="Loaded">
+
+                                <BeginStoryboard>
+
+                                    <Storyboard>
+
+                                        <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0.3" To="1.0" Duration="0:0:0.22">
+
+                                            <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+
+                                        </DoubleAnimation>
+
+                                        <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.X)"
+
+                                                         From="160" To="0" Duration="0:0:0.22">
+
+                                            <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+
+                                        </DoubleAnimation>
+
+                                    </Storyboard>
+
+                                </BeginStoryboard>
+
+                            </EventTrigger>
+
+                        </Style.Triggers>
+
+                    </Style>
+
+                </Border.Style>
+
+
+
+                <Grid>
+
+                    <Grid.RowDefinitions>
+
+                        <RowDefinition Height="Auto"/> <!-- Top Bar -->
+
+                        <RowDefinition Height="*"/>    <!-- Scrollable Profile Content -->
+
+                    </Grid.RowDefinitions>
+
+
+
+                    <!-- Top Bar -->
+
+                    <Border Grid.Row="0" Background="{StaticResource HeaderBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1" Padding="14,10">
+
+                        <DockPanel VerticalAlignment="Center">
+
+                            <Button Content="✕" Style="{StaticResource ModernButton}" Command="{Binding ToggleMediaDrawerCommand}" DockPanel.Dock="Right" Width="28" Height="28" Padding="0"/>
+
+                            <TextBlock Text="Информация о контакте" Foreground="{StaticResource TextPrimaryBrush}" FontWeight="Bold" FontSize="14" VerticalAlignment="Center"/>
+
+                        </DockPanel>
+
+                    </Border>
+
+
+
+                    <!-- Scrollable Content -->
+
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="14">
+
+                        <StackPanel>
+
+                            <!-- 7.1. Header Card with Large Photo and Gradient Overlay -->
+
+                            <Border Height="230" CornerRadius="16" ClipToBounds="True" Background="{StaticResource CardBrush}" Margin="0,0,0,14" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
+
+                                <Grid>
+
+                                    <!-- Fallback Initials Display -->
+
+                                    <Grid Background="{DynamicResource AccentBrush}" Visibility="{Binding SelectedChat.HasAvatar, Converter={StaticResource InverseBoolToVis}}">
+
+                                        <TextBlock Text="{Binding SelectedChat.Initials}" Foreground="White" FontSize="56" FontWeight="Bold"
+
+                                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+
+                                    </Grid>
+
+
+
+                                    <!-- Actual Avatar Photo -->
+
+                                    <Image Source="{Binding SelectedChat.AvatarPath}" Stretch="UniformToFill"
+
+                                           RenderOptions.BitmapScalingMode="HighQuality"
+
+                                           Visibility="{Binding SelectedChat.HasAvatar, Converter={StaticResource BoolToVis}}"/>
+
+
+
+                                    <!-- Top-right Avatar Counter Pill (1/1) -->
+
+                                    <Border HorizontalAlignment="Right" VerticalAlignment="Top" Margin="10"
+
+                                            Background="#99000000" CornerRadius="10" Padding="8,3">
+
+                                        <TextBlock Text="1/1" Foreground="White" FontSize="11" FontWeight="SemiBold"/>
+
+                                    </Border>
+
+
+
+                                    <!-- Bottom Gradient Overlay -->
+
+                                    <Border VerticalAlignment="Bottom" Height="110">
+
+                                        <Border.Background>
+
+                                            <LinearGradientBrush StartPoint="0.5,0" EndPoint="0.5,1">
+
+                                                <GradientStop Color="#000B1017" Offset="0.0"/>
+
+                                                <GradientStop Color="#CC0B1017" Offset="0.5"/>
+
+                                                <GradientStop Color="#FA0B1017" Offset="1.0"/>
+
+                                            </LinearGradientBrush>
+
+                                        </Border.Background>
+
+                                        <StackPanel VerticalAlignment="Bottom" Margin="14,0,14,12">
+
+                                            <TextBlock Text="{Binding SelectedChat.DisplayName}" Foreground="White" FontSize="18" FontWeight="Bold" TextTrimming="CharacterEllipsis"/>
+
+                                            <TextBlock Text="{Binding SelectedChat.Username, StringFormat='@{0}'}" Foreground="{StaticResource TextSecondaryBrush}" FontSize="12" Margin="0,2,0,4"/>
+
+                                            <StackPanel Orientation="Horizontal">
+
+                                                 <Ellipse Width="8" Height="8" Fill="{Binding SelectedChat.StatusColorHex, Converter={StaticResource HexToBrush}}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+
+                                                 <TextBlock Text="{Binding SelectedChat.StatusText}" Foreground="{Binding SelectedChat.StatusColorHex, Converter={StaticResource HexToBrush}}" FontSize="11" FontWeight="SemiBold"/>
+
+                                            </StackPanel>
+
+                                        </StackPanel>
+
+                                    </Border>
+
+                                </Grid>
+
+                            </Border>
+
+
+
+                            <!-- 7.2. Quick Action Buttons Bar -->
+
+                            <Grid Margin="0,0,0,16">
+
+                                <Grid.ColumnDefinitions>
+
+                                    <ColumnDefinition Width="*"/>
+
+                                    <ColumnDefinition Width="*"/>
+
+                                    <ColumnDefinition Width="*"/>
+
+                                </Grid.ColumnDefinitions>
+
+
+
+                                <!-- View Photo -->
+
+                                <Button Grid.Column="0" Style="{StaticResource ModernButton}" Margin="0,0,4,0" Padding="0,8"
+
+                                        Command="{Binding OpenPhotoViewerCommand}" CommandParameter="{Binding SelectedChat.AvatarPath}"
+
+                                        ToolTip="Просмотреть аватар на весь экран">
+
+                                    <StackPanel HorizontalAlignment="Center">
+
+                                        <TextBlock Text="👁️" FontSize="14" HorizontalAlignment="Center"/>
+
+                                        <TextBlock Text="Фото" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,3,0,0" HorizontalAlignment="Center"/>
+
+                                    </StackPanel>
+
+                                </Button>
+
+
+
+                                <!-- Change Avatar -->
+
+                                <Button Grid.Column="1" Style="{StaticResource ModernButton}" Margin="2,0,2,0" Padding="0,8"
+
+                                        Command="{Binding ChangeContactAvatarCommand}"
+
+                                        ToolTip="Сменить аватар контакта">
+
+                                    <StackPanel HorizontalAlignment="Center">
+
+                                        <TextBlock Text="📷" FontSize="14" HorizontalAlignment="Center"/>
+
+                                        <TextBlock Text="Сменить" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,3,0,0" HorizontalAlignment="Center"/>
+
+                                    </StackPanel>
+
+                                </Button>
+
+
+
+                                <!-- Delete Chat -->
+
+                                <Button Grid.Column="2" Style="{StaticResource ModernButton}" Margin="4,0,0,0" Padding="0,8"
+
+                                        Command="{Binding DeleteSelectedChatCommand}"
+
+                                        ToolTip="Удалить переписку и контакт">
+
+                                    <StackPanel HorizontalAlignment="Center">
+
+                                        <TextBlock Text="🗑️" FontSize="14" HorizontalAlignment="Center"/>
+
+                                        <TextBlock Text="Удалить" FontSize="11" Foreground="#EF4444" Margin="0,3,0,0" HorizontalAlignment="Center"/>
+
+                                    </StackPanel>
+
+                                </Button>
+
+                            </Grid>
+
+
+
+                            <!-- 7.3. Sticky Tab Bar: Медиа | Файлы | Аудио -->
+
+                            <Border Background="{StaticResource CardBrush}" CornerRadius="12" Padding="3" Margin="0,0,0,14" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
+
+                                <Grid>
+
+                                    <Grid.ColumnDefinitions>
+
+                                        <ColumnDefinition Width="*"/>
+
+                                        <ColumnDefinition Width="*"/>
+
+                                        <ColumnDefinition Width="*"/>
+
+                                    </Grid.ColumnDefinitions>
+
+
+
+                                    <!-- Tab 0: Медиа -->
+
+                                    <Button Grid.Column="0" Style="{StaticResource ModernButton}" Padding="0,7" BorderThickness="0"
+
+                                            Command="{Binding SelectProfileTabCommand}" CommandParameter="0">
+
+                                        <TextBlock Text="📷 Медиа" FontSize="12" FontWeight="SemiBold"
+
+                                                   Foreground="{StaticResource TextPrimaryBrush}"/>
+
+                                    </Button>
+
+
+
+                                    <!-- Tab 1: Файлы -->
+
+                                    <Button Grid.Column="1" Style="{StaticResource ModernButton}" Padding="0,7" BorderThickness="0"
+
+                                            Command="{Binding SelectProfileTabCommand}" CommandParameter="1">
+
+                                        <TextBlock Text="📁 Файлы" FontSize="12" FontWeight="SemiBold"
+
+                                                   Foreground="{StaticResource TextPrimaryBrush}"/>
+
+                                    </Button>
+
+
+
+                                    <!-- Tab 2: Аудио -->
+
+                                    <Button Grid.Column="2" Style="{StaticResource ModernButton}" Padding="0,7" BorderThickness="0"
+
+                                            Command="{Binding SelectProfileTabCommand}" CommandParameter="2">
+
+                                        <TextBlock Text="🎵 Аудио" FontSize="12" FontWeight="SemiBold"
+
+                                                   Foreground="{StaticResource TextPrimaryBrush}"/>
+
+                                    </Button>
+
+                                </Grid>
+
+                            </Border>
+
+
+
+                            <!-- Tab 0 Content: Медиа (Photos & Video Notes Grid) -->
+
+                            <StackPanel Visibility="{Binding SelectedProfileTab, Converter={StaticResource EqualityToVis}, ConverterParameter=0}">
+
+                                <TextBlock Text="ОБЩИЕ ФОТОГРАФИИ И КРУЖКИ" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" Margin="2,0,0,10"/>
+
+                                
+
+                                <ItemsControl ItemsSource="{Binding SharedMedia}">
+
+                                    <ItemsControl.ItemsPanel>
+
+                                        <ItemsPanelTemplate>
+
+                                            <WrapPanel/>
+
+                                        </ItemsPanelTemplate>
+
+                                    </ItemsControl.ItemsPanel>
+
+                                    <ItemsControl.ItemTemplate>
+
+                                        <DataTemplate>
+
+                                            <Border Width="92" Height="92" Margin="3" CornerRadius="10" ClipToBounds="True" Background="#141C28" Cursor="Hand"
+
+                                                    BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
+
+                                                <Border.InputBindings>
+
+                                                    <MouseBinding Gesture="LeftClick"
+
+                                                                  Command="{Binding DataContext.OpenPhotoViewerCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+
+                                                                  CommandParameter="{Binding FilePath}"/>
+
+                                                </Border.InputBindings>
+
+                                                <Image Source="{Binding FilePath}" Stretch="UniformToFill" RenderOptions.BitmapScalingMode="HighQuality"/>
+
+                                            </Border>
+
+                                        </DataTemplate>
+
+                                    </ItemsControl.ItemTemplate>
+
+                                </ItemsControl>
+
+
+
+                                <!-- Empty placeholder if no media -->
+
+                                <Border Background="{StaticResource CardBrush}" CornerRadius="10" Padding="16" Margin="0,4,0,0"
+
+                                        Visibility="{Binding SharedMedia.Count, Converter={StaticResource InverseBoolToVis}}">
+
+                                    <TextBlock Text="Нет общих фотографий" Foreground="{StaticResource TextMutedBrush}" FontSize="12" HorizontalAlignment="Center"/>
+
+                                </Border>
+
+                            </StackPanel>
+
+
+
+                            <!-- Tab 1 Content: Файлы (Documents & Attachments) -->
+
+                            <StackPanel Visibility="{Binding SelectedProfileTab, Converter={StaticResource EqualityToVis}, ConverterParameter=1}">
+
+                                <TextBlock Text="ПЕРЕДАННЫЕ ДОКУМЕНТЫ" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" Margin="2,0,0,10"/>
+
+                                
+
+                                <ItemsControl ItemsSource="{Binding SharedFiles}">
+
+                                    <ItemsControl.ItemTemplate>
+
+                                        <DataTemplate>
+
+                                            <Border Background="{StaticResource CardBrush}" CornerRadius="10" Padding="10,8" Margin="0,3"
+
+                                                    BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
+
+                                                <DockPanel>
+
+                                                    <Button Content="Открыть" Style="{StaticResource AccentButton}" DockPanel.Dock="Right"
+
+                                                            FontSize="11" Padding="10,4"
+
+                                                            Command="{Binding DataContext.OpenFileCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+
+                                                            CommandParameter="{Binding FilePath}"/>
+
+                                                    <Path Data="{StaticResource IconFile}" Fill="{DynamicResource AccentBrush}" Width="16" Height="16" Stretch="Uniform"
+
+                                                          VerticalAlignment="Center" Margin="0,0,10,0"/>
+
+                                                    <StackPanel VerticalAlignment="Center">
+
+                                                        <TextBlock Text="{Binding FileName}" Foreground="{StaticResource TextPrimaryBrush}" FontSize="12" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+
+                                                        <TextBlock Text="{Binding FormattedTime}" Foreground="{StaticResource TextMutedBrush}" FontSize="10" Margin="0,2,0,0"/>
+
+                                                    </StackPanel>
+
+                                                </DockPanel>
+
+                                            </Border>
+
+                                        </DataTemplate>
+
+                                    </ItemsControl.ItemTemplate>
+
+                                </ItemsControl>
+
+
+
+                                <Border Background="{StaticResource CardBrush}" CornerRadius="10" Padding="16" Margin="0,4,0,0"
+
+                                        Visibility="{Binding SharedFiles.Count, Converter={StaticResource InverseBoolToVis}}">
+
+                                    <TextBlock Text="Нет переданных файлов" Foreground="{StaticResource TextMutedBrush}" FontSize="12" HorizontalAlignment="Center"/>
+
+                                </Border>
+
+                            </StackPanel>
+
+
+
+                            <!-- Tab 2 Content: Аудио (Voice Notes & Music) -->
+
+                            <StackPanel Visibility="{Binding SelectedProfileTab, Converter={StaticResource EqualityToVis}, ConverterParameter=2}">
+
+                                <TextBlock Text="ГОЛОСОВЫЕ ЗАМЕТКИ И МУЗЫКА" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" Margin="2,0,0,10"/>
+
+                                
+
+                                <ItemsControl ItemsSource="{Binding SharedAudio}">
+
+                                    <ItemsControl.ItemTemplate>
+
+                                        <DataTemplate>
+
+                                            <Border Background="{StaticResource CardBrush}" CornerRadius="10" Padding="10,8" Margin="0,3"
+
+                                                    BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
+
+                                                <DockPanel>
+
+                                                    <TextBlock Text="{Binding Duration, TargetNullValue='0:15'}" DockPanel.Dock="Right"
+
+                                                               Foreground="{StaticResource TextSecondaryBrush}" FontSize="11" VerticalAlignment="Center"/>
+
+                                                    <Button Style="{StaticResource ModernButton}" Width="30" Height="30" Padding="0" Margin="0,0,10,0"
+
+                                                            Command="{Binding DataContext.PlayVoiceMessageCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+
+                                                            CommandParameter="{Binding}">
+
+                                                        <Grid>
+
+                                                            <Path Data="{StaticResource IconPlay}" Fill="{DynamicResource AccentBrush}" Width="12" Height="12" Stretch="Uniform"
+
+                                                                  Visibility="{Binding IsPlaying, Converter={StaticResource InverseBoolToVis}}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+
+                                                            <Path Data="{StaticResource IconPause}" Fill="{DynamicResource AccentBrush}" Width="12" Height="12" Stretch="Uniform"
+
+                                                                  Visibility="{Binding IsPlaying, Converter={StaticResource BoolToVis}}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+
+                                                        </Grid>
+
+                                                    </Button>
+
+                                                    <StackPanel VerticalAlignment="Center">
+
+                                                        <TextBlock Text="Голосовое сообщение" Foreground="{StaticResource TextPrimaryBrush}" FontSize="12" FontWeight="SemiBold"/>
+
+                                                        <TextBlock Text="{Binding FormattedTime}" Foreground="{StaticResource TextMutedBrush}" FontSize="10" Margin="0,2,0,0"/>
+
+                                                    </StackPanel>
+
+                                                </DockPanel>
+
+                                            </Border>
+
+                                        </DataTemplate>
+
+                                    </ItemsControl.ItemTemplate>
+
+                                </ItemsControl>
+
+
+
+                                <Border Background="{StaticResource CardBrush}" CornerRadius="10" Padding="16" Margin="0,4,0,0"
+
+                                        Visibility="{Binding SharedAudio.Count, Converter={StaticResource InverseBoolToVis}}">
+
+                                    <TextBlock Text="Нет аудиозаписей" Foreground="{StaticResource TextMutedBrush}" FontSize="12" HorizontalAlignment="Center"/>
+
+                                </Border>
+
+                            </StackPanel>
+
+
+
+                            <!-- Theme Accent Colors Section (Live DynamicResource update) -->
+
+                            <TextBlock Text="ЦВЕТОВОЙ АКЦЕНТ" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" Margin="2,16,0,8"/>
+
+                            <WrapPanel Margin="0,0,0,14">
+
+                                <Button Background="#4D9FFF" ToolTip="Синий" Command="{Binding ChangeAccentColorCommand}" CommandParameter="#4D9FFF" Width="26" Height="26" Margin="3" Style="{StaticResource ModernButton}"/>
+
+                                <Button Background="#26A69A" ToolTip="Изумруд" Command="{Binding ChangeAccentColorCommand}" CommandParameter="#26A69A" Width="26" Height="26" Margin="3" Style="{StaticResource ModernButton}"/>
+
+                                <Button Background="#B388FF" ToolTip="Пурпур" Command="{Binding ChangeAccentColorCommand}" CommandParameter="#B388FF" Width="26" Height="26" Margin="3" Style="{StaticResource ModernButton}"/>
+
+                                <Button Background="#FFB74D" ToolTip="Янтарь" Command="{Binding ChangeAccentColorCommand}" CommandParameter="#FFB74D" Width="26" Height="26" Margin="3" Style="{StaticResource ModernButton}"/>
+
+                                <Button Background="#FF5252" ToolTip="Рубин" Command="{Binding ChangeAccentColorCommand}" CommandParameter="#FF5252" Width="26" Height="26" Margin="3" Style="{StaticResource ModernButton}"/>
+
+                                <Button Background="#4DD0E1" ToolTip="Циан" Command="{Binding ChangeAccentColorCommand}" CommandParameter="#4DD0E1" Width="26" Height="26" Margin="3" Style="{StaticResource ModernButton}"/>
+
+                                <Button Background="#FF4081" ToolTip="Розовый" Command="{Binding ChangeAccentColorCommand}" CommandParameter="#FF4081" Width="26" Height="26" Margin="3" Style="{StaticResource ModernButton}"/>
+
+                            </WrapPanel>
+
+                        </StackPanel>
+
+                    </ScrollViewer>
+
+                </Grid>
+
+            </Border>
+
+        </Grid>
+
+
+
+        <!-- ============================================== -->
+
+        <!-- SETTINGS MODAL OVERLAY (SettingsActivity.kt tabbed layout) -->
+
+        <!-- ============================================== -->
+
+        <Grid Grid.Row="0" Grid.RowSpan="2" Background="#B005070D"
+
+              Visibility="{Binding IsSettingsOpen, Converter={StaticResource BoolToVis}}"
+
+              Panel.ZIndex="100">
+
+            <Border Background="{StaticResource CardBrush}"
+
+                    BorderBrush="{StaticResource BorderBrush}"
+
+                    BorderThickness="1"
+
+                    CornerRadius="16"
+
+                    Width="680" Height="540"
+
+                    VerticalAlignment="Center" HorizontalAlignment="Center">
+
+                <Border.Effect>
+
+                    <DropShadowEffect BlurRadius="32" ShadowDepth="8" Opacity="0.65" Color="#000000"/>
+
+                </Border.Effect>
+
+
+
+                <Grid Margin="20">
+
+                    <Grid.RowDefinitions>
+
+                        <RowDefinition Height="Auto"/> <!-- Title Header -->
+
+                        <RowDefinition Height="*"/>    <!-- 2-Column Body -->
+
+                        <RowDefinition Height="Auto"/> <!-- Bottom Actions -->
+
+                    </Grid.RowDefinitions>
+
+
+
+                    <!-- Title Header -->
+
+                    <DockPanel Grid.Row="0" Margin="0,0,0,16">
+
+                        <Button Content="✕" Style="{StaticResource ModernButton}" Command="{Binding ToggleSettingsCommand}"
+
+                                DockPanel.Dock="Right" Width="30" Height="30" Padding="0"/>
+
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+
+                            <Path Data="{StaticResource IconSettings}" Fill="{DynamicResource AccentBrush}" Width="18" Height="18" Stretch="Uniform" Margin="0,0,10,0"/>
+
+                            <TextBlock Text="Настройки Prime Messenger" FontSize="16" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}"/>
+
+                            <Border Background="{DynamicResource AccentSoftBrush}" CornerRadius="6" Padding="6,2" Margin="10,0,0,0">
+
+                                <TextBlock Text="v0.1" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"/>
+
+                            </Border>
+
+                        </StackPanel>
+
+                    </DockPanel>
+
+
+
+                    <!-- 2-Column Body: Left Tabs, Right Content -->
+
+                    <Grid Grid.Row="1" Margin="0,0,0,14">
+
+                        <Grid.ColumnDefinitions>
+
+                            <ColumnDefinition Width="170"/> <!-- Left Category Tabs -->
+
+                            <ColumnDefinition Width="*"/>   <!-- Right Tab Content -->
+
+                        </Grid.ColumnDefinitions>
+
+
+
+                        <!-- Left Navigation Strip -->
+
+                        <Border Grid.Column="0" Background="{StaticResource BackgroundBrush}" CornerRadius="12" Padding="6" Margin="0,0,12,0">
+
+                            <StackPanel>
+
+                                <Button Content="👤 Профиль" Style="{StaticResource ModernButton}" HorizontalContentAlignment="Left"
+
+                                        Padding="12,8" Margin="0,2" BorderThickness="0"
+
+                                        Command="{Binding SelectSettingsTabCommand}" CommandParameter="0"/>
+
+                                <Button Content="🎨 Оформление" Style="{StaticResource ModernButton}" HorizontalContentAlignment="Left"
+
+                                        Padding="12,8" Margin="0,2" BorderThickness="0"
+
+                                        Command="{Binding SelectSettingsTabCommand}" CommandParameter="1"/>
+
+                                <Button Content="💬 Чат и обои" Style="{StaticResource ModernButton}" HorizontalContentAlignment="Left"
+
+                                        Padding="12,8" Margin="0,2" BorderThickness="0"
+
+                                        Command="{Binding SelectSettingsTabCommand}" CommandParameter="2"/>
+
+                                <Button Content="🛡️ Безопасность" Style="{StaticResource ModernButton}" HorizontalContentAlignment="Left"
+
+                                        Padding="12,8" Margin="0,2" BorderThickness="0"
+
+                                        Command="{Binding SelectSettingsTabCommand}" CommandParameter="3"/>
+
+                                <Button Content="ℹ️ О программе" Style="{StaticResource ModernButton}" HorizontalContentAlignment="Left"
+
+                                        Padding="12,8" Margin="0,2" BorderThickness="0"
+
+                                        Command="{Binding SelectSettingsTabCommand}" CommandParameter="4"/>
+
+                            </StackPanel>
+
+                        </Border>
+
+
+
+                        <!-- Right Tab Content Area -->
+
+                        <Border Grid.Column="1" Background="{StaticResource BackgroundBrush}" CornerRadius="12" Padding="14">
+
+                            <ScrollViewer VerticalScrollBarVisibility="Auto">
+
+                                <Grid>
+
+                                    <!-- TAB 0: Профиль -->
+
+                                    <StackPanel Visibility="{Binding SelectedSettingsTab, Converter={StaticResource EqualityToVis}, ConverterParameter=0}">
+
+                                        <TextBlock Text="МОЙ ПРОФИЛЬ" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,12"/>
+
+                                        
+
+                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
+
+                                            <Border Width="64" Height="64" CornerRadius="32" Background="{DynamicResource AccentBrush}" Margin="0,0,14,0">
+
+                                                <Grid>
+
+                                                    <TextBlock Text="Я" Foreground="White" FontSize="22" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"
+
+                                                               Visibility="{Binding Settings.MyAvatarPath, Converter={StaticResource NullToVis}}"/>
+
+                                                    <Border CornerRadius="32" Visibility="{Binding Settings.MyAvatarPath, Converter={StaticResource NotNullToVis}}">
+
+                                                        <Border.Background>
+
+                                                            <ImageBrush ImageSource="{Binding Settings.MyAvatarPath}" Stretch="UniformToFill"/>
+
+                                                        </Border.Background>
+
+                                                    </Border>
+
+                                                </Grid>
+
+                                            </Border>
+
+                                            <StackPanel VerticalAlignment="Center">
+
+                                                <Button Content="📷 Сменить мой аватар" Command="{Binding ChangeMyAvatarCommand}"
+
+                                                        Style="{StaticResource ModernButton}" Padding="10,6" Margin="0,0,0,4"/>
+
+                                                <TextBlock Text="Аватар синхронизируется с собеседниками" Foreground="{StaticResource TextMutedBrush}" FontSize="10"/>
+
+                                            </StackPanel>
+
+                                        </StackPanel>
+
+
+
+                                        <TextBlock Text="Отображаемое имя" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,4"/>
+
+                                        <TextBox Text="{Binding Settings.MyDisplayName, UpdateSourceTrigger=PropertyChanged}"
+
+                                                 Style="{StaticResource ModernTextBox}" Margin="0,0,0,12"/>
+
+
+
+                                        <TextBlock Text="Имя пользователя (@username)" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,4"/>
+
+                                        <TextBox Text="{Binding Settings.MyUsername, UpdateSourceTrigger=PropertyChanged}"
+
+                                                 Style="{StaticResource ModernTextBox}" Margin="0,0,0,12"/>
+
+
+
+                                        <TextBlock Text="Физический MAC-адрес устройства надежно изолирован и никогда не передается."
+
+                                                   Foreground="{StaticResource TextMutedBrush}" FontSize="11" TextWrapping="Wrap"/>
+
+                                    </StackPanel>
+
+
+
+                                    <!-- TAB 1: Оформление и акценты -->
+
+                                    <StackPanel Visibility="{Binding SelectedSettingsTab, Converter={StaticResource EqualityToVis}, ConverterParameter=1}">
+
+                                        <TextBlock Text="ЦВЕТОВОЙ АКЦЕНТ ПРАЙМ" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,8"/>
+
+                                        <TextBlock Text="Мгновенно применяется ко всем кнопкам, бейджам и индикаторам:" Foreground="{StaticResource TextSecondaryBrush}" FontSize="11" Margin="0,0,0,8"/>
+
+                                        <WrapPanel Margin="0,0,0,16">
+
+                                            <Button Background="#4D9FFF" ToolTip="Синий" Command="{Binding ChangeAccentColorCommand}" CommandParameter="#4D9FFF" Width="28" Height="28" Margin="4" Style="{StaticResource ModernButton}"/>
+
+                                            <Button Background="#26A69A" ToolTip="Изумруд" Command="{Binding ChangeAccentColorCommand}" CommandParameter="#26A69A" Width="28" Height="28" Margin="4" Style="{StaticResource ModernButton}"/>
+
+                                            <Button Background="#B388FF" ToolTip="Пурпур" Command="{Binding ChangeAccentColorCommand}" CommandParameter="#B388FF" Width="28" Height="28" Margin="4" Style="{StaticResource ModernButton}"/>
+
+                                            <Button Background="#FFB74D" ToolTip="Янтарь" Command="{Binding ChangeAccentColorCommand}" CommandParameter="#FFB74D" Width="28" Height="28" Margin="4" Style="{StaticResource ModernButton}"/>
+
+                                            <Button Background="#FF5252" ToolTip="Рубин" Command="{Binding ChangeAccentColorCommand}" CommandParameter="#FF5252" Width="28" Height="28" Margin="4" Style="{StaticResource ModernButton}"/>
+
+                                            <Button Background="#4DD0E1" ToolTip="Циан" Command="{Binding ChangeAccentColorCommand}" CommandParameter="#4DD0E1" Width="28" Height="28" Margin="4" Style="{StaticResource ModernButton}"/>
+
+                                            <Button Background="#FF4081" ToolTip="Розовый" Command="{Binding ChangeAccentColorCommand}" CommandParameter="#FF4081" Width="28" Height="28" Margin="4" Style="{StaticResource ModernButton}"/>
+
+                                        </WrapPanel>
+
+
+
+                                        <TextBlock Text="ФОРМА АВАТАРОК" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,6"/>
+
+                                        <DockPanel Margin="0,0,0,6">
+
+                                            <TextBlock Text="Скругление углов" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}"/>
+
+                                            <TextBlock Text="{Binding AvatarCornerRadiusPercent, StringFormat='{}{0}%'}" DockPanel.Dock="Right" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"/>
+
+                                        </DockPanel>
+
+                                        <Grid Margin="0,0,0,16">
+
+                                            <Grid.ColumnDefinitions>
+
+                                                <ColumnDefinition Width="*"/>
+
+                                                <ColumnDefinition Width="Auto"/>
+
+                                            </Grid.ColumnDefinitions>
+
+                                            <Slider Grid.Column="0" Minimum="0" Maximum="50" Value="{Binding AvatarCornerRadiusPercent, Mode=TwoWay}"
+
+                                                    VerticalAlignment="Center" Margin="0,0,16,0"/>
+
+                                            <Border Grid.Column="1" Width="44" Height="44" CornerRadius="{Binding PreviewAvatarCornerRadius}" Background="{DynamicResource AccentBrush}">
+
+                                                <TextBlock Text="P" Foreground="White" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+
+                                            </Border>
+
+                                        </Grid>
+
+                                    </StackPanel>
+
+
+
+                                    <!-- TAB 2: Чат и обои -->
+
+                                    <StackPanel Visibility="{Binding SelectedSettingsTab, Converter={StaticResource EqualityToVis}, ConverterParameter=2}">
+
+                                        <TextBlock Text="ФОНОВЫЕ ОБОИ ЧАТА" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,8"/>
+
+                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+
+                                            <Button Content="🖼️ Выбрать изображение..." Command="{Binding ChangeWallpaperCommand}"
+
+                                                    Style="{StaticResource ModernButton}" Padding="10,6" Margin="0,0,8,0"/>
+
+                                            <Button Content="✕ Сбросить обои" Command="{Binding ResetWallpaperCommand}"
+
+                                                    Style="{StaticResource ModernButton}" Padding="10,6"/>
+
+                                        </StackPanel>
+
+
+
+                                        <DockPanel Margin="0,0,0,6">
+
+                                            <TextBlock Text="Прозрачность обоев" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}"/>
+
+                                            <TextBlock Text="{Binding Settings.WallpaperOpacity, StringFormat='{}{0:P0}'}" DockPanel.Dock="Right" FontSize="11" Foreground="{DynamicResource AccentBrush}"/>
+
+                                        </DockPanel>
+
+                                        <Slider Minimum="0.1" Maximum="1.0" Value="{Binding Settings.WallpaperOpacity, Mode=TwoWay}"
+
+                                                TickFrequency="0.05" Margin="0,0,0,16"/>
+
+
+
+                                        <TextBlock Text="СИСТЕМНЫЕ ОПЦИИ" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,8"/>
+
+                                        <CheckBox Content="Плавные анимации интерфейса" IsChecked="{Binding Settings.EnableAnimations, Mode=TwoWay}"
+
+                                                  Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,8"/>
+
+                                        <CheckBox Content="Сворачивать в трей при закрытии окна" IsChecked="{Binding Settings.MinimizeToTray, Mode=TwoWay}"
+
+                                                  Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,8"/>
+
+                                        <CheckBox Content="Звуковые сигналы уведомлений" IsChecked="{Binding Settings.PlayNotificationSounds, Mode=TwoWay}"
+
+                                                  Foreground="{StaticResource TextPrimaryBrush}"/>
+
+                                    </StackPanel>
+
+
+
+                                    <!-- TAB 3: Безопасность и приватность -->
+
+                                    <StackPanel Visibility="{Binding SelectedSettingsTab, Converter={StaticResource EqualityToVis}, ConverterParameter=3}">
+
+                                        <TextBlock Text="БЕЗОПАСНОСТЬ И КОНФИДЕНЦИАЛЬНОСТЬ" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,10"/>
+
+
+
+                                        <CheckBox Content="Защита окна от скриншотов и записи (FLAG_SECURE)"
+
+                                                  IsChecked="{Binding Settings.EnableScreenshotProtection, Mode=TwoWay}"
+
+                                                  Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,6"/>
+
+                                        <TextBlock Text="Блокирует перехват окна через Discord, OBS, Snipping Tool и снимки экрана."
+
+                                                   FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" Margin="24,0,0,14" TextWrapping="Wrap"/>
+
+
+
+                                        <CheckBox Content="Тотальная маскировка MAC-адресов"
+
+                                                  IsChecked="{Binding Settings.MaskDeviceIdentifiers, Mode=TwoWay}"
+
+                                                  Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,6"/>
+
+                                        <TextBlock Text="Физические адреса оборудования изолированы внутри сокетов и скрыты во всех слоях."
+
+                                                   FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" Margin="24,0,0,16" TextWrapping="Wrap"/>
+
+
+
+                                        <Border Background="{StaticResource CardBrush}" CornerRadius="10" Padding="12" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
+
+                                            <StackPanel>
+
+                                                <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+
+                                                    <Path Data="{StaticResource IconLock}" Fill="{DynamicResource AccentBrush}" Width="14" Height="14" Stretch="Uniform" Margin="0,0,6,0" VerticalAlignment="Center"/>
+
+                                                    <TextBlock Text="Локальное шифрование AES-256-GCM" Foreground="{StaticResource TextPrimaryBrush}" FontSize="12" FontWeight="SemiBold"/>
+
+                                                </StackPanel>
+
+                                                <TextBlock Text="Все диалоги и вложения сохраняются в зашифрованном локальном контейнере без облачных серверов."
+
+                                                           FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap"/>
+
+                                            </StackPanel>
+
+                                        </Border>
+
+                                    </StackPanel>
+
+
+
+                                    <!-- TAB 4: О программе (v0.1) -->
+
+                                    <StackPanel Visibility="{Binding SelectedSettingsTab, Converter={StaticResource EqualityToVis}, ConverterParameter=4}">
+
+                                        <StackPanel HorizontalAlignment="Center" Margin="0,10,0,16">
+
+                                            <Border Width="56" Height="56" CornerRadius="28" Background="{StaticResource CardBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" Margin="0,0,0,8" HorizontalAlignment="Center">
+
+                                                <Image Source="Assets/prime_logo_app.png" Width="38" Height="38" RenderOptions.BitmapScalingMode="HighQuality"/>
+
+                                            </Border>
+
+                                            <TextBlock Text="Prime Desktop" FontSize="16" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}" HorizontalAlignment="Center"/>
+
+                                            <TextBlock Text="Версия 0.1 (Alpha)" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" HorizontalAlignment="Center" Margin="0,2,0,0"/>
+
+                                        </StackPanel>
+
+
+
+                                        <Border Background="{StaticResource CardBrush}" CornerRadius="10" Padding="12" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" Margin="0,0,0,10">
+
+                                            <StackPanel>
+
+                                                <TextBlock Text="О ПРОЕКТЕ" FontSize="10" FontWeight="Bold" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,4"/>
+
+                                                <TextBlock Text="Кроссплатформенный защищенный мессенджер с прямой связью по Bluetooth RFCOMM и локальной сетью Wi-Fi."
+
+                                                           FontSize="11" Foreground="{StaticResource TextPrimaryBrush}" TextWrapping="Wrap"/>
+
+                                            </StackPanel>
+
+                                        </Border>
+
+
+
+                                        <Border Background="{StaticResource CardBrush}" CornerRadius="10" Padding="12" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
+
+                                            <StackPanel>
+
+                                                <TextBlock Text="ПРОТОКОЛ И СОВМЕСТИМОСТЬ" FontSize="10" FontWeight="Bold" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,4"/>
+
+                                                <TextBlock Text="UUID: fa87c0d0-afac-11de-8a39-0800200c9a66&#x0a;Клиент полностью совместим с Android-версией Prime Messenger."
+
+                                                           FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap"/>
+
+                                            </StackPanel>
+
+                                        </Border>
+
+                                    </StackPanel>
+
+                                </Grid>
+
+                            </ScrollViewer>
+
+                        </Border>
+
+                    </Grid>
+
+
+
+                    <!-- Bottom Actions -->
+
+                    <DockPanel Grid.Row="2">
+
+                        <Button Content="Закрыть" Style="{StaticResource ModernButton}" Command="{Binding ToggleSettingsCommand}"
+
+                                Padding="16,8"/>
+
+                        <Button Content="✓ Сохранить настройки" Style="{StaticResource AccentButton}" Command="{Binding SaveSettingsCommand}"
+
+                                DockPanel.Dock="Right" Padding="20,8"/>
+
+                    </DockPanel>
+
+                </Grid>
+
+            </Border>
+
+        </Grid>
+
+
+
+        <!-- ============================================== -->
+
+        <!-- FULLSCREEN PHOTO VIEWER MODAL                  -->
+
+        <!-- ============================================== -->
+
+        <Grid Grid.Row="0" Grid.RowSpan="2" Background="#E6000000"
+
+              Visibility="{Binding IsPhotoViewerOpen, Converter={StaticResource BoolToVis}}"
+
+              Panel.ZIndex="150">
+
+            <Grid Margin="24">
+
+                <!-- Top Toolbar -->
+
+                <DockPanel VerticalAlignment="Top" Margin="0,0,0,16">
+
+                    <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
+
+                        <Button Content="💾 Сохранить" Style="{StaticResource ModernButton}" Command="{Binding SaveViewedPhotoCommand}" Margin="0,0,8,0" Padding="12,6"/>
+
+                        <Button Content="📋 Копировать" Style="{StaticResource ModernButton}" Command="{Binding CopyViewedPhotoCommand}" Margin="0,0,8,0" Padding="12,6"/>
+
+                        <Button Content="✕ Закрыть" Style="{StaticResource ModernButton}" Command="{Binding ClosePhotoViewerCommand}" Padding="12,6"/>
+
+                    </StackPanel>
+
+                    <TextBlock Text="Просмотр фотографии" Foreground="White" FontSize="15" FontWeight="Bold" VerticalAlignment="Center"/>
+
+                </DockPanel>
+
+
+
+                <!-- Centered High-Quality Photo -->
+
+                <Border Margin="0,48,0,0" CornerRadius="12" ClipToBounds="True">
+
+                    <Image Source="{Binding ViewedPhotoPath}" Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality"/>
+
+                </Border>
+
+            </Grid>
+
+        </Grid>
+
+    
+
+        <!-- ============================================== -->
+
+        <!-- DEVICE DISCOVERY MODAL OVERLAY (PARAM 3)       -->
+
+        <!-- ============================================== -->
+
+        <Grid Grid.Row="0" Grid.RowSpan="2" Background="#A005070D"
+
+              Visibility="{Binding IsDiscoveryOpen, Converter={StaticResource BoolToVis}}"
+
+              Panel.ZIndex="90">
+
+            <Border Background="{StaticResource CardBrush}"
+
+                    BorderBrush="{StaticResource BorderBrush}"
+
+                    BorderThickness="1"
+
+                    CornerRadius="16"
+
+                    Width="480" MaxHeight="520"
+
+                    VerticalAlignment="Center" HorizontalAlignment="Center">
+
+                <Border.Effect>
+
+                    <DropShadowEffect BlurRadius="30" ShadowDepth="6" Opacity="0.6" Color="#000000"/>
+
+                </Border.Effect>
+
+                <Grid Margin="22">
+
+                    <Grid.RowDefinitions>
+
+                        <RowDefinition Height="Auto"/> <!-- Header -->
+
+                        <RowDefinition Height="*"/>    <!-- Devices List -->
+
+                        <RowDefinition Height="Auto"/> <!-- Bottom Actions -->
+
+                    </Grid.RowDefinitions>
+
+
+
+                    <!-- Header -->
+
+                    <DockPanel Grid.Row="0" Margin="0,0,0,16">
+
+                        <Button Content="✕" Style="{StaticResource ModernButton}" Command="{Binding CloseDeviceDiscoveryCommand}"
+
+                                DockPanel.Dock="Right" Width="30" Height="30" Padding="0"/>
+
+                        <StackPanel>
+
+                            <TextBlock Text="Поиск устройств Prime" Foreground="{StaticResource TextPrimaryBrush}" FontSize="16" FontWeight="Bold"/>
+
+                            <TextBlock Text="Периферия и наушники отфильтрованы" Foreground="{StaticResource TextSecondaryBrush}" FontSize="11" Margin="0,2,0,0"/>
+
+                        </StackPanel>
+
+                    </DockPanel>
+
+
+
+                    <!-- Devices List -->
+
+                    <Border Grid.Row="1" Background="{StaticResource BackgroundBrush}" CornerRadius="10" Padding="8" Margin="0,0,0,16">
+
+                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+
+                            <StackPanel>
+
+                                <ProgressBar Height="3" IsIndeterminate="True" Foreground="{DynamicResource AccentBrush}"
+
+                                             Background="Transparent" BorderThickness="0" Margin="0,0,0,8"
+
+                                             Visibility="{Binding IsScanning, Converter={StaticResource BoolToVis}}"/>
+
+
+
+                                <TextBlock Text="Доступные устройства не найдены"
+
+                                           Foreground="{StaticResource TextMutedBrush}" FontSize="12"
+
+                                           HorizontalAlignment="Center" Margin="0,30,0,0"
+
+                                           Visibility="{Binding DiscoveredDevices.Count, Converter={StaticResource InverseBoolToVis}}"/>
+
+
+
+                                <ItemsControl ItemsSource="{Binding DiscoveredDevices}">
+
+                                    <ItemsControl.ItemTemplate>
+
+                                        <DataTemplate>
+
+                                            <Border Background="{StaticResource CardBrush}" BorderBrush="{StaticResource BorderBrush}"
+
+                                                    BorderThickness="1" CornerRadius="10" Padding="12,10" Margin="0,3">
+
+                                                <DockPanel>
+
+                                                    <Button Content="Начать чат" Style="{StaticResource AccentButton}"
+
+                                                            DockPanel.Dock="Right" FontSize="11" Padding="10,4"
+
+                                                            Command="{Binding DataContext.StartChatWithDiscoveredCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+
+                                                            CommandParameter="{Binding}"/>
+
+                                                    <StackPanel VerticalAlignment="Center">
+
+                                                        <TextBlock Text="{Binding DisplayName}" Foreground="{StaticResource TextPrimaryBrush}" FontWeight="SemiBold" FontSize="13"/>
+
+                                                        <TextBlock Text="Prime совместимое устройство" Foreground="{StaticResource TextSecondaryBrush}" FontSize="10"/>
+
+                                                    </StackPanel>
+
+                                                </DockPanel>
+
+                                            </Border>
+
+                                        </DataTemplate>
+
+                                    </ItemsControl.ItemTemplate>
+
+                                </ItemsControl>
+
+                            </StackPanel>
+
+                        </ScrollViewer>
+
+                    </Border>
+
+
+
+                    <!-- Bottom Actions -->
+
+                    <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right">
+
+                        <Button Content="Обновить" Style="{StaticResource ModernButton}" Command="{Binding ScanDevicesCommand}" Margin="0,0,8,0"/>
+
+                        <Button Content="Закрыть" Style="{StaticResource ModernButton}" Command="{Binding CloseDeviceDiscoveryCommand}"/>
+
+                    </StackPanel>
+
+                </Grid>
+
+            </Border>
+
+        </Grid>
+
+</Grid>
+
+</Window>

@@ -1,0 +1,144 @@
+<Window x:Class="PrimeDesktop.Views.PhotoEditorWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Редактор фото — Prime Desktop" Height="680" Width="920"
+        MinHeight="500" MinWidth="700"
+        WindowStartupLocation="CenterScreen"
+        Background="#0B1017" Foreground="#F0F6FC">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="50"/> <!-- Header toolbar -->
+            <RowDefinition Height="*"/>  <!-- Main editor area -->
+            <RowDefinition Height="64"/> <!-- Bottom actions -->
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <Border Grid.Row="0" Background="#121924" BorderBrush="#223045" BorderThickness="0,0,0,1" Padding="16,0">
+            <DockPanel VerticalAlignment="Center">
+                <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
+                    <Button Content="↩ Отмена кисти" Click="BtnUndo_Click"
+                            Background="#182232" Foreground="#F0F6FC" BorderBrush="#223045" BorderThickness="1"
+                            Padding="12,6" Margin="0,0,8,0" Cursor="Hand"/>
+                    <Button Content="🔄 Сброс" Click="BtnReset_Click"
+                            Background="#182232" Foreground="#F0F6FC" BorderBrush="#223045" BorderThickness="1"
+                            Padding="12,6" Cursor="Hand"/>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="🎨 Фоторедактор Прайм" FontSize="15" FontWeight="Bold" Foreground="#F0F6FC"/>
+                    <TextBlock Text="v0.1" FontSize="11" Foreground="#4D9FFF" Margin="8,0,0,0" VerticalAlignment="Center"/>
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <!-- Main Editor Body -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="260"/> <!-- Controls sidebar -->
+            </Grid.ColumnDefinitions>
+
+            <!-- Center Image Viewport -->
+            <Border Grid.Column="0" Background="#070A0F" Margin="12" CornerRadius="12" ClipToBounds="True" BorderBrush="#1C2536" BorderThickness="1">
+                <Grid x:Name="CanvasContainer" HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <Image x:Name="TargetImage" Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality"/>
+                    <InkCanvas x:Name="DrawingCanvas" Background="Transparent"/>
+                </Grid>
+            </Border>
+
+            <!-- Right Editing Controls Panel -->
+            <Border Grid.Column="1" Background="#0F151F" BorderBrush="#223045" BorderThickness="1,0,0,0" Padding="14">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel>
+                        <!-- Geometric Transforms -->
+                        <TextBlock Text="ТРАНСФОРМАЦИЯ" FontSize="11" FontWeight="Bold" Foreground="#4D9FFF" Margin="0,0,0,10"/>
+                        <WrapPanel Margin="0,0,0,16">
+                            <Button Content="↶ -90°" Click="BtnRotateCCW_Click"
+                                    Background="#182232" Foreground="#F0F6FC" BorderBrush="#223045" BorderThickness="1"
+                                    Padding="10,6" Margin="2" Cursor="Hand"/>
+                            <Button Content="↷ +90°" Click="BtnRotateCW_Click"
+                                    Background="#182232" Foreground="#F0F6FC" BorderBrush="#223045" BorderThickness="1"
+                                    Padding="10,6" Margin="2" Cursor="Hand"/>
+                            <Button Content="↔ Отразить" Click="BtnFlipH_Click"
+                                    Background="#182232" Foreground="#F0F6FC" BorderBrush="#223045" BorderThickness="1"
+                                    Padding="10,6" Margin="2" Cursor="Hand"/>
+                            <Button Content="↕ Вертикально" Click="BtnFlipV_Click"
+                                    Background="#182232" Foreground="#F0F6FC" BorderBrush="#223045" BorderThickness="1"
+                                    Padding="10,6" Margin="2" Cursor="Hand"/>
+                        </WrapPanel>
+
+                        <!-- Adjustments -->
+                        <TextBlock Text="КОРРЕКЦИЯ ЦВЕТА" FontSize="11" FontWeight="Bold" Foreground="#4D9FFF" Margin="0,0,0,10"/>
+                        
+                        <DockPanel Margin="0,0,0,4">
+                            <TextBlock Text="Яркость" FontSize="12" Foreground="#8B949E"/>
+                            <TextBlock x:Name="TxtBrightness" Text="0" DockPanel.Dock="Right" FontSize="11" Foreground="#4D9FFF"/>
+                        </DockPanel>
+                        <Slider x:Name="SliderBrightness" Minimum="-100" Maximum="100" Value="0"
+                                ValueChanged="FilterSlider_ValueChanged" Margin="0,0,0,12"/>
+
+                        <DockPanel Margin="0,0,0,4">
+                            <TextBlock Text="Контрастность" FontSize="12" Foreground="#8B949E"/>
+                            <TextBlock x:Name="TxtContrast" Text="0" DockPanel.Dock="Right" FontSize="11" Foreground="#4D9FFF"/>
+                        </DockPanel>
+                        <Slider x:Name="SliderContrast" Minimum="-100" Maximum="100" Value="0"
+                                ValueChanged="FilterSlider_ValueChanged" Margin="0,0,0,12"/>
+
+                        <DockPanel Margin="0,0,0,4">
+                            <TextBlock Text="Насыщенность" FontSize="12" Foreground="#8B949E"/>
+                            <TextBlock x:Name="TxtSaturation" Text="0" DockPanel.Dock="Right" FontSize="11" Foreground="#4D9FFF"/>
+                        </DockPanel>
+                        <Slider x:Name="SliderSaturation" Minimum="-100" Maximum="100" Value="0"
+                                ValueChanged="FilterSlider_ValueChanged" Margin="0,0,0,16"/>
+
+                        <!-- Drawing Brush Section -->
+                        <TextBlock Text="РИСОВАНИЕ КИСТЬЮ" FontSize="11" FontWeight="Bold" Foreground="#4D9FFF" Margin="0,0,0,10"/>
+
+                        <DockPanel Margin="0,0,0,4">
+                            <TextBlock Text="Размер кисти" FontSize="12" Foreground="#8B949E"/>
+                            <TextBlock x:Name="TxtBrushSize" Text="4 px" DockPanel.Dock="Right" FontSize="11" Foreground="#4D9FFF"/>
+                        </DockPanel>
+                        <Slider x:Name="SliderBrushSize" Minimum="1" Maximum="32" Value="4"
+                                ValueChanged="SliderBrushSize_ValueChanged" Margin="0,0,0,12"/>
+
+                        <TextBlock Text="Цвет кисти" FontSize="12" Foreground="#8B949E" Margin="0,0,0,6"/>
+                        <WrapPanel Margin="0,0,0,14">
+                            <Button Background="#EF4444" Width="24" Height="24" Margin="3" Tag="#EF4444" Click="ColorSwatch_Click" Cursor="Hand"/>
+                            <Button Background="#4D9FFF" Width="24" Height="24" Margin="3" Tag="#4D9FFF" Click="ColorSwatch_Click" Cursor="Hand"/>
+                            <Button Background="#26A69A" Width="24" Height="24" Margin="3" Tag="#26A69A" Click="ColorSwatch_Click" Cursor="Hand"/>
+                            <Button Background="#FFB74D" Width="24" Height="24" Margin="3" Tag="#FFB74D" Click="ColorSwatch_Click" Cursor="Hand"/>
+                            <Button Background="#FFFFFF" Width="24" Height="24" Margin="3" Tag="#FFFFFF" Click="ColorSwatch_Click" Cursor="Hand"/>
+                            <Button Background="#B388FF" Width="24" Height="24" Margin="3" Tag="#B388FF" Click="ColorSwatch_Click" Cursor="Hand"/>
+                            <Button Background="#000000" Width="24" Height="24" Margin="3" Tag="#000000" Click="ColorSwatch_Click" Cursor="Hand"/>
+                        </WrapPanel>
+
+                        <!-- Drawing Mode Toggle -->
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                            <RadioButton x:Name="RadioBrush" Content="Кисть" IsChecked="True" Checked="DrawingMode_Checked"
+                                         Foreground="#F0F6FC" Margin="0,0,14,0"/>
+                            <RadioButton x:Name="RadioEraser" Content="Ластик" Checked="DrawingMode_Checked"
+                                         Foreground="#F0F6FC"/>
+                        </StackPanel>
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+        </Grid>
+
+        <!-- Bottom Actions -->
+        <Border Grid.Row="2" Background="#121924" BorderBrush="#223045" BorderThickness="0,1,0,0" Padding="16,0">
+            <DockPanel VerticalAlignment="Center">
+                <Button Content="Отмена" Click="BtnCancel_Click"
+                        Background="#182232" Foreground="#8B949E" BorderBrush="#223045" BorderThickness="1"
+                        Padding="16,8" Cursor="Hand"/>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button Content="💾 Сохранить на диск" Click="BtnSaveDisk_Click"
+                            Background="#182232" Foreground="#F0F6FC" BorderBrush="#223045" BorderThickness="1"
+                            Padding="16,8" Margin="0,0,10,0" Cursor="Hand"/>
+                    <Button Content="✓ Применить и отправить" Click="BtnApply_Click"
+                            Background="#4D9FFF" Foreground="#FFFFFF" FontWeight="Bold" BorderThickness="0"
+                            Padding="20,8" Cursor="Hand"/>
+                </StackPanel>
+            </DockPanel>
+        </Border>
+    </Grid>
+</Window>

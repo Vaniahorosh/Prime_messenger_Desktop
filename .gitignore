@@ -1,0 +1,18 @@
+# Build & Output
+bin/
+obj/
+desktop/**/bin/
+desktop/**/obj/
+desktop/PrimeSetup/Payload/app_files.zip
+
+# Visual Studio & IDE
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# OS & Temp
+Thumbs.db
+Desktop.ini
+*.tmp
