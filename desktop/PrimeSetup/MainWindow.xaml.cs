@@ -280,7 +280,7 @@ namespace PrimeSetup
                 if (key != null)
                 {
                     key.SetValue("DisplayName", "Prime Desktop");
-                    key.SetValue("DisplayVersion", "0.1.0");
+                    key.SetValue("DisplayVersion", "0.1 Desk");
                     key.SetValue("Publisher", "Prime Team");
                     key.SetValue("InstallLocation", TargetDir);
                     key.SetValue("DisplayIcon", $"{exePath},0");

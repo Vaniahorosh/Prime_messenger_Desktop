@@ -38,7 +38,7 @@
                     </Border>
                     <StackPanel Margin="12,0,0,0">
                         <TextBlock x:Name="HeaderTitle" Text="Prime Desktop" FontSize="18" FontWeight="Bold" Foreground="#FFFFFF"/>
-                        <TextBlock x:Name="HeaderSubtitle" Text="Установка версии v0.1 для Windows" FontSize="12" Foreground="#8B949E"/>
+                        <TextBlock x:Name="HeaderSubtitle" Text="Установка версии v0.1 Desk для Windows" FontSize="12" Foreground="#8B949E"/>
                     </StackPanel>
                 </StackPanel>
                 <Button Grid.Column="1" Content="✕" Width="30" Height="30" Click="CloseButton_Click"
