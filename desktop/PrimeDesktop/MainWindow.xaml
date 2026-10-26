@@ -168,12 +168,6 @@
 
                             </Button>
 
-                            <Button Style="{StaticResource ModernButton}" ToolTip="Связка с телефоном по Wi-Fi" Command="{Binding ConnectCompanionWifiCommand}" Margin="0,0,4,0" Width="34" Height="34" Padding="0">
-
-                                <Path Data="{StaticResource IconDesktop}" Fill="{StaticResource TextSecondaryBrush}" Width="15" Height="15" Stretch="Uniform"/>
-
-                            </Button>
-
                             <Button Style="{StaticResource ModernButton}" ToolTip="Настройки" Command="{Binding ToggleSettingsCommand}" Width="34" Height="34" Padding="0">
 
                                 <Path Data="{StaticResource IconSettings}" Fill="{StaticResource TextSecondaryBrush}" Width="16" Height="16" Stretch="Uniform"/>
@@ -1899,15 +1893,6 @@
 
 
 
-                                        <CheckBox Content="Тотальная маскировка MAC-адресов"
-
-                                                  IsChecked="{Binding Settings.MaskDeviceIdentifiers, Mode=TwoWay}"
-
-                                                  Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,6"/>
-
-                                        <TextBlock Text="Физические адреса оборудования изолированы внутри сокетов и скрыты во всех слоях."
-
-                                                   FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" Margin="24,0,0,16" TextWrapping="Wrap"/>
 
 
 
@@ -1961,7 +1946,7 @@
 
                                                 <TextBlock Text="О ПРОЕКТЕ" FontSize="10" FontWeight="Bold" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,4"/>
 
-                                                <TextBlock Text="Кроссплатформенный защищенный мессенджер с прямой связью по Bluetooth RFCOMM и локальной сетью Wi-Fi."
+                                                <TextBlock Text="Кроссплатформенный защищенный мессенджер с прямой связью по Bluetooth RFCOMM."
 
                                                            FontSize="11" Foreground="{StaticResource TextPrimaryBrush}" TextWrapping="Wrap"/>
 

@@ -31,7 +31,7 @@ public class MainViewModel : ViewModelBase
 
     private readonly BluetoothRfcommService _bluetoothService = new();
 
-    private readonly CompanionBridgeService _bridgeService = new();
+    // Local network (Wi-Fi) disabled - purely Bluetooth RFCOMM
 
     private ObservableCollection<ChatItem> _allChats = new();
 
@@ -486,13 +486,8 @@ public class MainViewModel : ViewModelBase
                 try
 
                 {
-                    if (SelectedChat.IsBluetoothDevice)
-
+                    
                         await _bluetoothService.SendPacketAsync(SelectedChat.DeviceAddress, PacketType.DeleteMessage, delPayload);
-
-                    else
-
-                        await _bridgeService.SendPacketAsync(SelectedChat.DeviceAddress, PacketType.DeleteMessage, delPayload);
 
                 }
 
@@ -1070,12 +1065,6 @@ public class MainViewModel : ViewModelBase
 
         _bluetoothService.ErrorOccurred += OnNetworkError;
 
-        _bridgeService.PacketReceived += OnPacketReceived;
-
-        _bridgeService.ConnectionStateChanged += OnConnectionStateChanged;
-
-        _bridgeService.ErrorOccurred += OnNetworkError;
-
         _ = InitializeAsync();
 
     }
@@ -1134,7 +1123,7 @@ public class MainViewModel : ViewModelBase
 
 Всё нужное без лишнего!
 
-Поддерживается мгновенная связка со смартфоном по Wi-Fi и оффлайн-переписка по Bluetooth.",
+Поддерживается прямое защищенное общение по Bluetooth без серверов.",
 
                 IsFromMe = false,
 
@@ -1157,12 +1146,6 @@ public class MainViewModel : ViewModelBase
         _bluetoothService.MyUsername = Settings.MyUsername;
 
         await _bluetoothService.StartServerAsync();
-
-        _bridgeService.MyDisplayName = Settings.MyDisplayName;
-
-        _bridgeService.MyUsername = Settings.MyUsername;
-
-        await _bridgeService.StartServerAsync();
 
     }
 
@@ -1218,13 +1201,8 @@ public class MainViewModel : ViewModelBase
         try
 
         {
-            if (SelectedChat.IsBluetoothDevice)
-
+            
                 await _bluetoothService.SendPacketAsync(SelectedChat.DeviceAddress, PacketType.Reaction, payload);
-
-            else
-
-                await _bridgeService.SendPacketAsync(SelectedChat.DeviceAddress, PacketType.Reaction, payload);
 
         }
 
@@ -1260,13 +1238,8 @@ public async Task SendTextMessageAsync()
             try
 
             {
-                if (targetChat.IsBluetoothDevice)
-
+                
                     await _bluetoothService.SendPacketAsync(targetChat.DeviceAddress, PacketType.Edit, editPayload);
-
-                else
-
-                    await _bridgeService.SendPacketAsync(targetChat.DeviceAddress, PacketType.Edit, editPayload);
 
             }
 
@@ -1326,19 +1299,7 @@ public async Task SendTextMessageAsync()
         try
 
         {
-            if (targetChat.IsBluetoothDevice)
-
-            {
-                await _bluetoothService.SendPacketAsync(targetChat.DeviceAddress, PacketType.Text, payload);
-
-            }
-
-            else
-
-            {
-                await _bridgeService.SendPacketAsync(targetChat.DeviceAddress, PacketType.Text, payload);
-
-            }
+            await _bluetoothService.SendPacketAsync(targetChat.DeviceAddress, PacketType.Text, payload);
 
             message.IsDelivered = true;
 
@@ -1393,13 +1354,8 @@ public async Task SendTextMessageAsync()
         try
 
         {
-            if (targetChat.IsBluetoothDevice)
-
+            
                 await _bluetoothService.SendPacketAsync(targetChat.DeviceAddress, PacketType.Voice, fileBytes);
-
-            else
-
-                await _bridgeService.SendPacketAsync(targetChat.DeviceAddress, PacketType.Voice, fileBytes);
 
             msg.IsDelivered = true;
 
@@ -1456,13 +1412,8 @@ public async Task SendTextMessageAsync()
         try
 
         {
-            if (targetChat.IsBluetoothDevice)
-
+            
                 await _bluetoothService.SendPacketAsync(targetChat.DeviceAddress, PacketType.Photo, fileBytes);
-
-            else
-
-                await _bridgeService.SendPacketAsync(targetChat.DeviceAddress, PacketType.Photo, fileBytes);
 
             message.IsDelivered = true;
 
@@ -1544,19 +1495,7 @@ public async Task SendTextMessageAsync()
             try
 
             {
-                if (targetChat.IsBluetoothDevice)
-
-                {
-                    await _bluetoothService.SendPacketAsync(targetChat.DeviceAddress, type, fileBytes);
-
-                }
-
-                else
-
-                {
-                    await _bridgeService.SendPacketAsync(targetChat.DeviceAddress, type, fileBytes);
-
-                }
+                await _bluetoothService.SendPacketAsync(targetChat.DeviceAddress, type, fileBytes);
 
                 message.IsDelivered = true;
 
@@ -1588,13 +1527,8 @@ public async Task SendTextMessageAsync()
             {
                 byte[] empty = Array.Empty<byte>();
 
-                if (SelectedChat.IsBluetoothDevice)
-
+                
                     await _bluetoothService.SendPacketAsync(SelectedChat.DeviceAddress, PacketType.Typing, empty);
-
-                else
-
-                    await _bridgeService.SendPacketAsync(SelectedChat.DeviceAddress, PacketType.Typing, empty);
 
             }
 
@@ -1652,19 +1586,7 @@ public async Task SendTextMessageAsync()
 
         StatusMessage = $"Connecting to {SelectedChat.DisplayName}...";
 
-        if (SelectedChat.IsBluetoothDevice)
-
-        {
-            await _bluetoothService.ConnectAsync(SelectedChat.DeviceAddress);
-
-        }
-
-        else
-
-        {
-            await _bridgeService.ConnectAsync(SelectedChat.DeviceAddress);
-
-        }
+        await _bluetoothService.ConnectAsync(SelectedChat.DeviceAddress);
 
     }
 
@@ -1673,81 +1595,13 @@ public async Task SendTextMessageAsync()
     {
         if (SelectedChat == null) return;
 
-        if (SelectedChat.IsBluetoothDevice)
-
-        {
-            await _bluetoothService.DisconnectAsync(SelectedChat.DeviceAddress);
-
-        }
-
-        else
-
-        {
-            await _bridgeService.DisconnectAsync(SelectedChat.DeviceAddress);
-
-        }
+        await _bluetoothService.DisconnectAsync(SelectedChat.DeviceAddress);
 
     }
 
     public async Task ConnectWifiCompanionAsync()
-
     {
-        StatusMessage = "Поиск смартфона в локальной сети Wi-Fi...";
-
-        var found = await _bridgeService.DiscoverDevicesAsync();
-
-        string? targetIp = found.FirstOrDefault()?.DeviceAddress;
-
-        if (string.IsNullOrEmpty(targetIp))
-
-        {
-            targetIp = Microsoft.VisualBasic.Interaction.InputBox(
-
-                "Смартфон не найден автоматически. Введите IP-адрес телефона (например 192.168.1.50):",
-
-                "Связка с телефоном по Wi-Fi",
-
-                "192.168.1.");
-
-        }
-
-        if (!string.IsNullOrWhiteSpace(targetIp))
-
-        {
-            var existing = _allChats.FirstOrDefault(c => c.DeviceAddress == targetIp);
-
-            if (existing == null)
-
-            {
-                existing = new ChatItem
-
-                {
-                    DisplayName = "Prime Смартфон",
-
-                    Username = "phone_link",
-
-                    DeviceAddress = targetIp,
-
-                    IsBluetoothDevice = false,
-
-                    LastMessage = "Связка по Wi-Fi установлена"
-
-                };
-
-                _allChats.Add(existing);
-
-                ApplySearchFilter();
-
-            }
-
-            SelectedChat = existing;
-
-            StatusMessage = $"Подключение к {targetIp}...";
-
-            await _bridgeService.ConnectAsync(targetIp);
-
-        }
-
+        await Task.CompletedTask;
     }
 
     private async Task ConfirmAndDeleteChatAsync(ChatItem chat)
@@ -1770,13 +1624,8 @@ public async Task SendTextMessageAsync()
         try
 
         {
-            if (chat.IsBluetoothDevice)
-
+            
                 await _bluetoothService.SendPacketAsync(chat.DeviceAddress, PacketType.ChatDeleted, payload);
-
-            else
-
-                await _bridgeService.SendPacketAsync(chat.DeviceAddress, PacketType.ChatDeleted, payload);
 
         }
 
@@ -1785,13 +1634,8 @@ public async Task SendTextMessageAsync()
         try
 
         {
-            if (chat.IsBluetoothDevice)
-
+            
                 await _bluetoothService.DisconnectAsync(chat.DeviceAddress);
-
-            else
-
-                await _bridgeService.DisconnectAsync(chat.DeviceAddress);
 
         }
 
@@ -1802,10 +1646,6 @@ public async Task SendTextMessageAsync()
         _bluetoothService.ForgetDevice(chat.DeviceAddress);
 
         _bluetoothService.ForgetDevice(chat.PeerId);
-
-        _bridgeService.ForgetDevice(chat.DeviceAddress);
-
-        _bridgeService.ForgetDevice(chat.PeerId);
 
         var discovered = DiscoveredDevices.FirstOrDefault(d => d.PeerId == chat.PeerId || d.DeviceAddress == chat.DeviceAddress);
 
@@ -1977,23 +1817,13 @@ public async Task SendTextMessageAsync()
                                 {
                                     byte[] ackBytes = PrimePacket.BuildHandshakePayload(Settings.MyDisplayName, Settings.MyUsername, isAck: true);
 
-                                    if (chat.IsBluetoothDevice)
-
+                                    
                                         await _bluetoothService.SendPacketAsync(chat.DeviceAddress, PacketType.Text, ackBytes);
-
-                                    else
-
-                                        await _bridgeService.SendPacketAsync(chat.DeviceAddress, PacketType.Text, ackBytes);
 
                                     byte[] presBytes = System.Text.Encoding.UTF8.GetBytes("ONLINE");
 
-                                    if (chat.IsBluetoothDevice)
-
+                                    
                                         await _bluetoothService.SendPacketAsync(chat.DeviceAddress, PacketType.Presence, presBytes);
-
-                                    else
-
-                                        await _bridgeService.SendPacketAsync(chat.DeviceAddress, PacketType.Presence, presBytes);
 
                                 }
 
@@ -2050,13 +1880,8 @@ public async Task SendTextMessageAsync()
                         {
                             byte[] ackPayload = System.Text.Encoding.UTF8.GetBytes(msgId);
 
-                            if (chat.IsBluetoothDevice)
-
+                            
                                 await _bluetoothService.SendPacketAsync(chat.DeviceAddress, PacketType.ReadReceipt, ackPayload);
-
-                            else
-
-                                await _bridgeService.SendPacketAsync(chat.DeviceAddress, PacketType.ReadReceipt, ackPayload);
 
                         }
 
@@ -2233,13 +2058,8 @@ public async Task SendTextMessageAsync()
                     try
 
                     {
-                        if (chat.IsBluetoothDevice)
-
+                        
                             _ = _bluetoothService.DisconnectAsync(chat.DeviceAddress);
-
-                        else
-
-                            _ = _bridgeService.DisconnectAsync(chat.DeviceAddress);
 
                     }
 
@@ -2248,10 +2068,6 @@ public async Task SendTextMessageAsync()
                     _bluetoothService.ForgetDevice(chat.DeviceAddress);
 
                     _bluetoothService.ForgetDevice(chat.PeerId);
-
-                    _bridgeService.ForgetDevice(chat.DeviceAddress);
-
-                    _bridgeService.ForgetDevice(chat.PeerId);
 
                     var disc = DiscoveredDevices.FirstOrDefault(d => d.PeerId == chat.PeerId || d.DeviceAddress == chat.DeviceAddress);
 
