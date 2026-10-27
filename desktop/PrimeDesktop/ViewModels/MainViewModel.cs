@@ -40,6 +40,7 @@ public class MainViewModel : ViewModelBase
     private ChatItem? _selectedChat;
 
     private string _searchQuery = string.Empty;
+    private bool _isSearchActive;
 
     private string _inputMessageText = string.Empty;
 
@@ -102,22 +103,30 @@ public class MainViewModel : ViewModelBase
     public bool HasSelectedChat => SelectedChat != null;
 
     public string SearchQuery
-
     {
         get => _searchQuery;
-
         set
-
         {
             if (SetProperty(ref _searchQuery, value))
-
             {
                 ApplySearchFilter();
-
             }
-
         }
+    }
 
+    public bool IsSearchActive
+    {
+        get => _isSearchActive;
+        set
+        {
+            if (SetProperty(ref _isSearchActive, value))
+            {
+                if (!value)
+                {
+                    SearchQuery = string.Empty;
+                }
+            }
+        }
     }
 
     public string InputMessageText
@@ -419,6 +428,9 @@ public class MainViewModel : ViewModelBase
     public ICommand ToggleReadingModeCommand { get; }
 
     public ICommand ToggleSettingsCommand { get; }
+    public ICommand OpenSearchCommand { get; }
+    public ICommand CloseSearchCommand { get; }
+    public ICommand ToggleSearchCommand { get; }
 
     public ICommand ToggleMediaDrawerCommand { get; }
 
@@ -989,6 +1001,10 @@ public class MainViewModel : ViewModelBase
                 Services.WindowManager.CloseSettings();
             }
         });
+
+        OpenSearchCommand = new RelayCommand(() => IsSearchActive = true);
+        CloseSearchCommand = new RelayCommand(() => IsSearchActive = false);
+        ToggleSearchCommand = new RelayCommand(() => IsSearchActive = !IsSearchActive);
 
         ResetMyAvatarCommand = new RelayCommand(() =>
         {

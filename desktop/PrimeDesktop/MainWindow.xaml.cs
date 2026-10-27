@@ -66,6 +66,10 @@ public partial class MainWindow : Window
                             }
                         }
                     }
+                    else if (args.PropertyName == nameof(MainViewModel.IsSearchActive))
+                    {
+                        AnimateSearch(vm.IsSearchActive);
+                    }
                 };
             }
         };
@@ -79,6 +83,11 @@ public partial class MainWindow : Window
                     if (vm.IsPhotoViewerOpen)
                     {
                         vm.IsPhotoViewerOpen = false;
+                        e.Handled = true;
+                    }
+                    else if (vm.IsSearchActive)
+                    {
+                        vm.IsSearchActive = false;
                         e.Handled = true;
                     }
                     else if (vm.IsSettingsOpen)
@@ -99,6 +108,59 @@ public partial class MainWindow : Window
                 }
             }
         };
+    }
+
+    public void AnimateSearch(bool isOpening)
+    {
+        if (ProfileHeaderGroup == null || SearchExpandedGroup == null || BtnSearchClose == null || ProfileTransform == null || SearchTransform == null || CloseBtnScale == null)
+            return;
+
+        var ease = new System.Windows.Media.Animation.CubicEase
+        {
+            EasingMode = isOpening ? System.Windows.Media.Animation.EasingMode.EaseOut : System.Windows.Media.Animation.EasingMode.EaseInOut
+        };
+        var duration = TimeSpan.FromMilliseconds(260);
+
+        // 1. ProfileHeaderGroup slides left and fades out
+        var profileTranslate = new System.Windows.Media.Animation.DoubleAnimation(isOpening ? -320 : 0, duration) { EasingFunction = ease };
+        var profileOpacity = new System.Windows.Media.Animation.DoubleAnimation(isOpening ? 0.0 : 1.0, duration) { EasingFunction = ease };
+
+        ProfileTransform.BeginAnimation(System.Windows.Media.TranslateTransform.XProperty, profileTranslate);
+        ProfileHeaderGroup.BeginAnimation(UIElement.OpacityProperty, profileOpacity);
+        ProfileHeaderGroup.IsHitTestVisible = !isOpening;
+
+        // 2. SearchExpandedGroup slides into place from right and expands/fades in
+        var searchTranslate = new System.Windows.Media.Animation.DoubleAnimation(isOpening ? 0 : 60, duration) { EasingFunction = ease };
+        var searchOpacity = new System.Windows.Media.Animation.DoubleAnimation(isOpening ? 1.0 : 0.0, duration) { EasingFunction = ease };
+
+        SearchTransform.BeginAnimation(System.Windows.Media.TranslateTransform.XProperty, searchTranslate);
+        SearchExpandedGroup.BeginAnimation(UIElement.OpacityProperty, searchOpacity);
+        SearchExpandedGroup.IsHitTestVisible = isOpening;
+
+        // 3. Close button (✕) fades in on the right with scale
+        var closeOpacity = new System.Windows.Media.Animation.DoubleAnimation(isOpening ? 1.0 : 0.0, TimeSpan.FromMilliseconds(200))
+        {
+            BeginTime = isOpening ? TimeSpan.FromMilliseconds(70) : TimeSpan.Zero,
+            EasingFunction = ease
+        };
+        var closeScale = new System.Windows.Media.Animation.DoubleAnimation(isOpening ? 1.0 : 0.4, TimeSpan.FromMilliseconds(200))
+        {
+            BeginTime = isOpening ? TimeSpan.FromMilliseconds(70) : TimeSpan.Zero,
+            EasingFunction = ease
+        };
+
+        BtnSearchClose.BeginAnimation(UIElement.OpacityProperty, closeOpacity);
+        CloseBtnScale.BeginAnimation(System.Windows.Media.ScaleTransform.ScaleXProperty, closeScale);
+        CloseBtnScale.BeginAnimation(System.Windows.Media.ScaleTransform.ScaleYProperty, closeScale);
+
+        if (isOpening)
+        {
+            Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Input, () =>
+            {
+                SearchTextBox?.Focus();
+                SearchTextBox?.SelectAll();
+            });
+        }
     }
 
     private void MainWindow_StateChanged(object? sender, EventArgs e)

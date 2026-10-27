@@ -169,85 +169,111 @@
                 <Grid>
 
                     <Grid.RowDefinitions>
-
-                        <RowDefinition Height="Auto"/> <!-- User Header & Actions -->
-
-                        <RowDefinition Height="Auto"/> <!-- Search Box -->
-
+                        <RowDefinition Height="Auto"/> <!-- Header & Morphing Search Bar -->
                         <RowDefinition Height="*"/>    <!-- Chats List -->
-
                         <RowDefinition Height="Auto"/> <!-- Bottom Status Bar -->
-
                     </Grid.RowDefinitions>
 
+                    <!-- Header with Morphing Search Bar -->
+                    <Grid Grid.Row="0" Margin="14,14,14,10" Height="40" ClipToBounds="True">
+                        <!-- Profile Header Group (Avatar, Name, Discovery Button, Search Button) -->
+                        <DockPanel x:Name="ProfileHeaderGroup" LastChildFill="True" VerticalAlignment="Center">
+                            <DockPanel.RenderTransform>
+                                <TranslateTransform x:Name="ProfileTransform" X="0"/>
+                            </DockPanel.RenderTransform>
 
+                            <!-- Right actions: Device Discovery & Search Trigger -->
+                            <StackPanel Orientation="Horizontal" DockPanel.Dock="Right" VerticalAlignment="Center">
+                                <Button x:Name="BtnDeviceDiscovery" Style="{StaticResource ModernButton}" 
+                                        ToolTip="Поиск устройств Prime" Command="{Binding OpenDeviceDiscoveryCommand}" 
+                                        Margin="0,0,4,0" Width="34" Height="34" Padding="0">
+                                    <Path Data="{StaticResource IconRefresh}" Fill="{DynamicResource TextSecondaryBrush}" Width="15" Height="15" Stretch="Uniform"/>
+                                </Button>
 
-                    <!-- User Header & Top Actions -->
+                                <Button x:Name="BtnSearchOpen" Style="{StaticResource ModernButton}" 
+                                        ToolTip="Поиск" Command="{Binding OpenSearchCommand}" 
+                                        Width="34" Height="34" Padding="0">
+                                    <Path Data="{StaticResource IconSearch}" Fill="{DynamicResource TextSecondaryBrush}" Width="15" Height="15" Stretch="Uniform"/>
+                                </Button>
+                            </StackPanel>
 
-                    <DockPanel Grid.Row="0" Margin="14,14,14,10">
-
-                        <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
-
-                            <Button Style="{StaticResource ModernButton}" ToolTip="Поиск устройств Prime" Command="{Binding OpenDeviceDiscoveryCommand}" Margin="0,0,4,0" Width="34" Height="34" Padding="0">
-
-                                <Path Data="{StaticResource IconRefresh}" Fill="{DynamicResource TextSecondaryBrush}" Width="15" Height="15" Stretch="Uniform"/>
-
-                            </Button>
-
-                            <Button Style="{StaticResource ModernButton}" ToolTip="Настройки" Command="{Binding ToggleSettingsCommand}" Width="34" Height="34" Padding="0">
-
-                                <Path Data="{StaticResource IconSettings}" Fill="{DynamicResource TextSecondaryBrush}" Width="16" Height="16" Stretch="Uniform"/>
-
-                            </Button>
-
-                        </StackPanel>
-
-                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-
-                            <Border Width="38" Height="38" CornerRadius="{Binding AvatarCornerRadius}" Background="{DynamicResource AccentBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Cursor="Hand" ToolTip="Нажмите, чтобы открыть настройки">
-                                <Border.InputBindings>
+                            <!-- Left: Profile Avatar & Name (Click to open settings) -->
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Cursor="Hand" ToolTip="Настройки профиля">
+                                <StackPanel.InputBindings>
                                     <MouseBinding Gesture="LeftClick" Command="{Binding ToggleSettingsCommand}"/>
-                                </Border.InputBindings>
-                                <Grid>
-                                    <TextBlock Text="{Binding Settings.MyDisplayName, Converter={StaticResource InitialsConverter}}"
-                                               Foreground="White" FontWeight="Bold" FontSize="14" HorizontalAlignment="Center" VerticalAlignment="Center"
-                                               Visibility="{Binding Settings.MyAvatarPath, Converter={StaticResource NullToVis}}"/>
+                                </StackPanel.InputBindings>
 
-                                    <Border CornerRadius="{Binding AvatarCornerRadius}"
-                                            Visibility="{Binding Settings.MyAvatarPath, Converter={StaticResource NotNullToVis}}">
-                                        <Border.Background>
-                                            <ImageBrush ImageSource="{Binding Settings.MyAvatarPath, Converter={StaticResource NonLockingImgConverter}}" Stretch="UniformToFill"/>
-                                        </Border.Background>
-                                    </Border>
+                                <Border Width="38" Height="38" CornerRadius="{Binding AvatarCornerRadius}" 
+                                        Background="{DynamicResource AccentBrush}" BorderBrush="{DynamicResource BorderBrush}" 
+                                        BorderThickness="1">
+                                    <Grid>
+                                        <TextBlock Text="{Binding Settings.MyDisplayName, Converter={StaticResource InitialsConverter}}"
+                                                   Foreground="White" FontWeight="Bold" FontSize="14" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                   Visibility="{Binding Settings.MyAvatarPath, Converter={StaticResource NullToVis}}"/>
+
+                                        <Border CornerRadius="{Binding AvatarCornerRadius}"
+                                                Visibility="{Binding Settings.MyAvatarPath, Converter={StaticResource NotNullToVis}}">
+                                            <Border.Background>
+                                                <ImageBrush ImageSource="{Binding Settings.MyAvatarPath, Converter={StaticResource NonLockingImgConverter}}" Stretch="UniformToFill"/>
+                                            </Border.Background>
+                                        </Border>
+                                    </Grid>
+                                </Border>
+
+                                <StackPanel Margin="10,0,0,0" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding Settings.MyDisplayName}" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold" FontSize="13"/>
+                                    <TextBlock Text="ПК клиент • Онлайн" Foreground="{DynamicResource AccentBrush}" FontSize="10"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </DockPanel>
+
+                        <!-- Expanded Search Bar (Animates into place from right when search is active) -->
+                        <Grid x:Name="SearchExpandedGroup" HorizontalAlignment="Stretch" VerticalAlignment="Center" 
+                              Opacity="0" IsHitTestVisible="False">
+                            <Grid.RenderTransform>
+                                <TranslateTransform x:Name="SearchTransform" X="60"/>
+                            </Grid.RenderTransform>
+
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+
+                            <!-- Modern Search Input Box -->
+                            <Border Grid.Column="0" Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" 
+                                    BorderThickness="1" CornerRadius="18" Height="36">
+                                <Grid>
+                                    <Path Data="{StaticResource IconSearch}" Fill="{DynamicResource TextSecondaryBrush}" 
+                                          Width="14" Height="14" Stretch="Uniform" HorizontalAlignment="Left" VerticalAlignment="Center" 
+                                          Margin="12,0,0,0" IsHitTestVisible="False"/>
+
+                                    <TextBox x:Name="SearchTextBox" Style="{StaticResource ModernTextBox}" 
+                                             Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}" 
+                                             Background="Transparent" BorderThickness="0"
+                                             Padding="34,6,12,6" FontSize="13" VerticalContentAlignment="Center"
+                                             FocusVisualStyle="{x:Null}">
+                                        <TextBox.InputBindings>
+                                            <KeyBinding Key="Esc" Command="{Binding CloseSearchCommand}"/>
+                                        </TextBox.InputBindings>
+                                    </TextBox>
                                 </Grid>
                             </Border>
 
-                            <StackPanel Margin="10,0,0,0" VerticalAlignment="Center">
-                                <TextBlock Text="{Binding Settings.MyDisplayName}" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold" FontSize="13"/>
-                                <TextBlock Text="ПК клиент • Онлайн" Foreground="{DynamicResource AccentBrush}" FontSize="10"/>
-                            </StackPanel>
-
-                        </StackPanel>
-
-                    </DockPanel>
-
-
-
-                    <!-- Search Box -->
-
-                    <Grid Grid.Row="1" Margin="14,0,14,10">
-
-                        <TextBox Style="{StaticResource ModernTextBox}" Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}" Padding="32,8,10,8"/>
-
-                        <Path Data="{StaticResource IconSearch}" Fill="{DynamicResource TextSecondaryBrush}" Width="14" Height="14" Stretch="Uniform" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="10,0,0,0" IsHitTestVisible="False"/>
-
+                            <!-- Smooth Fade-In Close Button (✕) -->
+                            <Button x:Name="BtnSearchClose" Grid.Column="1" Style="{StaticResource ModernButton}" 
+                                    Command="{Binding CloseSearchCommand}" ToolTip="Закрыть поиск (Esc)" 
+                                    Width="32" Height="32" Margin="6,0,0,0" Padding="0"
+                                    Content="✕" FontSize="13" Foreground="{DynamicResource TextSecondaryBrush}"
+                                    Opacity="0" RenderTransformOrigin="0.5,0.5">
+                                <Button.RenderTransform>
+                                    <ScaleTransform x:Name="CloseBtnScale" ScaleX="0.4" ScaleY="0.4"/>
+                                </Button.RenderTransform>
+                            </Button>
+                        </Grid>
                     </Grid>
 
-
-
                     <!-- Chats List -->
-
-                    <ListBox Grid.Row="2" ItemsSource="{Binding FilteredChats}" SelectedItem="{Binding SelectedChat}"
+                    <ListBox Grid.Row="1" ItemsSource="{Binding FilteredChats}" SelectedItem="{Binding SelectedChat}"
 
                              Background="Transparent" BorderThickness="0" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
 
@@ -356,8 +382,7 @@
 
 
                     <!-- Status Bar -->
-
-                    <Border Grid.Row="3" Background="{DynamicResource HeaderBrush}" Padding="12,6" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0">
+                    <Border Grid.Row="2" Background="{DynamicResource HeaderBrush}" Padding="12,6" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0">
 
                         <TextBlock Text="{Binding StatusMessage}" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" TextTrimming="CharacterEllipsis"/>
 
