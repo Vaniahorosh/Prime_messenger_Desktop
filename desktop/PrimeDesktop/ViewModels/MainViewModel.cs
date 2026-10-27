@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 
 using System.Collections.ObjectModel;
 
@@ -301,6 +301,96 @@ public class MainViewModel : ViewModelBase
 
     }
 
+    // --- Android Parity: Settings Properties & Commands ---
+    public string[] SearchEngines => new[] { "Google", "РЇРЅРґРµРєСЃ", "DuckDuckGo", "Bing" };
+    public string SelectedSearchEngine
+    {
+        get => Settings.SearchEngine;
+        set
+        {
+            if (Settings.SearchEngine != value)
+            {
+                Settings.SearchEngine = value;
+                OnPropertyChanged();
+                _ = _storageService.SaveSettingsAsync(Settings);
+            }
+        }
+    }
+    public ICommand ClearBrowserCacheCommand { get; }
+
+    public int VideoNoteRadiusPercent
+    {
+        get => Settings.VideoNoteRadiusPercent;
+        set
+        {
+            if (Settings.VideoNoteRadiusPercent != value)
+            {
+                Settings.VideoNoteRadiusPercent = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(VideoNoteCornerRadius));
+                _ = _storageService.SaveSettingsAsync(Settings);
+            }
+        }
+    }
+    public CornerRadius VideoNoteCornerRadius => new(50.0 * Settings.VideoNoteRadiusPercent / 100.0);
+
+    private bool _cbStoragePhotos = true;
+    public bool CbStoragePhotos { get => _cbStoragePhotos; set { SetProperty(ref _cbStoragePhotos, value); UpdateClearButtonText(); } }
+
+    private bool _cbStorageVideos = true;
+    public bool CbStorageVideos { get => _cbStorageVideos; set { SetProperty(ref _cbStorageVideos, value); UpdateClearButtonText(); } }
+
+    private bool _cbStorageAudio = true;
+    public bool CbStorageAudio { get => _cbStorageAudio; set { SetProperty(ref _cbStorageAudio, value); UpdateClearButtonText(); } }
+
+    private bool _cbStorageGifs = true;
+    public bool CbStorageGifs { get => _cbStorageGifs; set { SetProperty(ref _cbStorageGifs, value); UpdateClearButtonText(); } }
+
+    private bool _cbStorageFiles = true;
+    public bool CbStorageFiles { get => _cbStorageFiles; set { SetProperty(ref _cbStorageFiles, value); UpdateClearButtonText(); } }
+
+    private bool _cbStorageAvatars = true;
+    public bool CbStorageAvatars { get => _cbStorageAvatars; set { SetProperty(ref _cbStorageAvatars, value); UpdateClearButtonText(); } }
+
+    private bool _cbStorageCache = true;
+    public bool CbStorageCache { get => _cbStorageCache; set { SetProperty(ref _cbStorageCache, value); UpdateClearButtonText(); } }
+
+    private string _storagePhotosText = "0 С„. (0 Р‘)";
+    public string StoragePhotosText { get => _storagePhotosText; set => SetProperty(ref _storagePhotosText, value); }
+
+    private string _storageVideosText = "0 С„. (0 Р‘)";
+    public string StorageVideosText { get => _storageVideosText; set => SetProperty(ref _storageVideosText, value); }
+
+    private string _storageAudioText = "0 С„. (0 Р‘)";
+    public string StorageAudioText { get => _storageAudioText; set => SetProperty(ref _storageAudioText, value); }
+
+    private string _storageGifsText = "0 С„. (0 Р‘)";
+    public string StorageGifsText { get => _storageGifsText; set => SetProperty(ref _storageGifsText, value); }
+
+    private string _storageFilesText = "0 С„. (0 Р‘)";
+    public string StorageFilesText { get => _storageFilesText; set => SetProperty(ref _storageFilesText, value); }
+
+    private string _storageAvatarsText = "0 С„. (0 Р‘)";
+    public string StorageAvatarsText { get => _storageAvatarsText; set => SetProperty(ref _storageAvatarsText, value); }
+
+    private string _storageCacheText = "0 С„. (0 Р‘)";
+    public string StorageCacheText { get => _storageCacheText; set => SetProperty(ref _storageCacheText, value); }
+
+    private string _storageTotalText = "Р—Р°РЅСЏС‚Рѕ: 0 Р‘ (0 С„Р°Р№Р»РѕРІ)";
+    public string StorageTotalText { get => _storageTotalText; set => SetProperty(ref _storageTotalText, value); }
+
+    private string _clearSelectedStorageText = "рџ§№ РћС‡РёСЃС‚РёС‚СЊ РІС‹Р±СЂР°РЅРЅРѕРµ";
+    public string ClearSelectedStorageText { get => _clearSelectedStorageText; set => SetProperty(ref _clearSelectedStorageText, value); }
+
+    public ICommand ToggleSelectAllStorageCommand { get; }
+    public ICommand ClearSelectedStorageCommand { get; }
+
+    public int ThanksHeartCount => Settings.ThanksHeartCount;
+    public ICommand SendHeartCommand { get; }
+    public ICommand OpenGithubCommand { get; }
+    public ICommand OpenDevGithubCommand { get; }
+    public ICommand CheckUpdatesCommand { get; }
+
     public ICommand SaveSettingsCommand { get; }
 
     public ICommand DeleteChatCommand { get; }
@@ -545,7 +635,7 @@ public class MainViewModel : ViewModelBase
         ToggleSettingsCommand = new RelayCommand(() =>
         {
             IsSettingsOpen = !IsSettingsOpen;
-            if (IsSettingsOpen) UpdateMediaCacheSize();
+            if (IsSettingsOpen) { UpdateMediaCacheSize(); _ = CalculateStorageBreakdownAsync(); }
         });
 
         ResetMyAvatarCommand = new RelayCommand(() =>
@@ -614,6 +704,74 @@ public class MainViewModel : ViewModelBase
                 });
             }
             catch { }
+        });
+
+        ClearBrowserCacheCommand = new RelayCommand(() =>
+        {
+            try
+            {
+                string tempDir = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "PrimeBrowserCache");
+                if (System.IO.Directory.Exists(tempDir))
+                {
+                    System.IO.Directory.Delete(tempDir, true);
+                }
+            }
+            catch { }
+            StatusMessage = "РљСЌС€ Рё РґР°РЅРЅС‹Рµ Р±СЂР°СѓР·РµСЂР° РѕС‡РёС‰РµРЅС‹";
+        });
+
+        ToggleSelectAllStorageCommand = new RelayCommand(() =>
+        {
+            bool all = CbStoragePhotos && CbStorageVideos && CbStorageAudio && CbStorageGifs && CbStorageFiles && CbStorageAvatars && CbStorageCache;
+            bool targetState = !all;
+            CbStoragePhotos = targetState;
+            CbStorageVideos = targetState;
+            CbStorageAudio = targetState;
+            CbStorageGifs = targetState;
+            CbStorageFiles = targetState;
+            CbStorageAvatars = targetState;
+            CbStorageCache = targetState;
+        });
+
+        ClearSelectedStorageCommand = new RelayCommand(async () => await ClearSelectedStorageAsync());
+
+        SendHeartCommand = new RelayCommand(() =>
+        {
+            Settings.ThanksHeartCount++;
+            OnPropertyChanged(nameof(ThanksHeartCount));
+            _ = _storageService.SaveSettingsAsync(Settings);
+            StatusMessage = $"РЎРїР°СЃРёР±Рѕ Р·Р° РїРѕРґРґРµСЂР¶РєСѓ! вќ¤пёЏ ({Settings.ThanksHeartCount})";
+        });
+
+        OpenGithubCommand = new RelayCommand(() =>
+        {
+            try
+            {
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = "https://github.com/Vaniahorosh/Prime_messenger_Desktop",
+                    UseShellExecute = true
+                });
+            }
+            catch { }
+        });
+
+        OpenDevGithubCommand = new RelayCommand(() =>
+        {
+            try
+            {
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = "https://github.com/Vaniahorosh",
+                    UseShellExecute = true
+                });
+            }
+            catch { }
+        });
+
+        CheckUpdatesCommand = new RelayCommand(() =>
+        {
+            StatusMessage = "РЈ РІР°СЃ СѓСЃС‚Р°РЅРѕРІР»РµРЅР° Р°РєС‚СѓР°Р»СЊРЅР°СЏ РІРµСЂСЃРёСЏ Prime Messenger v0.1 Desk";
         });
 
         ToggleThemeCommand = new RelayCommand(() =>
@@ -1015,7 +1173,7 @@ public class MainViewModel : ViewModelBase
         SelectSettingsTabCommand = new RelayCommand(param =>
 
         {
-            if (param is string s && int.TryParse(s, out int tab)) SelectedSettingsTab = tab;
+            if (param is string s && int.TryParse(s, out int tab)) { SelectedSettingsTab = tab; if (tab == 4) _ = CalculateStorageBreakdownAsync(); }
 
             else if (param is int t) SelectedSettingsTab = t;
 
@@ -1903,6 +2061,173 @@ public async Task SendTextMessageAsync()
                lower.Contains("в сети") ||
                lower.Contains("ожидание") ||
                lower.Contains("не найдено");
+    }
+
+    private readonly System.Collections.Generic.List<string> _storageCatPhotos = new();
+    private readonly System.Collections.Generic.List<string> _storageCatVideos = new();
+    private readonly System.Collections.Generic.List<string> _storageCatAudio = new();
+    private readonly System.Collections.Generic.List<string> _storageCatGifs = new();
+    private readonly System.Collections.Generic.List<string> _storageCatFiles = new();
+    private readonly System.Collections.Generic.List<string> _storageCatAvatars = new();
+    private readonly System.Collections.Generic.List<string> _storageCatCache = new();
+
+    private long _bytesCatPhotos = 0;
+    private long _bytesCatVideos = 0;
+    private long _bytesCatAudio = 0;
+    private long _bytesCatGifs = 0;
+    private long _bytesCatFiles = 0;
+    private long _bytesCatAvatars = 0;
+    private long _bytesCatCache = 0;
+
+    private static string FormatStorageBytes(long bytes)
+    {
+        if (bytes <= 0) return "0 Р‘";
+        double kb = bytes / 1024.0;
+        if (kb < 1024) return $"{kb:F1} РљР‘";
+        double mb = kb / 1024.0;
+        if (mb < 1024) return $"{mb:F1} РњР‘";
+        double gb = mb / 1024.0;
+        return $"{gb:F2} Р“Р‘";
+    }
+
+    private void UpdateClearButtonText()
+    {
+        long selectedBytes = 0;
+        int selectedCount = 0;
+        if (CbStoragePhotos) { selectedBytes += _bytesCatPhotos; selectedCount += _storageCatPhotos.Count; }
+        if (CbStorageVideos) { selectedBytes += _bytesCatVideos; selectedCount += _storageCatVideos.Count; }
+        if (CbStorageAudio) { selectedBytes += _bytesCatAudio; selectedCount += _storageCatAudio.Count; }
+        if (CbStorageGifs) { selectedBytes += _bytesCatGifs; selectedCount += _storageCatGifs.Count; }
+        if (CbStorageFiles) { selectedBytes += _bytesCatFiles; selectedCount += _storageCatFiles.Count; }
+        if (CbStorageAvatars) { selectedBytes += _bytesCatAvatars; selectedCount += _storageCatAvatars.Count; }
+        if (CbStorageCache) { selectedBytes += _bytesCatCache; selectedCount += _storageCatCache.Count; }
+
+        if (selectedCount > 0)
+            ClearSelectedStorageText = $"рџ§№ РћС‡РёСЃС‚РёС‚СЊ РІС‹Р±СЂР°РЅРЅРѕРµ ({FormatStorageBytes(selectedBytes)})";
+        else
+            ClearSelectedStorageText = "рџ§№ РќРёС‡РµРіРѕ РЅРµ РІС‹Р±СЂР°РЅРѕ";
+    }
+
+    public async Task CalculateStorageBreakdownAsync()
+    {
+        await Task.Run(() =>
+        {
+            var pPhotos = new System.Collections.Generic.List<string>(); long bPhotos = 0;
+            var pVideos = new System.Collections.Generic.List<string>(); long bVideos = 0;
+            var pAudio = new System.Collections.Generic.List<string>(); long bAudio = 0;
+            var pGifs = new System.Collections.Generic.List<string>(); long bGifs = 0;
+            var pFiles = new System.Collections.Generic.List<string>(); long bFiles = 0;
+            var pAvatars = new System.Collections.Generic.List<string>(); long bAvatars = 0;
+            var pCache = new System.Collections.Generic.List<string>(); long bCache = 0;
+
+            string baseDir = StorageService.BaseDirectory;
+            if (System.IO.Directory.Exists(baseDir))
+            {
+                var di = new System.IO.DirectoryInfo(baseDir);
+                foreach (var fi in di.EnumerateFiles("*", System.IO.SearchOption.AllDirectories))
+                {
+                    string name = fi.Name.ToLowerInvariant();
+                    long len = fi.Length;
+
+                    // Skip profile assets and databases
+                    if (name.StartsWith("my_profile_avatar") || name.StartsWith("my_avatar") ||
+                        name.StartsWith("wallpaper_img_") || name.EndsWith(".json") || name == "chats.dat")
+                    {
+                        continue;
+                    }
+
+                    if (name.StartsWith("avatar_") || name.StartsWith("rec_avatar_") || name.StartsWith("tmp_contact_avatar_"))
+                    {
+                        pAvatars.Add(fi.FullName);
+                        bAvatars += len;
+                    }
+                    else if (name.EndsWith(".gif") || name.StartsWith("tenor_"))
+                    {
+                        pGifs.Add(fi.FullName);
+                        bGifs += len;
+                    }
+                    else if (name.EndsWith(".mp4") || name.EndsWith(".mkv") || name.EndsWith(".3gp") ||
+                             name.EndsWith(".webm") || name.EndsWith(".mov") || name.EndsWith(".avi") ||
+                             name.StartsWith("rec_video_") || name.StartsWith("rec_circle_") || name.StartsWith("rec_videonote_"))
+                    {
+                        pVideos.Add(fi.FullName);
+                        bVideos += len;
+                    }
+                    else if (name.EndsWith(".aac") || name.EndsWith(".m4a") || name.EndsWith(".opus") ||
+                             name.EndsWith(".mp3") || name.EndsWith(".ogg") || name.EndsWith(".wav") ||
+                             name.StartsWith("rec_voice_") || name.StartsWith("audio_") || name.StartsWith("voice_"))
+                    {
+                        pAudio.Add(fi.FullName);
+                        bAudio += len;
+                    }
+                    else if (name.EndsWith(".jpg") || name.EndsWith(".jpeg") || name.EndsWith(".png") ||
+                             name.EndsWith(".webp") || name.StartsWith("rec_photo_") || name.StartsWith("cache_img_") || name.StartsWith("cam_photo_"))
+                    {
+                        pPhotos.Add(fi.FullName);
+                        bPhotos += len;
+                    }
+                    else if (name.StartsWith("tmp_") || name.EndsWith(".tmp") || name.EndsWith(".log") || name.EndsWith(".dat"))
+                    {
+                        pCache.Add(fi.FullName);
+                        bCache += len;
+                    }
+                    else
+                    {
+                        pFiles.Add(fi.FullName);
+                        bFiles += len;
+                    }
+                }
+            }
+
+            System.Windows.Application.Current?.Dispatcher.Invoke(() =>
+            {
+                _storageCatPhotos.Clear(); _storageCatPhotos.AddRange(pPhotos); _bytesCatPhotos = bPhotos;
+                _storageCatVideos.Clear(); _storageCatVideos.AddRange(pVideos); _bytesCatVideos = bVideos;
+                _storageCatAudio.Clear(); _storageCatAudio.AddRange(pAudio); _bytesCatAudio = bAudio;
+                _storageCatGifs.Clear(); _storageCatGifs.AddRange(pGifs); _bytesCatGifs = bGifs;
+                _storageCatFiles.Clear(); _storageCatFiles.AddRange(pFiles); _bytesCatFiles = bFiles;
+                _storageCatAvatars.Clear(); _storageCatAvatars.AddRange(pAvatars); _bytesCatAvatars = bAvatars;
+                _storageCatCache.Clear(); _storageCatCache.AddRange(pCache); _bytesCatCache = bCache;
+
+                StoragePhotosText = $"{pPhotos.Count} С„. ({FormatStorageBytes(bPhotos)})";
+                StorageVideosText = $"{pVideos.Count} С„. ({FormatStorageBytes(bVideos)})";
+                StorageAudioText = $"{pAudio.Count} С„. ({FormatStorageBytes(bAudio)})";
+                StorageGifsText = $"{pGifs.Count} С„. ({FormatStorageBytes(bGifs)})";
+                StorageFilesText = $"{pFiles.Count} С„. ({FormatStorageBytes(bFiles)})";
+                StorageAvatarsText = $"{pAvatars.Count} С„. ({FormatStorageBytes(bAvatars)})";
+                StorageCacheText = $"{pCache.Count} С„. ({FormatStorageBytes(bCache)})";
+
+                long totalBytes = bPhotos + bVideos + bAudio + bGifs + bFiles + bAvatars + bCache;
+                int totalCount = pPhotos.Count + pVideos.Count + pAudio.Count + pGifs.Count + pFiles.Count + pAvatars.Count + pCache.Count;
+                StorageTotalText = $"Р—Р°РЅСЏС‚Рѕ: {FormatStorageBytes(totalBytes)} ({totalCount} С„Р°Р№Р»РѕРІ)";
+
+                UpdateClearButtonText();
+            });
+        });
+    }
+
+    public async Task ClearSelectedStorageAsync()
+    {
+        var toDelete = new System.Collections.Generic.List<string>();
+        if (CbStoragePhotos) toDelete.AddRange(_storageCatPhotos);
+        if (CbStorageVideos) toDelete.AddRange(_storageCatVideos);
+        if (CbStorageAudio) toDelete.AddRange(_storageCatAudio);
+        if (CbStorageGifs) toDelete.AddRange(_storageCatGifs);
+        if (CbStorageFiles) toDelete.AddRange(_storageCatFiles);
+        if (CbStorageAvatars) toDelete.AddRange(_storageCatAvatars);
+        if (CbStorageCache) toDelete.AddRange(_storageCatCache);
+
+        await Task.Run(() =>
+        {
+            foreach (var f in toDelete)
+            {
+                try { if (System.IO.File.Exists(f)) System.IO.File.Delete(f); } catch { }
+            }
+        });
+
+        await CalculateStorageBreakdownAsync();
+        UpdateMediaCacheSize();
+        StatusMessage = "Р’С‹Р±СЂР°РЅРЅС‹Рµ РґР°РЅРЅС‹Рµ СѓСЃРїРµС€РЅРѕ РѕС‡РёС‰РµРЅС‹";
     }
 
     public void UpdateMediaCacheSize()

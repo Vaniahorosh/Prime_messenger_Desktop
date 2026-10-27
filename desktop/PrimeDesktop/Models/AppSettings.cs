@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.ComponentModel;
 using System.IO;
 using System.Runtime.CompilerServices;
@@ -25,6 +25,13 @@ public class AppSettings : INotifyPropertyChanged
     private bool _maskDeviceIdentifiers = true;
     private int _companionPort = 8989;
     private bool _autoConnectBluetooth = true;
+    private string _searchEngine = "Google";
+    private bool _useInternalBrowser = false;
+    private bool _browserEnableJs = true;
+    private bool _browserEnableCookies = true;
+    private bool _browserDesktopMode = false;
+    private int _videoNoteRadiusPercent = 50;
+    private int _thanksHeartCount = 0;
 
     public string MyUsername
     {
@@ -135,6 +142,48 @@ public class AppSettings : INotifyPropertyChanged
     {
         get => _autoConnectBluetooth;
         set => SetField(ref _autoConnectBluetooth, value);
+    }
+
+    public string SearchEngine
+    {
+        get => _searchEngine;
+        set => SetField(ref _searchEngine, value);
+    }
+
+    public bool UseInternalBrowser
+    {
+        get => _useInternalBrowser;
+        set => SetField(ref _useInternalBrowser, value);
+    }
+
+    public bool BrowserEnableJs
+    {
+        get => _browserEnableJs;
+        set => SetField(ref _browserEnableJs, value);
+    }
+
+    public bool BrowserEnableCookies
+    {
+        get => _browserEnableCookies;
+        set => SetField(ref _browserEnableCookies, value);
+    }
+
+    public bool BrowserDesktopMode
+    {
+        get => _browserDesktopMode;
+        set => SetField(ref _browserDesktopMode, value);
+    }
+
+    public int VideoNoteRadiusPercent
+    {
+        get => _videoNoteRadiusPercent;
+        set => SetField(ref _videoNoteRadiusPercent, value);
+    }
+
+    public int ThanksHeartCount
+    {
+        get => _thanksHeartCount;
+        set => SetField(ref _thanksHeartCount, value);
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
