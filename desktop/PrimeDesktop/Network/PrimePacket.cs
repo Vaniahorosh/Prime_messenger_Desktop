@@ -407,11 +407,12 @@ public class PrimePacket
 
     }
 
-    public static byte[] BuildFilePayload(string msgId, string fileName, byte[] fileBytes, string duration = "00:00", bool isVoice = false)
+    public static byte[] BuildFilePayload(string msgId, string fileName, byte[] fileBytes, string duration = "00:00", bool isVoice = false, string caption = "")
     {
         string msgType = isVoice ? "VOICE" : "FILE";
-        string text = isVoice ? "Голосовое сообщение" : fileName;
-        string header = $"{msgId}:::{fileName}:::{fileBytes.Length}:::{text}:::DURATION:::{duration}:::IS_VIDEO:::0:::MSG_TYPE:::{msgType}:::HEADER_END:::";
+        string text = !string.IsNullOrEmpty(caption) ? caption : (isVoice ? "Голосовое сообщение" : fileName);
+        string isVidStr = (text.StartsWith("VIDEO_NOTE:") || fileName.StartsWith("vn_")) ? "1" : "0";
+        string header = $"{msgId}:::{fileName}:::{fileBytes.Length}:::{text}:::DURATION:::{duration}:::IS_VIDEO:::{isVidStr}:::MSG_TYPE:::{msgType}:::HEADER_END:::";
         byte[] headerBytes = Encoding.UTF8.GetBytes(header);
         byte[] combined = new byte[headerBytes.Length + fileBytes.Length];
         Buffer.BlockCopy(headerBytes, 0, combined, 0, headerBytes.Length);
@@ -419,7 +420,7 @@ public class PrimePacket
         return combined;
     }
 
-    public static (string msgId, string fileName, string duration, bool isVoice, byte[] fileBytes) ParseFilePayload(byte[] payload)
+    public static (string msgId, string fileName, string duration, bool isVoice, byte[] fileBytes, string caption) ParseFilePayload(byte[] payload)
     {
         int tagIdx = -1;
         byte[] tagBytes = Encoding.UTF8.GetBytes(":::HEADER_END:::");
@@ -443,6 +444,7 @@ public class PrimePacket
             string[] parts = headerStr.Split(":::");
             string msgId = parts.Length > 0 ? parts[0] : Guid.NewGuid().ToString();
             string fileName = parts.Length > 1 ? parts[1] : "file.bin";
+            string caption = parts.Length > 3 ? parts[3] : string.Empty;
             string duration = "00:00";
             bool isVoice = false;
 
@@ -452,11 +454,11 @@ public class PrimePacket
                 if (parts[i] == "MSG_TYPE" && i + 1 < parts.Length && parts[i + 1] == "VOICE") isVoice = true;
             }
 
-            return (msgId, fileName, duration, isVoice, fileBytes);
+            return (msgId, fileName, duration, isVoice, fileBytes, caption);
         }
         else
         {
-            return (Guid.NewGuid().ToString(), "file.bin", "00:00", false, payload);
+            return (Guid.NewGuid().ToString(), "file.bin", "00:00", false, payload, string.Empty);
         }
     }
 

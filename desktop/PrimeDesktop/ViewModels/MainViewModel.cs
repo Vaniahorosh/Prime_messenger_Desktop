@@ -154,6 +154,8 @@ public class MainViewModel : ViewModelBase
         }
     }
 
+    public bool HasInputText => !string.IsNullOrWhiteSpace(_inputMessageText);
+
     public string InputMessageText
     {
         get => _inputMessageText;
@@ -161,6 +163,7 @@ public class MainViewModel : ViewModelBase
         {
             if (SetProperty(ref _inputMessageText, value))
             {
+                OnPropertyChanged(nameof(HasInputText));
                 if (!string.IsNullOrWhiteSpace(value))
                 {
                     NotifyTyping();
@@ -2559,6 +2562,9 @@ public async Task SendTextMessageAsync()
         string fileName = Path.GetFileName(filePath);
         byte[] fileBytes = await File.ReadAllBytesAsync(filePath);
 
+        string lowerSingle = fileName.ToLowerInvariant();
+        bool isVidSingle = lowerSingle.EndsWith(".mp4") || lowerSingle.EndsWith(".mkv") || lowerSingle.EndsWith(".mov") || lowerSingle.EndsWith(".avi") || lowerSingle.EndsWith(".webm");
+
         var singleMsg = new ChatMessage
         {
             Sender = Settings.MyDisplayName,
@@ -2567,6 +2573,8 @@ public async Task SendTextMessageAsync()
             FileName = fileName,
             FileSizeBytes = fileBytes.Length,
             Type = type,
+            IsVideoNote = isVidSingle,
+            VideoNoteRadiusPercent = Settings.VideoNoteRadiusPercent,
             IsFromMe = true,
             FormattedTime = DateTime.Now.ToString("HH:mm")
         };
@@ -2579,7 +2587,7 @@ public async Task SendTextMessageAsync()
         {
             byte[] payload = (type == PacketType.Photo)
                 ? PrimePacket.BuildPhotoPayload(singleMsg.Id, fileBytes, "")
-                : PrimePacket.BuildFilePayload(singleMsg.Id, fileName, fileBytes);
+                : PrimePacket.BuildFilePayload(singleMsg.Id, fileName, fileBytes, "00:00", false, isVidSingle ? $"VIDEO_NOTE:{Settings.VideoNoteRadiusPercent}" : string.Empty);
 
             await _bluetoothService.SendPacketAsync(targetAddr, type, payload);
             singleMsg.IsDelivered = true;
@@ -3510,7 +3518,7 @@ public async Task SendTextMessageAsync()
                     break;
 
                 case PacketType.File:
-                    var (fMsgId, fName, fDuration, fIsVoice, fBytes) = PrimePacket.ParseFilePayload(payload);
+                    var (fMsgId, fName, fDuration, fIsVoice, fBytes, fCaption) = PrimePacket.ParseFilePayload(payload);
                     string fDir = StorageService.MediaDirectory;
                     Directory.CreateDirectory(fDir);
                     string fPath = Path.Combine(fDir, $"file_{DateTime.Now:yyyyMMdd_HHmmss}_{fName}");
@@ -3521,6 +3529,33 @@ public async Task SendTextMessageAsync()
                     bool isAudioMsg = !isVoiceMsg && (lowerName.EndsWith(".mp3") || lowerName.EndsWith(".m4a") || lowerName.EndsWith(".aac") || lowerName.EndsWith(".wav") || lowerName.EndsWith(".ogg") || lowerName.EndsWith(".flac"));
                     bool isPhotoMsg = !isVoiceMsg && !isAudioMsg && (lowerName.EndsWith(".jpg") || lowerName.EndsWith(".jpeg") || lowerName.EndsWith(".png") || lowerName.EndsWith(".webp") || lowerName.EndsWith(".gif"));
                     bool isVideoMsg = !isVoiceMsg && !isAudioMsg && !isPhotoMsg && (lowerName.EndsWith(".mp4") || lowerName.EndsWith(".mkv") || lowerName.EndsWith(".mov") || lowerName.EndsWith(".avi") || lowerName.EndsWith(".webm"));
+
+                    int parsedRadius = 50;
+                    string shapeTag = "";
+                    if (!string.IsNullOrEmpty(fCaption) && fCaption.StartsWith("VIDEO_NOTE:", StringComparison.OrdinalIgnoreCase))
+                    {
+                        shapeTag = fCaption.Substring("VIDEO_NOTE:".Length).Trim();
+                    }
+                    else if (fName.StartsWith("vn_", StringComparison.OrdinalIgnoreCase))
+                    {
+                        string withoutExt = Path.GetFileNameWithoutExtension(fName);
+                        var fnParts = withoutExt.Split('_');
+                        if (fnParts.Length >= 3) shapeTag = fnParts[2].Trim();
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(shapeTag))
+                    {
+                        if (int.TryParse(shapeTag, out int r))
+                            parsedRadius = Math.Clamp(r, 0, 50);
+                        else if (shapeTag.Equals("square", StringComparison.OrdinalIgnoreCase))
+                            parsedRadius = 0;
+                        else if (shapeTag.Equals("circle", StringComparison.OrdinalIgnoreCase))
+                            parsedRadius = 50;
+                        else if (shapeTag.Equals("star", StringComparison.OrdinalIgnoreCase))
+                            parsedRadius = 35;
+                        else if (shapeTag.Equals("prime", StringComparison.OrdinalIgnoreCase))
+                            parsedRadius = 25;
+                    }
 
                     var incomingFileMsg = new ChatMessage
                     {
@@ -3533,6 +3568,7 @@ public async Task SendTextMessageAsync()
                         Duration = !string.IsNullOrWhiteSpace(fDuration) && fDuration != "00:00" ? fDuration : (isVoiceMsg ? "0:00" : ""),
                         Type = isPhotoMsg ? PacketType.Photo : (isVoiceMsg ? PacketType.Voice : PacketType.File),
                         IsVideoNote = isVideoMsg,
+                        VideoNoteRadiusPercent = parsedRadius,
                         IsFromMe = false,
                         FormattedTime = DateTime.Now.ToString("HH:mm")
                     };

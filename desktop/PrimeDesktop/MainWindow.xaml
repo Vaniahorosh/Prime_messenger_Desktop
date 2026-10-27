@@ -1127,41 +1127,26 @@
 
 
 
-                            <!-- Actions: Voice & Send -->
-
-                            <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="8,0,0,0">
-
-                                <Button Style="{StaticResource ModernButton}" ToolTip="Записать голосовое сообщение"
-
-                                        Command="{Binding ToggleVoiceRecordCommand}" Width="36" Height="36" Padding="0" Margin="0,0,6,0">
-
+                            <!-- Actions: Combined Voice & Send Button -->
+                            <Grid Grid.Column="2" Margin="8,0,0,0">
+                                <Button Style="{StaticResource ModernButton}" ToolTip="Голосовое сообщение"
+                                        Command="{Binding ToggleVoiceRecordCommand}" Width="40" Height="36" Padding="0"
+                                        Visibility="{Binding HasInputText, Converter={StaticResource InverseBoolToVis}}">
                                     <Grid>
-
                                         <Path Data="{StaticResource IconMic}" Fill="{DynamicResource TextSecondaryBrush}" Width="15" Height="15" Stretch="Uniform"
-
                                               Visibility="{Binding IsRecordingVoice, Converter={StaticResource InverseBoolToVis}}"
-
                                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
-
                                         <Path Data="{StaticResource IconStop}" Fill="#FF5252" Width="14" Height="14" Stretch="Uniform"
-
                                               Visibility="{Binding IsRecordingVoice, Converter={StaticResource BoolToVis}}"
-
                                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
-
                                     </Grid>
-
                                 </Button>
-
                                 <Button Style="{StaticResource AccentButton}" ToolTip="Отправить (Enter)"
-
-                                        Command="{Binding SendMessageCommand}" Width="40" Height="36" Padding="0">
-
+                                        Command="{Binding SendMessageCommand}" Width="40" Height="36" Padding="0"
+                                        Visibility="{Binding HasInputText, Converter={StaticResource BoolToVis}}">
                                     <Path Data="{StaticResource IconSend}" Fill="White" Width="16" Height="16" Stretch="Uniform"/>
-
                                 </Button>
-
-                            </StackPanel>
+                            </Grid>
 
                         </Grid>
 

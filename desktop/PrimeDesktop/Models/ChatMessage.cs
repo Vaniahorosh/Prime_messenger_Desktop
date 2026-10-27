@@ -92,6 +92,22 @@ public class ChatMessage : INotifyPropertyChanged
     [JsonIgnore]
     public string? VideoNotePath => IsVideoNote ? FilePath : null;
 
+    private int _videoNoteRadiusPercent = 50;
+    public int VideoNoteRadiusPercent
+    {
+        get => _videoNoteRadiusPercent;
+        set
+        {
+            if (SetField(ref _videoNoteRadiusPercent, value))
+            {
+                OnPropertyChanged(nameof(VideoNoteCornerRadius));
+            }
+        }
+    }
+
+    [JsonIgnore]
+    public System.Windows.CornerRadius VideoNoteCornerRadius => new(95.0 * Math.Clamp(_videoNoteRadiusPercent, 0, 50) / 50.0);
+
     [JsonIgnore]
     public string StatusTick
     {
