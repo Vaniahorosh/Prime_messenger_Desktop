@@ -145,7 +145,7 @@
                 <ColumnDefinition Width="Auto"/>                             <!-- Col 1: Splitter 1 -->
                 <ColumnDefinition Width="*"/>                                <!-- Col 2: Chat View -->
                 <ColumnDefinition Width="Auto"/>                             <!-- Col 3: Splitter 2 -->
-                <ColumnDefinition x:Name="ColDrawer" MaxWidth="500">                            <!-- Col 4: Profile & Info Drawer -->
+                <ColumnDefinition x:Name="ColDrawer" MaxWidth="850">                            <!-- Col 4: Profile & Info Drawer -->
                     <ColumnDefinition.Style>
                         <Style TargetType="ColumnDefinition">
                             <Setter Property="Width" Value="330"/>
@@ -1240,7 +1240,7 @@
             <!-- Column 4: Profile & Info Drawer (PersonInformationActivity.kt layout) -->
 
             <Border Grid.Column="4" Background="{DynamicResource SidebarBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1,0,0,0"
-
+                    SizeChanged="ProfileDrawer_SizeChanged"
                     Visibility="{Binding IsMediaDrawerOpen, Converter={StaticResource BoolToVis}}">
 
                 <Border.RenderTransform>
@@ -1323,153 +1323,128 @@
 
                         <StackPanel>
 
-                            <!-- 7.1. Header Card with Large Photo and Gradient Overlay -->
-
+                            <!-- 7.1. Header Card with Large Photo, Avatar History and Gradient Overlay -->
                             <Border Height="230" CornerRadius="16" ClipToBounds="True" Background="{DynamicResource CardBrush}" Margin="0,0,0,14" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
-
                                 <Grid>
-
                                     <!-- Fallback Initials Display -->
-
                                     <Grid Background="{DynamicResource AccentBrush}" Visibility="{Binding SelectedChat.HasAvatar, Converter={StaticResource InverseBoolToVis}}">
-
                                         <TextBlock Text="{Binding SelectedChat.Initials}" Foreground="White" FontSize="56" FontWeight="Bold"
-
                                                    HorizontalAlignment="Center" VerticalAlignment="Center"/>
-
                                     </Grid>
 
-
-
                                     <!-- Actual Avatar Photo -->
-
-                                    <Image Source="{Binding SelectedChat.AvatarPath, Converter={StaticResource NonLockingImgConverter}}" Stretch="UniformToFill"
-
+                                    <Image Source="{Binding SelectedChat.CurrentAvatarDisplayPath, Converter={StaticResource NonLockingImgConverter}}" Stretch="UniformToFill"
                                            RenderOptions.BitmapScalingMode="HighQuality"
-
                                            Visibility="{Binding SelectedChat.HasAvatar, Converter={StaticResource BoolToVis}}"/>
 
-
-
-                                    <!-- Top-right Avatar Counter Pill (1/1) -->
-
-                                    <Border HorizontalAlignment="Right" VerticalAlignment="Top" Margin="10"
-
-                                            Background="#99000000" CornerRadius="10" Padding="8,3">
-
-                                        <TextBlock Text="1/1" Foreground="White" FontSize="11" FontWeight="SemiBold"/>
-
+                                    <!-- Clickable Overlay to open Avatar in full-screen Photo Viewer -->
+                                    <Border Background="Transparent" Cursor="Hand">
+                                        <Border.InputBindings>
+                                            <MouseBinding Gesture="LeftClick"
+                                                          Command="{Binding OpenPhotoViewerCommand}"
+                                                          CommandParameter="{Binding SelectedChat.CurrentAvatarDisplayPath}"/>
+                                        </Border.InputBindings>
                                     </Border>
 
+                                    <!-- Left Navigation Arrow for Avatar History -->
+                                    <Border HorizontalAlignment="Left" VerticalAlignment="Center" Margin="8,0,0,0"
+                                            Visibility="{Binding SelectedChat.CanGoPreviousAvatar, Converter={StaticResource BoolToVis}}">
+                                        <Border Background="#B3000000" CornerRadius="16" Width="32" Height="32">
+                                            <Button Style="{StaticResource ModernButton}" Command="{Binding PrevContactAvatarCommand}"
+                                                    Width="32" Height="32" Padding="0" Background="Transparent" BorderThickness="0"
+                                                    ToolTip="Предыдущий аватар">
+                                                <TextBlock Text="‹" Foreground="White" FontSize="20" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,-2,0,0"/>
+                                            </Button>
+                                        </Border>
+                                    </Border>
 
+                                    <!-- Right Navigation Arrow for Avatar History -->
+                                    <Border HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,8,0"
+                                            Visibility="{Binding SelectedChat.CanGoNextAvatar, Converter={StaticResource BoolToVis}}">
+                                        <Border Background="#B3000000" CornerRadius="16" Width="32" Height="32">
+                                            <Button Style="{StaticResource ModernButton}" Command="{Binding NextContactAvatarCommand}"
+                                                    Width="32" Height="32" Padding="0" Background="Transparent" BorderThickness="0"
+                                                    ToolTip="Следующий аватар">
+                                                <TextBlock Text="›" Foreground="White" FontSize="20" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,-2,0,0"/>
+                                            </Button>
+                                        </Border>
+                                    </Border>
+
+                                    <!-- Top-right Avatar Counter Pill (e.g. 1/3) -->
+                                    <Border HorizontalAlignment="Right" VerticalAlignment="Top" Margin="10"
+                                            Background="#99000000" CornerRadius="10" Padding="8,3"
+                                            Visibility="{Binding SelectedChat.HasAvatar, Converter={StaticResource BoolToVis}}">
+                                        <TextBlock Text="{Binding SelectedChat.AvatarCounterText}" Foreground="White" FontSize="11" FontWeight="SemiBold"/>
+                                    </Border>
 
                                     <!-- Bottom Gradient Overlay -->
-
-                                    <Border VerticalAlignment="Bottom" Height="110">
-
+                                    <Border VerticalAlignment="Bottom" Height="110" IsHitTestVisible="False">
                                         <Border.Background>
-
                                             <LinearGradientBrush StartPoint="0.5,0" EndPoint="0.5,1">
-
                                                 <GradientStop Color="#000B1017" Offset="0.0"/>
-
                                                 <GradientStop Color="#CC0B1017" Offset="0.5"/>
-
                                                 <GradientStop Color="#FA0B1017" Offset="1.0"/>
-
                                             </LinearGradientBrush>
-
                                         </Border.Background>
-
                                         <StackPanel VerticalAlignment="Bottom" Margin="14,0,14,12">
-
                                             <TextBlock Text="{Binding SelectedChat.DisplayName}" Foreground="White" FontSize="18" FontWeight="Bold" TextTrimming="CharacterEllipsis"/>
-
-
                                             <StackPanel Orientation="Horizontal">
-
                                                  <Ellipse Width="8" Height="8" Fill="{Binding SelectedChat.StatusColorHex, Converter={StaticResource HexToBrush}}" VerticalAlignment="Center" Margin="0,0,6,0"/>
-
                                                  <TextBlock Text="{Binding SelectedChat.StatusText}" Foreground="{Binding SelectedChat.StatusColorHex, Converter={StaticResource HexToBrush}}" FontSize="11" FontWeight="SemiBold"/>
-
                                             </StackPanel>
-
                                         </StackPanel>
-
                                     </Border>
-
                                 </Grid>
-
                             </Border>
 
-
-
-                            <!-- 7.2. Quick Action Buttons Bar -->
-
+                            <!-- 7.2. Quick Action Buttons Bar (4 columns) -->
                             <Grid Margin="0,0,0,16">
-
                                 <Grid.ColumnDefinitions>
-
                                     <ColumnDefinition Width="*"/>
-
                                     <ColumnDefinition Width="*"/>
-
                                     <ColumnDefinition Width="*"/>
-
+                                    <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
 
-
-
                                 <!-- View Photo -->
-
-                                <Button Grid.Column="0" Style="{StaticResource ModernButton}" Margin="0,0,4,0" Padding="0,8"
-
-                                        Command="{Binding OpenPhotoViewerCommand}" CommandParameter="{Binding SelectedChat.AvatarPath}"
-
-                                        ToolTip="Просмотреть аватар на весь экран">
-
+                                <Button Grid.Column="0" Style="{StaticResource ModernButton}" Margin="0,0,2,0" Padding="0,8"
+                                        Command="{Binding OpenPhotoViewerCommand}" CommandParameter="{Binding SelectedChat.CurrentAvatarDisplayPath}"
+                                        ToolTip="Просмотреть аватары в медиаплеере">
                                     <StackPanel HorizontalAlignment="Center">
-
-                                        <TextBlock Text="👁️" FontSize="14" HorizontalAlignment="Center"/>
-
-                                        <TextBlock Text="Фото" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,3,0,0" HorizontalAlignment="Center"/>
-
+                                        <TextBlock Text="👁️" FontSize="13" HorizontalAlignment="Center"/>
+                                        <TextBlock Text="Фото" FontSize="10" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,3,0,0" HorizontalAlignment="Center"/>
                                     </StackPanel>
-
                                 </Button>
 
-
+                                <!-- Add / Change Avatar -->
+                                <Button Grid.Column="1" Style="{StaticResource ModernButton}" Margin="2,0,2,0" Padding="0,8"
+                                        Command="{Binding ChangeContactAvatarCommand}"
+                                        ToolTip="Сменить или загрузить новый аватар в историю">
+                                    <StackPanel HorizontalAlignment="Center">
+                                        <TextBlock Text="📷" FontSize="13" HorizontalAlignment="Center"/>
+                                        <TextBlock Text="Аватар" FontSize="10" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,3,0,0" HorizontalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button>
 
                                 <!-- Reading Mode / Connect Toggle Button -->
-                                <Button Grid.Column="1" Style="{StaticResource ModernButton}" Margin="2,0,2,0" Padding="0,8"
+                                <Button Grid.Column="2" Style="{StaticResource ModernButton}" Margin="2,0,2,0" Padding="0,8"
                                         Command="{Binding ToggleReadingModeCommand}"
                                         ToolTip="{Binding ReadingModeToolTip}">
                                     <StackPanel HorizontalAlignment="Center">
-                                        <TextBlock Text="{Binding ReadingModeButtonIcon}" FontSize="14" HorizontalAlignment="Center"/>
-                                        <TextBlock Text="{Binding ReadingModeButtonText}" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,3,0,0" HorizontalAlignment="Center"/>
+                                        <TextBlock Text="{Binding ReadingModeButtonIcon}" FontSize="13" HorizontalAlignment="Center"/>
+                                        <TextBlock Text="{Binding ReadingModeButtonText}" FontSize="10" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,3,0,0" HorizontalAlignment="Center"/>
                                     </StackPanel>
                                 </Button>
-
-
 
                                 <!-- Delete Chat -->
-
-                                <Button Grid.Column="2" Style="{StaticResource ModernButton}" Margin="4,0,0,0" Padding="0,8"
-
+                                <Button Grid.Column="3" Style="{StaticResource ModernButton}" Margin="2,0,0,0" Padding="0,8"
                                         Command="{Binding DeleteSelectedChatCommand}"
-
                                         ToolTip="Удалить переписку и контакт">
-
                                     <StackPanel HorizontalAlignment="Center">
-
-                                        <TextBlock Text="🗑️" FontSize="14" HorizontalAlignment="Center"/>
-
-                                        <TextBlock Text="Удалить" FontSize="11" Foreground="#EF4444" Margin="0,3,0,0" HorizontalAlignment="Center"/>
-
+                                        <TextBlock Text="🗑️" FontSize="13" HorizontalAlignment="Center"/>
+                                        <TextBlock Text="Удалить" FontSize="10" Foreground="#EF4444" Margin="0,3,0,0" HorizontalAlignment="Center"/>
                                     </StackPanel>
-
                                 </Button>
-
                             </Grid>
 
 
@@ -1538,205 +1513,194 @@
 
 
 
-                            <!-- Tab 0 Content: Медиа (Photos & Video Notes Grid) -->
-
+                            <!-- Tab 0 Content: Медиа (Photos & Videos Grid) -->
                             <StackPanel Visibility="{Binding SelectedProfileTab, Converter={StaticResource EqualityToVis}, ConverterParameter=0}">
+                                <TextBlock Text="ОБЩИЕ МЕДИАФАЙЛЫ (ФОТО И ВИДЕО)" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" Margin="2,0,0,10"/>
 
-                                <TextBlock Text="ОБЩИЕ ФОТОГРАФИИ И КРУЖКИ" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" Margin="2,0,0,10"/>
-
-                                
-
-                                <ItemsControl ItemsSource="{Binding SharedMedia}">
-
+                                <ItemsControl ItemsSource="{Binding SharedMediaList}">
                                     <ItemsControl.ItemsPanel>
-
                                         <ItemsPanelTemplate>
-
-                                            <WrapPanel/>
-
+                                            <UniformGrid Columns="{Binding DataContext.ProfileGridColumns, RelativeSource={RelativeSource AncestorType=Window}}"/>
                                         </ItemsPanelTemplate>
-
                                     </ItemsControl.ItemsPanel>
-
                                     <ItemsControl.ItemTemplate>
-
                                         <DataTemplate>
-
-                                            <Border Width="92" Height="92" Margin="3" CornerRadius="10" ClipToBounds="True" Background="#141C28" Cursor="Hand"
-
+                                            <Border Height="95" Margin="2" CornerRadius="8" ClipToBounds="True" Background="#141C28" Cursor="Hand"
                                                     BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
-
                                                 <Border.InputBindings>
-
                                                     <MouseBinding Gesture="LeftClick"
-
                                                                   Command="{Binding DataContext.OpenPhotoViewerCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-
                                                                   CommandParameter="{Binding FilePath}"/>
-
                                                 </Border.InputBindings>
+                                                <Grid>
+                                                    <!-- Photo / Thumbnail -->
+                                                    <Image Source="{Binding FilePath, Converter={StaticResource NonLockingImgConverter}}"
+                                                           Stretch="UniformToFill" RenderOptions.BitmapScalingMode="HighQuality"/>
 
-                                                <Image Source="{Binding FilePath}" Stretch="UniformToFill" RenderOptions.BitmapScalingMode="HighQuality"/>
-
+                                                    <!-- Video Indicator Overlay if Video -->
+                                                    <Grid Visibility="{Binding IsVideo, Converter={StaticResource BoolToVis}}">
+                                                        <Border VerticalAlignment="Bottom" Height="30">
+                                                            <Border.Background>
+                                                                <LinearGradientBrush StartPoint="0.5,0" EndPoint="0.5,1">
+                                                                    <GradientStop Color="#00000000" Offset="0.0"/>
+                                                                    <GradientStop Color="#D9000000" Offset="1.0"/>
+                                                                </LinearGradientBrush>
+                                                            </Border.Background>
+                                                        </Border>
+                                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Bottom" HorizontalAlignment="Left" Margin="6,0,0,5">
+                                                            <Border Width="16" Height="16" CornerRadius="8" Background="#CC000000" Margin="0,0,4,0">
+                                                                <Path Data="{StaticResource IconPlay}" Fill="White" Width="7" Height="7" Stretch="Uniform" Margin="1,0,0,0" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                            </Border>
+                                                            <TextBlock Text="{Binding DurationText}" Foreground="White" FontSize="10" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                                        </StackPanel>
+                                                    </Grid>
+                                                </Grid>
                                             </Border>
-
                                         </DataTemplate>
-
                                     </ItemsControl.ItemTemplate>
-
                                 </ItemsControl>
-
-
 
                                 <!-- Empty placeholder if no media -->
-
                                 <Border Background="{DynamicResource CardBrush}" CornerRadius="10" Padding="16" Margin="0,4,0,0"
-
-                                        Visibility="{Binding SharedMedia.Count, Converter={StaticResource InverseBoolToVis}}">
-
-                                    <TextBlock Text="Нет общих фотографий" Foreground="{StaticResource TextMutedBrush}" FontSize="12" HorizontalAlignment="Center"/>
-
+                                        Visibility="{Binding HasSharedMedia, Converter={StaticResource InverseBoolToVis}}">
+                                    <TextBlock Text="Нет общих фото и видео" Foreground="{StaticResource TextMutedBrush}" FontSize="12" HorizontalAlignment="Center"/>
                                 </Border>
-
                             </StackPanel>
 
 
 
-                            <!-- Tab 1 Content: Файлы (Documents & Attachments) -->
-
+                            <!-- Tab 1 Content: Файлы (Documents & Attachments in Responsive Grid) -->
                             <StackPanel Visibility="{Binding SelectedProfileTab, Converter={StaticResource EqualityToVis}, ConverterParameter=1}">
+                                <TextBlock Text="ПЕРЕДАННЫЕ ДОКУМЕНТЫ И ФАЙЛЫ" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" Margin="2,0,0,10"/>
 
-                                <TextBlock Text="ПЕРЕДАННЫЕ ДОКУМЕНТЫ" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" Margin="2,0,0,10"/>
-
-                                
-
-                                <ItemsControl ItemsSource="{Binding SharedFiles}">
-
+                                <ItemsControl ItemsSource="{Binding SharedFileList}">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <UniformGrid Columns="{Binding DataContext.ProfileGridColumns, RelativeSource={RelativeSource AncestorType=Window}}"/>
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
                                     <ItemsControl.ItemTemplate>
-
                                         <DataTemplate>
+                                            <Border Height="110" Margin="2" CornerRadius="10" Background="{DynamicResource CardBrush}"
+                                                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Padding="7" Cursor="Hand"
+                                                    ToolTip="{Binding FileName}">
+                                                <Border.ContextMenu>
+                                                    <ContextMenu Style="{StaticResource ModernContextMenu}">
+                                                        <MenuItem Header="Открыть файл" Style="{StaticResource ModernMenuItem}"
+                                                                  Command="{Binding DataContext.OpenFileCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                  CommandParameter="{Binding FilePath}"/>
+                                                        <MenuItem Header="📁 Показать в Загрузках / Проводнике" Style="{StaticResource ModernMenuItem}"
+                                                                  Command="{Binding DataContext.OpenFileLocationCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                  CommandParameter="{Binding FilePath}"/>
+                                                    </ContextMenu>
+                                                </Border.ContextMenu>
+                                                <Border.InputBindings>
+                                                    <MouseBinding Gesture="LeftClick"
+                                                                  Command="{Binding DataContext.OpenFileCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                  CommandParameter="{Binding FilePath}"/>
+                                                </Border.InputBindings>
+                                                <Grid>
+                                                    <Grid.RowDefinitions>
+                                                        <RowDefinition Height="Auto"/>
+                                                        <RowDefinition Height="*"/>
+                                                        <RowDefinition Height="Auto"/>
+                                                    </Grid.RowDefinitions>
 
-                                            <Border Background="{DynamicResource CardBrush}" CornerRadius="10" Padding="10,8" Margin="0,3"
+                                                    <!-- Top: Extension Badge and Downloads / Explorer Button -->
+                                                    <DockPanel Grid.Row="0">
+                                                        <Button DockPanel.Dock="Right" Style="{StaticResource ModernButton}" Width="24" Height="24" Padding="0"
+                                                                Command="{Binding DataContext.OpenFileLocationCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                CommandParameter="{Binding FilePath}"
+                                                                ToolTip="Перейти к файлу в Загрузках на ПК">
+                                                            <TextBlock Text="📁" FontSize="12" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                        </Button>
 
-                                                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                                                        <Border CornerRadius="4" Padding="5,2" HorizontalAlignment="Left"
+                                                                Background="{Binding BadgeBrushHex, Converter={StaticResource HexToBrush}}">
+                                                            <TextBlock Text="{Binding ExtensionBadge}" Foreground="White" FontSize="10" FontWeight="Bold"/>
+                                                        </Border>
+                                                    </DockPanel>
 
-                                                <DockPanel>
+                                                    <!-- Middle: File Name -->
+                                                    <TextBlock Grid.Row="1" Text="{Binding FileName}" Foreground="{DynamicResource TextPrimaryBrush}"
+                                                               FontSize="11" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"
+                                                               TextWrapping="Wrap" MaxHeight="34" Margin="0,4,0,2" VerticalAlignment="Center"/>
 
-                                                    <Button Content="Открыть" Style="{StaticResource AccentButton}" DockPanel.Dock="Right"
-
-                                                            FontSize="11" Padding="10,4"
-
-                                                            Command="{Binding DataContext.OpenFileCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-
-                                                            CommandParameter="{Binding FilePath}"/>
-
-                                                    <Path Data="{StaticResource IconFile}" Fill="{DynamicResource AccentBrush}" Width="16" Height="16" Stretch="Uniform"
-
-                                                          VerticalAlignment="Center" Margin="0,0,10,0"/>
-
-                                                    <StackPanel VerticalAlignment="Center">
-
-                                                        <TextBlock Text="{Binding FileName}" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="12" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
-
-                                                        <TextBlock Text="{Binding FormattedTime}" Foreground="{StaticResource TextMutedBrush}" FontSize="10" Margin="0,2,0,0"/>
-
-                                                    </StackPanel>
-
-                                                </DockPanel>
-
+                                                    <!-- Bottom: File Size -->
+                                                    <TextBlock Grid.Row="2" Text="{Binding FormattedSize}" Foreground="{StaticResource TextMutedBrush}"
+                                                               FontSize="10" VerticalAlignment="Bottom"/>
+                                                </Grid>
                                             </Border>
-
                                         </DataTemplate>
-
                                     </ItemsControl.ItemTemplate>
-
                                 </ItemsControl>
 
-
-
                                 <Border Background="{DynamicResource CardBrush}" CornerRadius="10" Padding="16" Margin="0,4,0,0"
-
-                                        Visibility="{Binding SharedFiles.Count, Converter={StaticResource InverseBoolToVis}}">
-
+                                        Visibility="{Binding HasSharedFiles, Converter={StaticResource InverseBoolToVis}}">
                                     <TextBlock Text="Нет переданных файлов" Foreground="{StaticResource TextMutedBrush}" FontSize="12" HorizontalAlignment="Center"/>
-
                                 </Border>
-
                             </StackPanel>
 
 
 
-                            <!-- Tab 2 Content: Аудио (Voice Notes & Music) -->
-
+                            <!-- Tab 2 Content: Аудио (Voice Notes & Music in Responsive Grid 3 to 5 wide) -->
                             <StackPanel Visibility="{Binding SelectedProfileTab, Converter={StaticResource EqualityToVis}, ConverterParameter=2}">
-
                                 <TextBlock Text="ГОЛОСОВЫЕ ЗАМЕТКИ И МУЗЫКА" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" Margin="2,0,0,10"/>
 
-                                
-
                                 <ItemsControl ItemsSource="{Binding SharedAudio}">
-
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <UniformGrid Columns="{Binding DataContext.ProfileGridColumns, RelativeSource={RelativeSource AncestorType=Window}}"/>
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
                                     <ItemsControl.ItemTemplate>
-
                                         <DataTemplate>
+                                            <Border Height="110" Margin="2" CornerRadius="10" Background="{DynamicResource CardBrush}"
+                                                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Padding="6"
+                                                    ToolTip="{Binding FileName}">
+                                                <Grid>
+                                                    <Grid.RowDefinitions>
+                                                        <RowDefinition Height="Auto"/>
+                                                        <RowDefinition Height="*"/>
+                                                        <RowDefinition Height="Auto"/>
+                                                    </Grid.RowDefinitions>
 
-                                            <Border Background="{DynamicResource CardBrush}" CornerRadius="10" Padding="10,8" Margin="0,3"
-
-                                                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
-
-                                                <DockPanel>
-
-                                                    <TextBlock Text="{Binding DisplayPlayTime}" DockPanel.Dock="Right"
-                                                               Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" VerticalAlignment="Center"/>
-
-                                                    <Button Style="{StaticResource ModernButton}" Width="30" Height="30" Padding="0" Margin="0,0,10,0"
-
+                                                    <!-- Top: Circular Play/Pause Button -->
+                                                    <Button Grid.Row="0" Style="{StaticResource ModernButton}" Width="36" Height="36" Padding="0"
+                                                            HorizontalAlignment="Center" Margin="0,2,0,3"
                                                             Command="{Binding DataContext.PlayVoiceMessageCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-
                                                             CommandParameter="{Binding}">
-
                                                         <Grid>
-
-                                                            <Path Data="{StaticResource IconPlay}" Fill="{DynamicResource AccentBrush}" Width="12" Height="12" Stretch="Uniform"
-
+                                                            <Border Width="36" Height="36" CornerRadius="18" Background="{DynamicResource AccentBrush}" Opacity="0.18"/>
+                                                            <Path Data="{StaticResource IconPlay}" Fill="{DynamicResource AccentBrush}" Width="13" Height="13" Stretch="Uniform"
+                                                                  Margin="2,0,0,0"
                                                                   Visibility="{Binding IsPlaying, Converter={StaticResource InverseBoolToVis}}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-
-                                                            <Path Data="{StaticResource IconPause}" Fill="{DynamicResource AccentBrush}" Width="12" Height="12" Stretch="Uniform"
-
+                                                            <Path Data="{StaticResource IconPause}" Fill="{DynamicResource AccentBrush}" Width="13" Height="13" Stretch="Uniform"
                                                                   Visibility="{Binding IsPlaying, Converter={StaticResource BoolToVis}}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-
                                                         </Grid>
-
                                                     </Button>
 
-                                                    <StackPanel VerticalAlignment="Center">
+                                                    <!-- Middle: Title / Voice -->
+                                                    <TextBlock Grid.Row="1" Text="{Binding FileName, TargetNullValue='Голосовое'}"
+                                                               Foreground="{DynamicResource TextPrimaryBrush}" FontSize="11" FontWeight="SemiBold"
+                                                               TextTrimming="CharacterEllipsis" TextAlignment="Center" HorizontalAlignment="Center"
+                                                               VerticalAlignment="Center" MaxWidth="90"/>
 
-                                                        <TextBlock Text="Голосовое сообщение" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="12" FontWeight="SemiBold"/>
-
-                                                        <TextBlock Text="{Binding FormattedTime}" Foreground="{StaticResource TextMutedBrush}" FontSize="10" Margin="0,2,0,0"/>
-
+                                                    <!-- Bottom: Duration & Music Icon -->
+                                                    <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,2,0,0">
+                                                        <TextBlock Text="🎵" FontSize="9" Margin="0,0,3,0" VerticalAlignment="Center" Foreground="{DynamicResource AccentBrush}"/>
+                                                        <TextBlock Text="{Binding DisplayPlayTime}" Foreground="{StaticResource TextMutedBrush}" FontSize="10" FontWeight="SemiBold"/>
                                                     </StackPanel>
-
-                                                </DockPanel>
-
+                                                </Grid>
                                             </Border>
-
                                         </DataTemplate>
-
                                     </ItemsControl.ItemTemplate>
-
                                 </ItemsControl>
 
-
-
                                 <Border Background="{DynamicResource CardBrush}" CornerRadius="10" Padding="16" Margin="0,4,0,0"
-
-                                        Visibility="{Binding SharedAudio.Count, Converter={StaticResource InverseBoolToVis}}">
-
+                                        Visibility="{Binding HasSharedAudio, Converter={StaticResource InverseBoolToVis}}">
                                     <TextBlock Text="Нет аудиозаписей" Foreground="{StaticResource TextMutedBrush}" FontSize="12" HorizontalAlignment="Center"/>
-
                                 </Border>
-
                             </StackPanel>
 
 

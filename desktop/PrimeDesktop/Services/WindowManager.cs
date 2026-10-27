@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Windows;
 using PrimeDesktop.ViewModels;
@@ -109,16 +110,28 @@ public static class WindowManager
                 }
             }
 
+            OpenPhotoViewerWithItems(photoPath, mediaList, vm);
+        });
+    }
+
+    public static void OpenPhotoViewerWithItems(string photoPath, List<MediaViewerItem> items, MainViewModel? vm = null)
+    {
+        if (string.IsNullOrEmpty(photoPath) || !File.Exists(photoPath)) return;
+
+        Application.Current?.Dispatcher.Invoke(() =>
+        {
+            vm ??= Application.Current?.MainWindow?.DataContext as MainViewModel;
+
             if (_photoViewerWindow != null && _photoViewerWindow.IsLoaded)
             {
-                _photoViewerWindow.SetMediaList(photoPath, mediaList);
+                _photoViewerWindow.SetMediaList(photoPath, items);
                 if (_photoViewerWindow.WindowState == WindowState.Minimized)
                     _photoViewerWindow.WindowState = WindowState.Normal;
                 _photoViewerWindow.Activate();
                 return;
             }
 
-            _photoViewerWindow = new PhotoViewerWindow(photoPath, mediaList)
+            _photoViewerWindow = new PhotoViewerWindow(photoPath, items)
             {
                 Owner = Application.Current?.MainWindow,
                 DataContext = vm

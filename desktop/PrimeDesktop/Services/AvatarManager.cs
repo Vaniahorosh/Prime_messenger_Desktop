@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 
 namespace PrimeDesktop.Services
 {
@@ -33,6 +35,11 @@ namespace PrimeDesktop.Services
 
         public static string? SaveAvatar(string identifier, string sourceFilePath)
         {
+            return SaveAvatarToHistory(identifier, sourceFilePath);
+        }
+
+        public static string? SaveAvatarToHistory(string identifier, string sourceFilePath)
+        {
             if (!File.Exists(sourceFilePath)) return null;
 
             try
@@ -41,21 +48,65 @@ namespace PrimeDesktop.Services
                 string ext = Path.GetExtension(sourceFilePath);
                 if (string.IsNullOrWhiteSpace(ext)) ext = ".png";
 
-                string destPath = Path.Combine(AvatarsDir, $"avatar_{safeKey}{ext}");
+                string timestamp = DateTime.UtcNow.ToString("yyyyMMdd_HHmmssfff");
+                string historyPath = Path.Combine(AvatarsDir, $"avatar_{safeKey}_{timestamp}{ext}");
+                File.Copy(sourceFilePath, historyPath, overwrite: true);
 
-                // Remove existing if any
-                if (File.Exists(destPath))
-                {
-                    try { File.Delete(destPath); } catch { }
-                }
+                // Also update canonical path
+                string canonicalPath = Path.Combine(AvatarsDir, $"avatar_{safeKey}{ext}");
+                File.Copy(sourceFilePath, canonicalPath, overwrite: true);
 
-                File.Copy(sourceFilePath, destPath, overwrite: true);
-                return destPath;
+                return historyPath;
             }
             catch
             {
                 return null;
             }
+        }
+
+        public static string? SaveAvatarBytesToHistory(string identifier, byte[] bytes, string ext = ".png")
+        {
+            if (bytes == null || bytes.Length == 0) return null;
+
+            try
+            {
+                string safeKey = GetSafePeerKey(identifier);
+                if (!ext.StartsWith(".")) ext = "." + ext;
+
+                string timestamp = DateTime.UtcNow.ToString("yyyyMMdd_HHmmssfff");
+                string historyPath = Path.Combine(AvatarsDir, $"avatar_{safeKey}_{timestamp}{ext}");
+                File.WriteAllBytes(historyPath, bytes);
+
+                // Also update canonical path
+                string canonicalPath = Path.Combine(AvatarsDir, $"avatar_{safeKey}{ext}");
+                File.WriteAllBytes(canonicalPath, bytes);
+
+                return historyPath;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        public static List<string> GetAvatarHistory(string identifier)
+        {
+            var list = new List<string>();
+            try
+            {
+                string safeKey = GetSafePeerKey(identifier);
+                var dirInfo = new DirectoryInfo(AvatarsDir);
+                if (dirInfo.Exists)
+                {
+                    var files = dirInfo.GetFiles($"avatar_{safeKey}*.*")
+                                       .OrderByDescending(f => f.LastWriteTimeUtc)
+                                       .Select(f => f.FullName)
+                                       .ToList();
+                    list.AddRange(files);
+                }
+            }
+            catch { }
+            return list;
         }
 
         public static string? GetAvatarPath(string identifier)
@@ -78,10 +129,10 @@ namespace PrimeDesktop.Services
             try
             {
                 string safeKey = GetSafePeerKey(identifier);
-                string[] files = Directory.GetFiles(AvatarsDir, $"avatar_{safeKey}.*");
+                string[] files = Directory.GetFiles(AvatarsDir, $"avatar_{safeKey}*.*");
                 foreach (var file in files)
                 {
-                    File.Delete(file);
+                    try { File.Delete(file); } catch { }
                 }
                 return true;
             }

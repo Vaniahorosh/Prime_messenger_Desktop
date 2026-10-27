@@ -387,6 +387,14 @@ public partial class MainWindow : Window
         }
     }
 
+    private void ProfileDrawer_SizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        if (DataContext is MainViewModel vm && e.NewSize.Width > 0)
+        {
+            vm.UpdateDrawerGridColumns(e.NewSize.Width);
+        }
+    }
+
     private static T? FindVisualParent<T>(DependencyObject child) where T : DependencyObject
     {
         DependencyObject parentObject = System.Windows.Media.VisualTreeHelper.GetParent(child);

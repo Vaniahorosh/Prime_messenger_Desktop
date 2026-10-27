@@ -19,6 +19,7 @@ using PrimeDesktop.Models;
 using PrimeDesktop.Network;
 
 using PrimeDesktop.Services;
+using PrimeDesktop.Views;
 
 namespace PrimeDesktop.ViewModels;
 
@@ -77,8 +78,27 @@ public class MainViewModel : ViewModelBase
                 if (_selectedChat != null)
                 {
                     IsReadingMode = false;
+
+                    // Ensure avatar history is populated
+                    if (_selectedChat.AvatarHistory.Count == 0 && !string.IsNullOrEmpty(_selectedChat.AvatarPath))
+                    {
+                        _selectedChat.AvatarHistory.Add(_selectedChat.AvatarPath);
+                    }
+                    var diskAvatars = AvatarManager.GetAvatarHistory(_selectedChat.DeviceAddress);
+                    var peerAvatars = AvatarManager.GetAvatarHistory(_selectedChat.PeerId);
+                    foreach (var a in diskAvatars.Concat(peerAvatars))
+                    {
+                        if (!_selectedChat.AvatarHistory.Contains(a))
+                        {
+                            _selectedChat.AvatarHistory.Add(a);
+                        }
+                    }
+                    _selectedChat.CurrentAvatarIndex = 0;
+
                     OnPropertyChanged(nameof(SharedMedia));
+                    OnPropertyChanged(nameof(SharedMediaList));
                     OnPropertyChanged(nameof(SharedFiles));
+                    OnPropertyChanged(nameof(SharedFileList));
                     OnPropertyChanged(nameof(SharedAudio));
 
                     _ = _storageService.SaveChatsAsync(_allChats);
@@ -809,6 +829,14 @@ public class MainViewModel : ViewModelBase
 
     public ICommand OpenFileCommand { get; }
 
+    public ICommand OpenFileLocationCommand { get; }
+
+    public ICommand NextContactAvatarCommand { get; }
+
+    public ICommand PrevContactAvatarCommand { get; }
+
+    public ICommand DeleteContactAvatarCommand { get; }
+
     private ChatMessage? _editingMessage;
 
     public ChatMessage? EditingMessage
@@ -885,14 +913,125 @@ public class MainViewModel : ViewModelBase
 
     }
 
+    private int _profileGridColumns = 3;
+    public int ProfileGridColumns
+    {
+        get => _profileGridColumns;
+        set => SetProperty(ref _profileGridColumns, value);
+    }
+
+    public void UpdateDrawerGridColumns(double drawerWidth)
+    {
+        double contentWidth = drawerWidth - 42.0;
+        int cols = 3;
+        if (contentWidth >= 480.0)
+        {
+            cols = 5;
+        }
+        else if (contentWidth >= 380.0)
+        {
+            cols = 4;
+        }
+        else
+        {
+            cols = 3;
+        }
+
+        if (ProfileGridColumns != cols)
+        {
+            ProfileGridColumns = cols;
+        }
+    }
+
     public System.Collections.Generic.IEnumerable<ChatMessage> SharedMedia =>
         SelectedChat?.Messages.Where(m => m.IsPhoto || m.IsVideoNote || (!string.IsNullOrEmpty(m.FileName) && (m.FileName.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase) || m.FileName.EndsWith(".jpeg", StringComparison.OrdinalIgnoreCase) || m.FileName.EndsWith(".png", StringComparison.OrdinalIgnoreCase) || m.FileName.EndsWith(".webp", StringComparison.OrdinalIgnoreCase) || m.FileName.EndsWith(".gif", StringComparison.OrdinalIgnoreCase) || m.FileName.EndsWith(".mp4", StringComparison.OrdinalIgnoreCase)))) ?? Enumerable.Empty<ChatMessage>();
+
+    public System.Collections.Generic.IEnumerable<SharedMediaItem> SharedMediaList
+    {
+        get
+        {
+            if (SelectedChat == null) yield break;
+            foreach (var msg in SelectedChat.Messages)
+            {
+                if (msg.IsCollage && msg.CollagePaths != null && msg.CollagePaths.Count > 0)
+                {
+                    foreach (var cp in msg.CollagePaths)
+                    {
+                        if (File.Exists(cp))
+                        {
+                            yield return new SharedMediaItem
+                            {
+                                FilePath = cp,
+                                IsVideo = false,
+                                FormattedTime = msg.FormattedTime,
+                                Sender = msg.Sender,
+                                SourceMessage = msg
+                            };
+                        }
+                    }
+                }
+                else if (msg.IsPhoto && !string.IsNullOrEmpty(msg.FilePath) && File.Exists(msg.FilePath))
+                {
+                    yield return new SharedMediaItem
+                    {
+                        FilePath = msg.FilePath,
+                        IsVideo = false,
+                        FormattedTime = msg.FormattedTime,
+                        Sender = msg.Sender,
+                        SourceMessage = msg
+                    };
+                }
+                else if ((msg.IsVideoNote || Views.PhotoViewerWindow.IsVideoPath(msg.FilePath)) && !string.IsNullOrEmpty(msg.FilePath) && File.Exists(msg.FilePath))
+                {
+                    yield return new SharedMediaItem
+                    {
+                        FilePath = msg.FilePath,
+                        IsVideo = true,
+                        DurationText = !string.IsNullOrEmpty(msg.Duration) && msg.Duration != "0:00" ? msg.Duration : "Видео",
+                        FormattedTime = msg.FormattedTime,
+                        Sender = msg.Sender,
+                        SourceMessage = msg
+                    };
+                }
+            }
+        }
+    }
 
     public System.Collections.Generic.IEnumerable<ChatMessage> SharedFiles =>
         SelectedChat?.Messages.Where(m => m.IsFile && !m.IsMusic && !m.IsVoice && !m.IsPhoto) ?? Enumerable.Empty<ChatMessage>();
 
+    public System.Collections.Generic.IEnumerable<SharedFileItem> SharedFileList
+    {
+        get
+        {
+            if (SelectedChat == null) yield break;
+            foreach (var msg in SelectedChat.Messages)
+            {
+                if (msg.IsFile && !msg.IsMusic && !msg.IsVoice && !msg.IsPhoto && !msg.IsVideoNote && !Views.PhotoViewerWindow.IsVideoPath(msg.FilePath))
+                {
+                    string fName = msg.FileName ?? (string.IsNullOrEmpty(msg.FilePath) ? "Документ" : Path.GetFileName(msg.FilePath));
+                    var (badge, color) = SharedFileItem.GetExtensionStyle(fName);
+                    yield return new SharedFileItem
+                    {
+                        FilePath = msg.FilePath ?? string.Empty,
+                        FileName = fName,
+                        ExtensionBadge = badge,
+                        BadgeBrushHex = color,
+                        FormattedSize = msg.FormattedFileSize,
+                        FormattedTime = msg.FormattedTime,
+                        SourceMessage = msg
+                    };
+                }
+            }
+        }
+    }
+
     public System.Collections.Generic.IEnumerable<ChatMessage> SharedAudio =>
         SelectedChat?.Messages.Where(m => m.IsVoice || m.IsMusic || (!string.IsNullOrEmpty(m.FileName) && (m.FileName.EndsWith(".mp3", StringComparison.OrdinalIgnoreCase) || m.FileName.EndsWith(".wav", StringComparison.OrdinalIgnoreCase) || m.FileName.EndsWith(".ogg", StringComparison.OrdinalIgnoreCase) || m.FileName.EndsWith(".m4a", StringComparison.OrdinalIgnoreCase) || m.FileName.EndsWith(".opus", StringComparison.OrdinalIgnoreCase) || m.FileName.EndsWith(".flac", StringComparison.OrdinalIgnoreCase)))) ?? Enumerable.Empty<ChatMessage>();
+
+    public bool HasSharedMedia => SharedMediaList.Any();
+    public bool HasSharedFiles => SharedFileList.Any();
+    public bool HasSharedAudio => SharedAudio.Any();
 
     public MainViewModel()
 
@@ -1169,36 +1308,46 @@ public class MainViewModel : ViewModelBase
         ConnectCompanionWifiCommand = new RelayCommand(async () => await ConnectWifiCompanionAsync());
 
         ChangeContactAvatarCommand = new RelayCommand(() =>
-
         {
             if (SelectedChat == null) return;
 
             var dlg = new Microsoft.Win32.OpenFileDialog
-
             {
                 Title = "Выберите аватар для собеседника",
-
                 Filter = "Изображения (*.png;*.jpg;*.jpeg;*.webp)|*.png;*.jpg;*.jpeg;*.webp|Все файлы (*.*)|*.*"
-
             };
 
             if (dlg.ShowDialog() == true)
-
             {
-                string? saved = AvatarManager.SaveAvatar(SelectedChat.DeviceAddress, dlg.FileName);
-
+                string? saved = AvatarManager.SaveAvatarToHistory(SelectedChat.DeviceAddress, dlg.FileName);
                 if (saved != null)
-
                 {
-                    SelectedChat.AvatarPath = saved;
-
+                    SelectedChat.AddAvatarToHistory(saved);
                     _ = _storageService.SaveChatsAsync(_allChats);
-
+                    StatusMessage = "Аватар добавлен в профиль и историю";
                 }
-
             }
-
         }, () => HasSelectedChat);
+
+        NextContactAvatarCommand = new RelayCommand(() =>
+        {
+            SelectedChat?.NextAvatar();
+        }, () => SelectedChat != null && SelectedChat.CanGoNextAvatar);
+
+        PrevContactAvatarCommand = new RelayCommand(() =>
+        {
+            SelectedChat?.PrevAvatar();
+        }, () => SelectedChat != null && SelectedChat.CanGoPreviousAvatar);
+
+        DeleteContactAvatarCommand = new RelayCommand(() =>
+        {
+            if (SelectedChat != null)
+            {
+                SelectedChat.RemoveCurrentAvatar();
+                _ = _storageService.SaveChatsAsync(_allChats);
+                StatusMessage = "Аватар удален из истории";
+            }
+        }, () => SelectedChat != null && SelectedChat.HasAvatar);
 
         ChangeMyAvatarCommand = new RelayCommand(() =>
         {
@@ -1316,11 +1465,42 @@ public class MainViewModel : ViewModelBase
             {
                 path = msg.FilePath;
             }
+            else if (param is SharedMediaItem smi)
+            {
+                path = smi.FilePath;
+            }
+            else if (param is SharedFileItem sfi)
+            {
+                path = sfi.FilePath;
+            }
+
+            if (string.IsNullOrEmpty(path))
+            {
+                path = SelectedChat?.CurrentAvatarDisplayPath;
+            }
 
             if (!string.IsNullOrEmpty(path) && File.Exists(path))
             {
                 ViewedPhotoPath = path;
                 IsPhotoViewerOpen = true;
+
+                if (SelectedChat != null && SelectedChat.AvatarHistory != null && SelectedChat.AvatarHistory.Contains(path))
+                {
+                    var avatarMediaList = SelectedChat.AvatarHistory
+                        .Where(File.Exists)
+                        .Select(p => new MediaViewerItem
+                        {
+                            FilePath = p,
+                            Sender = SelectedChat.DisplayName,
+                            FormattedTime = "История аватарок",
+                            IsVideo = false,
+                            FileName = Path.GetFileName(p)
+                        }).ToList();
+
+                    Services.WindowManager.OpenPhotoViewerWithItems(path, avatarMediaList, this);
+                    return;
+                }
+
                 Services.WindowManager.OpenPhotoViewer(path, this);
             }
         });
@@ -1645,31 +1825,65 @@ public class MainViewModel : ViewModelBase
         });
 
         OpenFileCommand = new RelayCommand(param =>
-
         {
-            if (param is string p && File.Exists(p))
+            string? p = param as string;
+            if (param is SharedFileItem sfi) p = sfi.FilePath;
+            else if (param is ChatMessage msg) p = msg.FilePath;
 
+            if (!string.IsNullOrEmpty(p) && File.Exists(p))
             {
                 try
-
                 {
                     var psi = new System.Diagnostics.ProcessStartInfo
-
                     {
                         FileName = p,
-
                         UseShellExecute = true
-
                     };
-
                     System.Diagnostics.Process.Start(psi);
+                }
+                catch { }
+            }
+        });
 
+        OpenFileLocationCommand = new RelayCommand(param =>
+        {
+            string? path = param as string;
+            if (param is SharedFileItem sfi) path = sfi.FilePath;
+            else if (param is ChatMessage msg) path = msg.FilePath;
+
+            try
+            {
+                if (!string.IsNullOrEmpty(path) && File.Exists(path))
+                {
+                    System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                    {
+                        FileName = "explorer.exe",
+                        Arguments = $"/select,\"{path}\"",
+                        UseShellExecute = true
+                    });
+                    StatusMessage = $"Файл выделен в проводнике: {Path.GetFileName(path)}";
+                    return;
                 }
 
-                catch { }
-
+                // If file doesn't exist on disk, open user's Downloads folder
+                string downloadsDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
+                if (!Directory.Exists(downloadsDir))
+                {
+                    downloadsDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "PrimeDesktop", "Downloads");
+                    Directory.CreateDirectory(downloadsDir);
+                }
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = "explorer.exe",
+                    Arguments = $"\"{downloadsDir}\"",
+                    UseShellExecute = true
+                });
+                StatusMessage = "Открыта папка Загрузки";
             }
-
+            catch (Exception ex)
+            {
+                StatusMessage = $"Не удалось открыть проводник: {ex.Message}";
+            }
         });
 
         ResetWallpaperCommand = new RelayCommand(() =>
@@ -3059,7 +3273,9 @@ public async Task SendTextMessageAsync()
                     if (SelectedChat != chat) chat.UnreadCount++;
                     NotifyIncomingMessage(chat, chat.LastMessage);
                     OnPropertyChanged(nameof(SharedMedia));
+                    OnPropertyChanged(nameof(SharedMediaList));
                     OnPropertyChanged(nameof(SharedFiles));
+                    OnPropertyChanged(nameof(SharedFileList));
                     OnPropertyChanged(nameof(SharedAudio));
 
                     _ = Task.Run(async () =>
@@ -3202,17 +3418,13 @@ public async Task SendTextMessageAsync()
                 case PacketType.Avatar:
                     try
                     {
-                        string aDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "PrimeDesktop", "Avatars");
-                        Directory.CreateDirectory(aDir);
-                        string safeKey = AvatarManager.GetSafePeerKey(chat.PeerId);
-                        string aPath = Path.Combine(aDir, $"avatar_{safeKey}.png");
-                        using (var fs = new FileStream(aPath, FileMode.Create, FileAccess.Write, FileShare.ReadWrite))
+                        string? newAvatarPath = AvatarManager.SaveAvatarBytesToHistory(chat.PeerId, payload);
+                        if (!string.IsNullOrEmpty(newAvatarPath))
                         {
-                            fs.Write(payload, 0, payload.Length);
+                            chat.AddAvatarToHistory(newAvatarPath);
+                            App.Log($"[Avatar] Saved to history and updated avatar for '{chat.DisplayName}' ({payload.Length} bytes)");
+                            _ = _storageService.SaveChatsAsync(_allChats);
                         }
-                        chat.AvatarPath = null;
-                        chat.AvatarPath = aPath;
-                        App.Log($"[Avatar] Saved and updated avatar for '{chat.DisplayName}' ({payload.Length} bytes)");
                     }
                     catch (Exception avEx)
                     {
