@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 
 using System.Collections.ObjectModel;
 
@@ -302,7 +302,7 @@ public class MainViewModel : ViewModelBase
     }
 
     // --- Android Parity: Settings Properties & Commands ---
-    public string[] SearchEngines => new[] { "Google", "РЇРЅРґРµРєСЃ", "DuckDuckGo", "Bing" };
+    public string[] SearchEngines => new[] { "Google", "Яндекс", "DuckDuckGo", "Bing" };
     public string SelectedSearchEngine
     {
         get => Settings.SearchEngine;
@@ -355,31 +355,31 @@ public class MainViewModel : ViewModelBase
     private bool _cbStorageCache = true;
     public bool CbStorageCache { get => _cbStorageCache; set { SetProperty(ref _cbStorageCache, value); UpdateClearButtonText(); } }
 
-    private string _storagePhotosText = "0 С„. (0 Р‘)";
+    private string _storagePhotosText = "0 ф. (0 Б)";
     public string StoragePhotosText { get => _storagePhotosText; set => SetProperty(ref _storagePhotosText, value); }
 
-    private string _storageVideosText = "0 С„. (0 Р‘)";
+    private string _storageVideosText = "0 ф. (0 Б)";
     public string StorageVideosText { get => _storageVideosText; set => SetProperty(ref _storageVideosText, value); }
 
-    private string _storageAudioText = "0 С„. (0 Р‘)";
+    private string _storageAudioText = "0 ф. (0 Б)";
     public string StorageAudioText { get => _storageAudioText; set => SetProperty(ref _storageAudioText, value); }
 
-    private string _storageGifsText = "0 С„. (0 Р‘)";
+    private string _storageGifsText = "0 ф. (0 Б)";
     public string StorageGifsText { get => _storageGifsText; set => SetProperty(ref _storageGifsText, value); }
 
-    private string _storageFilesText = "0 С„. (0 Р‘)";
+    private string _storageFilesText = "0 ф. (0 Б)";
     public string StorageFilesText { get => _storageFilesText; set => SetProperty(ref _storageFilesText, value); }
 
-    private string _storageAvatarsText = "0 С„. (0 Р‘)";
+    private string _storageAvatarsText = "0 ф. (0 Б)";
     public string StorageAvatarsText { get => _storageAvatarsText; set => SetProperty(ref _storageAvatarsText, value); }
 
-    private string _storageCacheText = "0 С„. (0 Р‘)";
+    private string _storageCacheText = "0 ф. (0 Б)";
     public string StorageCacheText { get => _storageCacheText; set => SetProperty(ref _storageCacheText, value); }
 
-    private string _storageTotalText = "Р—Р°РЅСЏС‚Рѕ: 0 Р‘ (0 С„Р°Р№Р»РѕРІ)";
+    private string _storageTotalText = "Занято: 0 Б (0 файлов)";
     public string StorageTotalText { get => _storageTotalText; set => SetProperty(ref _storageTotalText, value); }
 
-    private string _clearSelectedStorageText = "рџ§№ РћС‡РёСЃС‚РёС‚СЊ РІС‹Р±СЂР°РЅРЅРѕРµ";
+    private string _clearSelectedStorageText = "🧹 Очистить выбранное";
     public string ClearSelectedStorageText { get => _clearSelectedStorageText; set => SetProperty(ref _clearSelectedStorageText, value); }
 
     public ICommand ToggleSelectAllStorageCommand { get; }
@@ -387,6 +387,71 @@ public class MainViewModel : ViewModelBase
 
     public int ThanksHeartCount => Settings.ThanksHeartCount;
     public ICommand SendHeartCommand { get; }
+
+    public string SelectedThemeMode
+    {
+        get => Settings.ThemeMode ?? "system";
+        set
+        {
+            if (Settings.ThemeMode != value)
+            {
+                ApplyThemeSelection(value);
+            }
+        }
+    }
+
+    public bool IsDarkTheme => Settings.DarkTheme;
+
+    public bool IsDarkThemeSelected
+    {
+        get => Settings.ThemeMode == "dark";
+        set
+        {
+            if (value) ApplyThemeSelection("dark");
+        }
+    }
+
+    public bool IsLightThemeSelected
+    {
+        get => Settings.ThemeMode == "light";
+        set
+        {
+            if (value) ApplyThemeSelection("light");
+        }
+    }
+
+    public bool IsSystemTheme
+    {
+        get => string.IsNullOrEmpty(Settings.ThemeMode) || Settings.ThemeMode == "system";
+        set
+        {
+            if (value) ApplyThemeSelection("system");
+        }
+    }
+
+    public ICommand SetThemeModeCommand { get; }
+
+    public void ApplyThemeSelection(string mode)
+    {
+        Settings.ThemeMode = mode;
+        Settings.DarkTheme = (mode == "dark") || (mode == "system" && ThemeManager.GetSystemIsDark());
+        ThemeManager.ApplyTheme(mode, Settings.AccentColorHex);
+        _ = _storageService.SaveSettingsAsync(Settings);
+
+        OnPropertyChanged(nameof(SelectedThemeMode));
+        OnPropertyChanged(nameof(IsDarkThemeSelected));
+        OnPropertyChanged(nameof(IsLightThemeSelected));
+        OnPropertyChanged(nameof(IsSystemTheme));
+        OnPropertyChanged(nameof(IsDarkTheme));
+        OnPropertyChanged(nameof(Settings));
+
+        StatusMessage = mode switch
+        {
+            "dark" => "Включена тёмная тема",
+            "light" => "Включена светлая тема",
+            _ => "Включена системная (адаптивная) тема"
+        };
+    }
     public ICommand OpenGithubCommand { get; }
     public ICommand OpenDevGithubCommand { get; }
     public ICommand CheckUpdatesCommand { get; }
@@ -717,7 +782,7 @@ public class MainViewModel : ViewModelBase
                 }
             }
             catch { }
-            StatusMessage = "РљСЌС€ Рё РґР°РЅРЅС‹Рµ Р±СЂР°СѓР·РµСЂР° РѕС‡РёС‰РµРЅС‹";
+            StatusMessage = "Кэш и данные браузера очищены";
         });
 
         ToggleSelectAllStorageCommand = new RelayCommand(() =>
@@ -740,7 +805,7 @@ public class MainViewModel : ViewModelBase
             Settings.ThanksHeartCount++;
             OnPropertyChanged(nameof(ThanksHeartCount));
             _ = _storageService.SaveSettingsAsync(Settings);
-            StatusMessage = $"РЎРїР°СЃРёР±Рѕ Р·Р° РїРѕРґРґРµСЂР¶РєСѓ! вќ¤пёЏ ({Settings.ThanksHeartCount})";
+            StatusMessage = $"Спасибо за поддержку! ❤️ ({Settings.ThanksHeartCount})";
         });
 
         OpenGithubCommand = new RelayCommand(() =>
@@ -771,14 +836,21 @@ public class MainViewModel : ViewModelBase
 
         CheckUpdatesCommand = new RelayCommand(() =>
         {
-            StatusMessage = "РЈ РІР°СЃ СѓСЃС‚Р°РЅРѕРІР»РµРЅР° Р°РєС‚СѓР°Р»СЊРЅР°СЏ РІРµСЂСЃРёСЏ Prime Messenger v0.1 Desk";
+            StatusMessage = "У вас установлена актуальная версия Prime Messenger v0.1 Desk";
         });
 
         ToggleThemeCommand = new RelayCommand(() =>
         {
-            Settings.DarkTheme = !Settings.DarkTheme;
-            _ = _storageService.SaveSettingsAsync(Settings);
-            StatusMessage = Settings.DarkTheme ? "Включена тёмная тема" : "Включена светлая тема";
+            string newMode = Settings.DarkTheme ? "light" : "dark";
+            ApplyThemeSelection(newMode);
+        });
+
+        SetThemeModeCommand = new RelayCommand(param =>
+        {
+            if (param is string mode && !string.IsNullOrEmpty(mode))
+            {
+                ApplyThemeSelection(mode);
+            }
         });
 
         ToggleMediaDrawerCommand = new RelayCommand(() => IsMediaDrawerOpen = !IsMediaDrawerOpen);
@@ -1371,7 +1443,7 @@ public class MainViewModel : ViewModelBase
 
             Application.Current?.Dispatcher?.Invoke(() =>
             {
-                ThemeManager.ApplyAccentColor(Settings.AccentColorHex);
+                ThemeManager.InitializeTheme(Settings.ThemeMode, Settings.AccentColorHex);
             });
 
             var chats = await _storageService.LoadChatsAsync();
@@ -2081,11 +2153,11 @@ public async Task SendTextMessageAsync()
 
     private static string FormatStorageBytes(long bytes)
     {
-        if (bytes <= 0) return "0 Р‘";
+        if (bytes <= 0) return "0 Б";
         double kb = bytes / 1024.0;
-        if (kb < 1024) return $"{kb:F1} РљР‘";
+        if (kb < 1024) return $"{kb:F1} КБ";
         double mb = kb / 1024.0;
-        if (mb < 1024) return $"{mb:F1} РњР‘";
+        if (mb < 1024) return $"{mb:F1} МБ";
         double gb = mb / 1024.0;
         return $"{gb:F2} Р“Р‘";
     }
@@ -2103,9 +2175,9 @@ public async Task SendTextMessageAsync()
         if (CbStorageCache) { selectedBytes += _bytesCatCache; selectedCount += _storageCatCache.Count; }
 
         if (selectedCount > 0)
-            ClearSelectedStorageText = $"рџ§№ РћС‡РёСЃС‚РёС‚СЊ РІС‹Р±СЂР°РЅРЅРѕРµ ({FormatStorageBytes(selectedBytes)})";
+            ClearSelectedStorageText = $"🧹 Очистить выбранное ({FormatStorageBytes(selectedBytes)})";
         else
-            ClearSelectedStorageText = "рџ§№ РќРёС‡РµРіРѕ РЅРµ РІС‹Р±СЂР°РЅРѕ";
+            ClearSelectedStorageText = "🧹 Ничего не выбрано";
     }
 
     public async Task CalculateStorageBreakdownAsync()
@@ -2199,7 +2271,7 @@ public async Task SendTextMessageAsync()
 
                 long totalBytes = bPhotos + bVideos + bAudio + bGifs + bFiles + bAvatars + bCache;
                 int totalCount = pPhotos.Count + pVideos.Count + pAudio.Count + pGifs.Count + pFiles.Count + pAvatars.Count + pCache.Count;
-                StorageTotalText = $"Р—Р°РЅСЏС‚Рѕ: {FormatStorageBytes(totalBytes)} ({totalCount} С„Р°Р№Р»РѕРІ)";
+                StorageTotalText = $"Занято: {FormatStorageBytes(totalBytes)} ({totalCount} файлов)";
 
                 UpdateClearButtonText();
             });
@@ -2227,7 +2299,7 @@ public async Task SendTextMessageAsync()
 
         await CalculateStorageBreakdownAsync();
         UpdateMediaCacheSize();
-        StatusMessage = "Р’С‹Р±СЂР°РЅРЅС‹Рµ РґР°РЅРЅС‹Рµ СѓСЃРїРµС€РЅРѕ РѕС‡РёС‰РµРЅС‹";
+        StatusMessage = "Выбранные данные успешно очищены";
     }
 
     public void UpdateMediaCacheSize()

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.ComponentModel;
 using System.IO;
 using System.Runtime.CompilerServices;
@@ -15,6 +15,7 @@ public class AppSettings : INotifyPropertyChanged
     private double _wallpaperOpacity = 0.35;
     private string _accentColorHex = "#4D9FFF";
     private bool _darkTheme = true;
+    private string _themeMode = "system";
     private bool _enableAcrylic = true;
     private bool _enableAnimations = true;
     private int _avatarCornerRadiusPercent = 50;
@@ -76,6 +77,12 @@ public class AppSettings : INotifyPropertyChanged
     {
         get => _accentColorHex;
         set => SetField(ref _accentColorHex, value);
+    }
+
+        public string ThemeMode
+    {
+        get => _themeMode;
+        set => SetField(ref _themeMode, value);
     }
 
     public bool DarkTheme

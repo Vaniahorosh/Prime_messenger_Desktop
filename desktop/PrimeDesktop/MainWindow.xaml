@@ -16,7 +16,7 @@
 
         WindowStyle="None" AllowsTransparency="False"
 
-        Background="{StaticResource BackgroundBrush}">
+        Background="{DynamicResource BackgroundBrush}">
 
 
 
@@ -76,7 +76,7 @@
 
         <!-- Custom Windows 11 TitleBar -->
 
-        <Grid Grid.Row="0" Background="{StaticResource HeaderBrush}" MouseLeftButtonDown="TitleBar_MouseDown">
+        <Grid Grid.Row="0" Background="{DynamicResource HeaderBrush}" MouseLeftButtonDown="TitleBar_MouseDown">
 
             <Grid.ColumnDefinitions>
 
@@ -96,7 +96,7 @@
 
                 <Image Source="Assets/prime_logo_app.png" Width="22" Height="22" Margin="0,0,8,0" RenderOptions.BitmapScalingMode="HighQuality"/>
 
-                <TextBlock Text="ПРАЙМ" Foreground="{StaticResource TextPrimaryBrush}" FontSize="13" FontWeight="Bold"/>
+                <TextBlock Text="ПРАЙМ" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="13" FontWeight="Bold"/>
 
             </StackPanel>
 
@@ -157,7 +157,7 @@
 
             <!-- Column 0: Left Sidebar -->
 
-            <Border Grid.Column="0" Background="{StaticResource SidebarBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,1,0">
+            <Border Grid.Column="0" Background="{StaticResource SidebarBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,1,0">
 
                 <Grid>
 
@@ -183,13 +183,13 @@
 
                             <Button Style="{StaticResource ModernButton}" ToolTip="Поиск устройств Prime" Command="{Binding OpenDeviceDiscoveryCommand}" Margin="0,0,4,0" Width="34" Height="34" Padding="0">
 
-                                <Path Data="{StaticResource IconRefresh}" Fill="{StaticResource TextSecondaryBrush}" Width="15" Height="15" Stretch="Uniform"/>
+                                <Path Data="{StaticResource IconRefresh}" Fill="{DynamicResource TextSecondaryBrush}" Width="15" Height="15" Stretch="Uniform"/>
 
                             </Button>
 
                             <Button Style="{StaticResource ModernButton}" ToolTip="Настройки" Command="{Binding ToggleSettingsCommand}" Width="34" Height="34" Padding="0">
 
-                                <Path Data="{StaticResource IconSettings}" Fill="{StaticResource TextSecondaryBrush}" Width="16" Height="16" Stretch="Uniform"/>
+                                <Path Data="{StaticResource IconSettings}" Fill="{DynamicResource TextSecondaryBrush}" Width="16" Height="16" Stretch="Uniform"/>
 
                             </Button>
 
@@ -197,7 +197,7 @@
 
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
 
-                            <Border Width="38" Height="38" CornerRadius="{Binding AvatarCornerRadius}" Background="{DynamicResource AccentBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" Cursor="Hand" ToolTip="Нажмите, чтобы открыть настройки">
+                            <Border Width="38" Height="38" CornerRadius="{Binding AvatarCornerRadius}" Background="{DynamicResource AccentBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Cursor="Hand" ToolTip="Нажмите, чтобы открыть настройки">
                                 <Border.InputBindings>
                                     <MouseBinding Gesture="LeftClick" Command="{Binding ToggleSettingsCommand}"/>
                                 </Border.InputBindings>
@@ -216,7 +216,7 @@
                             </Border>
 
                             <StackPanel Margin="10,0,0,0" VerticalAlignment="Center">
-                                <TextBlock Text="{Binding Settings.MyDisplayName}" Foreground="{StaticResource TextPrimaryBrush}" FontWeight="SemiBold" FontSize="13"/>
+                                <TextBlock Text="{Binding Settings.MyDisplayName}" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold" FontSize="13"/>
                                 <TextBlock Text="ПК клиент • Онлайн" Foreground="{DynamicResource AccentBrush}" FontSize="10"/>
                             </StackPanel>
 
@@ -232,7 +232,7 @@
 
                         <TextBox Style="{StaticResource ModernTextBox}" Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}" Padding="32,8,10,8"/>
 
-                        <Path Data="{StaticResource IconSearch}" Fill="{StaticResource TextSecondaryBrush}" Width="14" Height="14" Stretch="Uniform" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="10,0,0,0" IsHitTestVisible="False"/>
+                        <Path Data="{StaticResource IconSearch}" Fill="{DynamicResource TextSecondaryBrush}" Width="14" Height="14" Stretch="Uniform" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="10,0,0,0" IsHitTestVisible="False"/>
 
                     </Grid>
 
@@ -277,11 +277,11 @@
 
                                         <Grid Grid.Column="0" Margin="0,0,10,0">
 
-                                            <Border Width="42" Height="42" CornerRadius="{Binding DataContext.AvatarCornerRadius, RelativeSource={RelativeSource AncestorType=Window}}" Background="{StaticResource CardBrush}">
+                                            <Border Width="42" Height="42" CornerRadius="{Binding DataContext.AvatarCornerRadius, RelativeSource={RelativeSource AncestorType=Window}}" Background="{DynamicResource CardBrush}">
 
                                                 <Grid>
 
-                                                    <TextBlock Text="{Binding Initials}" Foreground="{StaticResource TextPrimaryBrush}" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                    <TextBlock Text="{Binding Initials}" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"
 
                                                                Visibility="{Binding HasAvatar, Converter={StaticResource InverseBoolToVis}}"/>
 
@@ -312,9 +312,9 @@
 
                                         <StackPanel Grid.Column="1" VerticalAlignment="Center">
 
-                                            <TextBlock Text="{Binding DisplayName}" Foreground="{StaticResource TextPrimaryBrush}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                            <TextBlock Text="{Binding DisplayName}" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
 
-                                            <TextBlock Text="{Binding LastMessage}" Foreground="{StaticResource TextSecondaryBrush}" FontSize="12" Margin="0,2,0,0" TextTrimming="CharacterEllipsis"/>
+                                            <TextBlock Text="{Binding LastMessage}" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,2,0,0" TextTrimming="CharacterEllipsis"/>
 
                                         </StackPanel>
 
@@ -350,9 +350,9 @@
 
                     <!-- Status Bar -->
 
-                    <Border Grid.Row="3" Background="{StaticResource HeaderBrush}" Padding="12,6" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,1,0,0">
+                    <Border Grid.Row="3" Background="{DynamicResource HeaderBrush}" Padding="12,6" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0">
 
-                        <TextBlock Text="{Binding StatusMessage}" Foreground="{StaticResource TextSecondaryBrush}" FontSize="11" TextTrimming="CharacterEllipsis"/>
+                        <TextBlock Text="{Binding StatusMessage}" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" TextTrimming="CharacterEllipsis"/>
 
                     </Border>
 
@@ -366,13 +366,13 @@
 
                           ResizeBehavior="PreviousAndNext" Width="5" Cursor="SizeWE"
 
-                          Background="{StaticResource BorderBrush}" Opacity="0.5"/>
+                          Background="{DynamicResource BorderBrush}" Opacity="0.5"/>
 
 
 
             <!-- Column 2: Chat View -->
 
-            <Grid Grid.Column="2" Background="{StaticResource BackgroundBrush}">
+            <Grid Grid.Column="2" Background="{DynamicResource BackgroundBrush}">
 
                 <!-- Active Chat Content -->
 
@@ -392,7 +392,7 @@
 
                 <!-- Chat Header -->
 
-                <Border Grid.Row="0" Background="{StaticResource HeaderBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1" Padding="16,0">
+                <Border Grid.Row="0" Background="{DynamicResource HeaderBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1" Padding="16,0">
 
                     <DockPanel VerticalAlignment="Center">
 
@@ -408,11 +408,11 @@
 
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
 
-                            <Border Width="38" Height="38" CornerRadius="{Binding HeaderAvatarCornerRadius}" Background="{StaticResource CardBrush}" Margin="0,0,12,0">
+                            <Border Width="38" Height="38" CornerRadius="{Binding HeaderAvatarCornerRadius}" Background="{DynamicResource CardBrush}" Margin="0,0,12,0">
 
                                 <Grid>
 
-                                    <TextBlock Text="{Binding SelectedChat.Initials}" Foreground="{StaticResource TextPrimaryBrush}" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                    <TextBlock Text="{Binding SelectedChat.Initials}" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"
 
                                                Visibility="{Binding SelectedChat.HasAvatar, Converter={StaticResource InverseBoolToVis}}"/>
 
@@ -432,7 +432,7 @@
 
                             <StackPanel VerticalAlignment="Center">
 
-                                <TextBlock Text="{Binding SelectedChat.DisplayName}" Foreground="{StaticResource TextPrimaryBrush}" FontWeight="Bold" FontSize="14"/>
+                                <TextBlock Text="{Binding SelectedChat.DisplayName}" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="Bold" FontSize="14"/>
 
                                 <StackPanel Orientation="Horizontal" Margin="0,2,0,0" VerticalAlignment="Center">
 
@@ -617,7 +617,7 @@
 
                                                     <TextBlock Text="{Binding ReplyToSender}" Foreground="{DynamicResource AccentBrush}" FontSize="11" FontWeight="SemiBold"/>
 
-                                                    <TextBlock Text="{Binding ReplyToText}" Foreground="{StaticResource TextSecondaryBrush}" FontSize="11" TextTrimming="CharacterEllipsis"/>
+                                                    <TextBlock Text="{Binding ReplyToText}" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" TextTrimming="CharacterEllipsis"/>
 
                                                 </StackPanel>
 
@@ -661,7 +661,7 @@
 
                                                         <TextBlock Text="{Binding FileName}" Foreground="{DynamicResource AccentBrush}" FontSize="12" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" MaxWidth="280"/>
 
-                                                        <TextBlock Text="{Binding FormattedFileSize}" Foreground="{StaticResource TextSecondaryBrush}" FontSize="10" Margin="0,2,0,0"/>
+                                                        <TextBlock Text="{Binding FormattedFileSize}" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10" Margin="0,2,0,0"/>
 
                                                     </StackPanel>
 
@@ -711,13 +711,13 @@
 
                                                     <StackPanel Grid.Column="1" VerticalAlignment="Center">
 
-                                                        <TextBlock Text="Голосовое сообщение" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}"/>
+                                                        <TextBlock Text="Голосовое сообщение" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
 
                                                         <ProgressBar Height="4" IsIndeterminate="{Binding IsPlaying}" Background="#30FFFFFF" Foreground="{DynamicResource AccentBrush}" Margin="0,4,0,0" BorderThickness="0"/>
 
                                                     </StackPanel>
 
-                                                    <TextBlock Grid.Column="2" Text="{Binding Duration}" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center" Margin="8,0,0,0"/>
+                                                    <TextBlock Grid.Column="2" Text="{Binding Duration}" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center" Margin="8,0,0,0"/>
 
                                                 </Grid>
 
@@ -797,7 +797,7 @@
 
                                             <!-- Message Text -->
 
-                                            <TextBlock Text="{Binding Text}" Foreground="{StaticResource TextPrimaryBrush}" FontSize="13" TextWrapping="Wrap"
+                                            <TextBlock Text="{Binding Text}" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="13" TextWrapping="Wrap"
 
                                                        Visibility="{Binding HasText, Converter={StaticResource BoolToVis}}"/>
 
@@ -903,13 +903,13 @@
 
                 <!-- Row 2: Reply Bar & Message Input Area -->
 
-                <Border Grid.Row="2" Background="{StaticResource HeaderBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,1,0,0" Padding="14,10">
+                <Border Grid.Row="2" Background="{DynamicResource HeaderBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0" Padding="14,10">
 
                     <StackPanel>
 
                         <!-- Active Edit Banner -->
 
-                        <Border Background="{StaticResource CardBrush}" CornerRadius="8" Padding="10,6" Margin="0,0,0,8"
+                        <Border Background="{DynamicResource CardBrush}" CornerRadius="8" Padding="10,6" Margin="0,0,0,8"
 
                                 Visibility="{Binding IsEditingMessage, Converter={StaticResource BoolToVis}}">
 
@@ -921,7 +921,7 @@
 
                                     <TextBlock Text="Редактирование сообщения:" Foreground="{DynamicResource AccentBrush}" FontSize="11" FontWeight="SemiBold"/>
 
-                                    <TextBlock Text="{Binding EditingMessage.Text}" Foreground="{StaticResource TextSecondaryBrush}" FontSize="12" TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Text="{Binding EditingMessage.Text}" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" TextTrimming="CharacterEllipsis"/>
 
                                 </StackPanel>
 
@@ -933,7 +933,7 @@
 
                         <!-- Active Reply Banner -->
 
-                        <Border Background="{StaticResource CardBrush}" CornerRadius="8" Padding="10,6" Margin="0,0,0,8"
+                        <Border Background="{DynamicResource CardBrush}" CornerRadius="8" Padding="10,6" Margin="0,0,0,8"
 
                                 Visibility="{Binding HasReply, Converter={StaticResource BoolToVis}}">
 
@@ -945,7 +945,7 @@
 
                                     <TextBlock Text="Ответ на сообщение:" Foreground="{DynamicResource AccentBrush}" FontSize="11" FontWeight="SemiBold"/>
 
-                                    <TextBlock Text="{Binding ReplyMessage.Text}" Foreground="{StaticResource TextSecondaryBrush}" FontSize="12" TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Text="{Binding ReplyMessage.Text}" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" TextTrimming="CharacterEllipsis"/>
 
                                 </StackPanel>
 
@@ -977,7 +977,7 @@
 
                                 <Button Style="{StaticResource ModernButton}" ToolTip="Отправить фото" Command="{Binding AttachPhotoCommand}" Width="34" Height="36" Padding="0" Margin="0,0,3,0">
 
-                                    <Path Data="{StaticResource IconPhoto}" Fill="{StaticResource TextSecondaryBrush}" Width="15" Height="15" Stretch="Uniform"/>
+                                    <Path Data="{StaticResource IconPhoto}" Fill="{DynamicResource TextSecondaryBrush}" Width="15" Height="15" Stretch="Uniform"/>
 
                                 </Button>
 
@@ -989,7 +989,7 @@
 
                                 <Button Style="{StaticResource ModernButton}" ToolTip="Отправить файл" Command="{Binding AttachFileCommand}" Width="34" Height="36" Padding="0">
 
-                                    <Path Data="{StaticResource IconFile}" Fill="{StaticResource TextSecondaryBrush}" Width="15" Height="15" Stretch="Uniform"/>
+                                    <Path Data="{StaticResource IconFile}" Fill="{DynamicResource TextSecondaryBrush}" Width="15" Height="15" Stretch="Uniform"/>
 
                                 </Button>
 
@@ -1019,7 +1019,7 @@
 
                                     <Grid>
 
-                                        <Path Data="{StaticResource IconMic}" Fill="{StaticResource TextSecondaryBrush}" Width="15" Height="15" Stretch="Uniform"
+                                        <Path Data="{StaticResource IconMic}" Fill="{DynamicResource TextSecondaryBrush}" Width="15" Height="15" Stretch="Uniform"
 
                                               Visibility="{Binding IsRecordingVoice, Converter={StaticResource InverseBoolToVis}}"
 
@@ -1059,13 +1059,13 @@
 
                 <Grid Visibility="{Binding HasSelectedChat, Converter={StaticResource InverseBoolToVis}}"
 
-                      Background="{StaticResource BackgroundBrush}">
+                      Background="{DynamicResource BackgroundBrush}">
 
                     <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
 
-                        <Border Width="90" Height="90" CornerRadius="45" Background="{StaticResource CardBrush}"
+                        <Border Width="90" Height="90" CornerRadius="45" Background="{DynamicResource CardBrush}"
 
-                                BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
+                                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
 
                                 Margin="0,0,0,18" HorizontalAlignment="Center">
 
@@ -1077,7 +1077,7 @@
 
                         <TextBlock Text="Выберите чат, с которым вы хотите общаться"
 
-                                   Foreground="{StaticResource TextSecondaryBrush}"
+                                   Foreground="{DynamicResource TextSecondaryBrush}"
 
                                    FontSize="16" FontWeight="SemiBold"
 
@@ -1109,13 +1109,13 @@
 
                           ResizeBehavior="PreviousAndNext" Width="5" Cursor="SizeWE"
 
-                          Background="{StaticResource BorderBrush}" Opacity="0.5"/>
+                          Background="{DynamicResource BorderBrush}" Opacity="0.5"/>
 
 
 
             <!-- Column 4: Profile & Info Drawer (PersonInformationActivity.kt layout) -->
 
-            <Border Grid.Column="4" Width="330" Background="{StaticResource SidebarBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1,0,0,0"
+            <Border Grid.Column="4" Width="330" Background="{StaticResource SidebarBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1,0,0,0"
 
                     Visibility="{Binding IsMediaDrawerOpen, Converter={StaticResource BoolToVis}}">
 
@@ -1179,13 +1179,13 @@
 
                     <!-- Top Bar -->
 
-                    <Border Grid.Row="0" Background="{StaticResource HeaderBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1" Padding="14,10">
+                    <Border Grid.Row="0" Background="{DynamicResource HeaderBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1" Padding="14,10">
 
                         <DockPanel VerticalAlignment="Center">
 
                             <Button Content="✕" Style="{StaticResource ModernButton}" Command="{Binding ToggleMediaDrawerCommand}" DockPanel.Dock="Right" Width="28" Height="28" Padding="0"/>
 
-                            <TextBlock Text="Информация о контакте" Foreground="{StaticResource TextPrimaryBrush}" FontWeight="Bold" FontSize="14" VerticalAlignment="Center"/>
+                            <TextBlock Text="Информация о контакте" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="Bold" FontSize="14" VerticalAlignment="Center"/>
 
                         </DockPanel>
 
@@ -1201,7 +1201,7 @@
 
                             <!-- 7.1. Header Card with Large Photo and Gradient Overlay -->
 
-                            <Border Height="230" CornerRadius="16" ClipToBounds="True" Background="{StaticResource CardBrush}" Margin="0,0,0,14" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
+                            <Border Height="230" CornerRadius="16" ClipToBounds="True" Background="{DynamicResource CardBrush}" Margin="0,0,0,14" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
 
                                 <Grid>
 
@@ -1261,7 +1261,7 @@
 
                                             <TextBlock Text="{Binding SelectedChat.DisplayName}" Foreground="White" FontSize="18" FontWeight="Bold" TextTrimming="CharacterEllipsis"/>
 
-                                            <TextBlock Text="{Binding SelectedChat.Username, StringFormat='@{0}'}" Foreground="{StaticResource TextSecondaryBrush}" FontSize="12" Margin="0,2,0,4"/>
+                                            <TextBlock Text="{Binding SelectedChat.Username, StringFormat='@{0}'}" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,2,0,4"/>
 
                                             <StackPanel Orientation="Horizontal">
 
@@ -1309,7 +1309,7 @@
 
                                         <TextBlock Text="👁️" FontSize="14" HorizontalAlignment="Center"/>
 
-                                        <TextBlock Text="Фото" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,3,0,0" HorizontalAlignment="Center"/>
+                                        <TextBlock Text="Фото" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,3,0,0" HorizontalAlignment="Center"/>
 
                                     </StackPanel>
 
@@ -1329,7 +1329,7 @@
 
                                         <TextBlock Text="📷" FontSize="14" HorizontalAlignment="Center"/>
 
-                                        <TextBlock Text="Сменить" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,3,0,0" HorizontalAlignment="Center"/>
+                                        <TextBlock Text="Сменить" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,3,0,0" HorizontalAlignment="Center"/>
 
                                     </StackPanel>
 
@@ -1361,7 +1361,7 @@
 
                             <!-- 7.3. Sticky Tab Bar: Медиа | Файлы | Аудио -->
 
-                            <Border Background="{StaticResource CardBrush}" CornerRadius="12" Padding="3" Margin="0,0,0,14" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
+                            <Border Background="{DynamicResource CardBrush}" CornerRadius="12" Padding="3" Margin="0,0,0,14" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
 
                                 <Grid>
 
@@ -1385,7 +1385,7 @@
 
                                         <TextBlock Text="📷 Медиа" FontSize="12" FontWeight="SemiBold"
 
-                                                   Foreground="{StaticResource TextPrimaryBrush}"/>
+                                                   Foreground="{DynamicResource TextPrimaryBrush}"/>
 
                                     </Button>
 
@@ -1399,7 +1399,7 @@
 
                                         <TextBlock Text="📁 Файлы" FontSize="12" FontWeight="SemiBold"
 
-                                                   Foreground="{StaticResource TextPrimaryBrush}"/>
+                                                   Foreground="{DynamicResource TextPrimaryBrush}"/>
 
                                     </Button>
 
@@ -1413,7 +1413,7 @@
 
                                         <TextBlock Text="🎵 Аудио" FontSize="12" FontWeight="SemiBold"
 
-                                                   Foreground="{StaticResource TextPrimaryBrush}"/>
+                                                   Foreground="{DynamicResource TextPrimaryBrush}"/>
 
                                     </Button>
 
@@ -1449,7 +1449,7 @@
 
                                             <Border Width="92" Height="92" Margin="3" CornerRadius="10" ClipToBounds="True" Background="#141C28" Cursor="Hand"
 
-                                                    BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
+                                                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
 
                                                 <Border.InputBindings>
 
@@ -1475,7 +1475,7 @@
 
                                 <!-- Empty placeholder if no media -->
 
-                                <Border Background="{StaticResource CardBrush}" CornerRadius="10" Padding="16" Margin="0,4,0,0"
+                                <Border Background="{DynamicResource CardBrush}" CornerRadius="10" Padding="16" Margin="0,4,0,0"
 
                                         Visibility="{Binding SharedMedia.Count, Converter={StaticResource InverseBoolToVis}}">
 
@@ -1501,9 +1501,9 @@
 
                                         <DataTemplate>
 
-                                            <Border Background="{StaticResource CardBrush}" CornerRadius="10" Padding="10,8" Margin="0,3"
+                                            <Border Background="{DynamicResource CardBrush}" CornerRadius="10" Padding="10,8" Margin="0,3"
 
-                                                    BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
+                                                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
 
                                                 <DockPanel>
 
@@ -1521,7 +1521,7 @@
 
                                                     <StackPanel VerticalAlignment="Center">
 
-                                                        <TextBlock Text="{Binding FileName}" Foreground="{StaticResource TextPrimaryBrush}" FontSize="12" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                                        <TextBlock Text="{Binding FileName}" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="12" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
 
                                                         <TextBlock Text="{Binding FormattedTime}" Foreground="{StaticResource TextMutedBrush}" FontSize="10" Margin="0,2,0,0"/>
 
@@ -1539,7 +1539,7 @@
 
 
 
-                                <Border Background="{StaticResource CardBrush}" CornerRadius="10" Padding="16" Margin="0,4,0,0"
+                                <Border Background="{DynamicResource CardBrush}" CornerRadius="10" Padding="16" Margin="0,4,0,0"
 
                                         Visibility="{Binding SharedFiles.Count, Converter={StaticResource InverseBoolToVis}}">
 
@@ -1565,15 +1565,15 @@
 
                                         <DataTemplate>
 
-                                            <Border Background="{StaticResource CardBrush}" CornerRadius="10" Padding="10,8" Margin="0,3"
+                                            <Border Background="{DynamicResource CardBrush}" CornerRadius="10" Padding="10,8" Margin="0,3"
 
-                                                    BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
+                                                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
 
                                                 <DockPanel>
 
                                                     <TextBlock Text="{Binding Duration, TargetNullValue='0:15'}" DockPanel.Dock="Right"
 
-                                                               Foreground="{StaticResource TextSecondaryBrush}" FontSize="11" VerticalAlignment="Center"/>
+                                                               Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" VerticalAlignment="Center"/>
 
                                                     <Button Style="{StaticResource ModernButton}" Width="30" Height="30" Padding="0" Margin="0,0,10,0"
 
@@ -1597,7 +1597,7 @@
 
                                                     <StackPanel VerticalAlignment="Center">
 
-                                                        <TextBlock Text="Голосовое сообщение" Foreground="{StaticResource TextPrimaryBrush}" FontSize="12" FontWeight="SemiBold"/>
+                                                        <TextBlock Text="Голосовое сообщение" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="12" FontWeight="SemiBold"/>
 
                                                         <TextBlock Text="{Binding FormattedTime}" Foreground="{StaticResource TextMutedBrush}" FontSize="10" Margin="0,2,0,0"/>
 
@@ -1615,7 +1615,7 @@
 
 
 
-                                <Border Background="{StaticResource CardBrush}" CornerRadius="10" Padding="16" Margin="0,4,0,0"
+                                <Border Background="{DynamicResource CardBrush}" CornerRadius="10" Padding="16" Margin="0,4,0,0"
 
                                         Visibility="{Binding SharedAudio.Count, Converter={StaticResource InverseBoolToVis}}">
 
@@ -1673,9 +1673,9 @@
 
               Panel.ZIndex="100">
 
-            <Border Background="{StaticResource CardBrush}"
+            <Border Background="{DynamicResource CardBrush}"
 
-                    BorderBrush="{StaticResource BorderBrush}"
+                    BorderBrush="{DynamicResource BorderBrush}"
 
                     BorderThickness="1"
 
@@ -1719,7 +1719,7 @@
 
                             <Path Data="{StaticResource IconSettings}" Fill="{DynamicResource AccentBrush}" Width="18" Height="18" Stretch="Uniform" Margin="0,0,10,0"/>
 
-                            <TextBlock Text="Настройки Prime Messenger" FontSize="16" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}"/>
+                            <TextBlock Text="Настройки Prime Messenger" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}"/>
 
                             <Border Background="{DynamicResource AccentSoftBrush}" CornerRadius="6" Padding="6,2" Margin="10,0,0,0">
 
@@ -1741,7 +1741,7 @@
                         </Grid.ColumnDefinitions>
 
                         <!-- Left Navigation Strip (Exact 6 Android Tabs) -->
-                        <Border Grid.Column="0" Background="{StaticResource BackgroundBrush}" CornerRadius="12" Padding="6" Margin="0,0,12,0">
+                        <Border Grid.Column="0" Background="{DynamicResource BackgroundBrush}" CornerRadius="12" Padding="6" Margin="0,0,12,0">
                             <StackPanel>
                                 <Button Content="👤 Профиль" Style="{StaticResource ModernButton}" HorizontalContentAlignment="Left"
                                         Padding="12,8" Margin="0,2" BorderThickness="0"
@@ -1770,7 +1770,7 @@
                         </Border>
 
                         <!-- Right Tab Content Area -->
-                        <Border Grid.Column="1" Background="{StaticResource BackgroundBrush}" CornerRadius="12" Padding="14">
+                        <Border Grid.Column="1" Background="{DynamicResource BackgroundBrush}" CornerRadius="12" Padding="14">
                             <ScrollViewer VerticalScrollBarVisibility="Auto">
                                 <Grid>
                                     <!-- TAB 0: Профиль -->
@@ -1804,22 +1804,22 @@
                                             </StackPanel>
                                         </StackPanel>
 
-                                        <TextBlock Text="Отображаемое имя" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,4"/>
+                                        <TextBlock Text="Отображаемое имя" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,4"/>
                                         <TextBox Text="{Binding Settings.MyDisplayName, UpdateSourceTrigger=PropertyChanged}"
                                                  Style="{StaticResource ModernTextBox}" Margin="0,0,0,12"/>
 
-                                        <TextBlock Text="Имя пользователя (@username)" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,4"/>
+                                        <TextBlock Text="Имя пользователя (@username)" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,4"/>
                                         <TextBox Text="{Binding Settings.MyUsername, UpdateSourceTrigger=PropertyChanged}"
                                                  Style="{StaticResource ModernTextBox}" Margin="0,0,0,12"/>
 
-                                        <Border Background="{StaticResource CardBrush}" CornerRadius="10" Padding="12" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
+                                        <Border Background="{DynamicResource CardBrush}" CornerRadius="10" Padding="12" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
                                             <StackPanel>
                                                 <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
                                                     <Path Data="{StaticResource IconLock}" Fill="{DynamicResource AccentBrush}" Width="14" Height="14" Stretch="Uniform" Margin="0,0,6,0" VerticalAlignment="Center"/>
-                                                    <TextBlock Text="Безопасность профиля" Foreground="{StaticResource TextPrimaryBrush}" FontSize="12" FontWeight="SemiBold"/>
+                                                    <TextBlock Text="Безопасность профиля" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="12" FontWeight="SemiBold"/>
                                                 </StackPanel>
                                                 <TextBlock Text="Физический MAC-адрес устройства надежно изолирован и никогда не передается в эфир. Локальное шифрование данных: AES-256-GCM."
-                                                           FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap"/>
+                                                           FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap"/>
                                             </StackPanel>
                                         </Border>
                                     </StackPanel>
@@ -1827,11 +1827,22 @@
                                     <!-- TAB 1: Оформление и акценты -->
                                     <StackPanel Visibility="{Binding SelectedSettingsTab, Converter={StaticResource EqualityToVis}, ConverterParameter=1}">
                                         <TextBlock Text="ТЕМА ОФОРМЛЕНИЯ" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,8"/>
-                                        <CheckBox Content="Тёмная тема (Dark Mode)" IsChecked="{Binding Settings.DarkTheme, Mode=TwoWay}"
-                                                  Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,14"/>
+                                        <TextBlock Text="Цветовая схема приложения:" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,8"/>
+                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
+                                            <RadioButton Content="🌙 Тёмная" IsChecked="{Binding IsDarkThemeSelected, Mode=TwoWay}"
+                                                         GroupName="ThemeModeGroup"
+                                                         Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,18,0" VerticalAlignment="Center"/>
+                                            <RadioButton Content="☀️ Светлая" IsChecked="{Binding IsLightThemeSelected, Mode=TwoWay}"
+                                                         GroupName="ThemeModeGroup"
+                                                         Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,18,0" VerticalAlignment="Center"/>
+                                            <RadioButton Content="💻 Системная" IsChecked="{Binding IsSystemTheme, Mode=TwoWay}"
+                                                         GroupName="ThemeModeGroup"
+                                                         ToolTip="Автоматически адаптируется под тему Windows"
+                                                         Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+                                        </StackPanel>
 
                                         <TextBlock Text="ЦВЕТОВОЙ АКЦЕНТ ПРАЙМ" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,8"/>
-                                        <TextBlock Text="Мгновенно применяется ко всем элементам интерфейса:" Foreground="{StaticResource TextSecondaryBrush}" FontSize="11" Margin="0,0,0,8"/>
+                                        <TextBlock Text="Мгновенно применяется ко всем элементам интерфейса:" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" Margin="0,0,0,8"/>
                                         <WrapPanel Margin="0,0,0,14">
                                             <Button Background="#4D9FFF" ToolTip="Синий" Command="{Binding ChangeAccentColorCommand}" CommandParameter="#4D9FFF" Width="30" Height="30" Margin="4" Style="{StaticResource ModernButton}"/>
                                             <Button Background="#26A69A" ToolTip="Изумруд" Command="{Binding ChangeAccentColorCommand}" CommandParameter="#26A69A" Width="30" Height="30" Margin="4" Style="{StaticResource ModernButton}"/>
@@ -1844,7 +1855,7 @@
 
                                         <TextBlock Text="ФОРМА АВАТАРОК" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,6"/>
                                         <DockPanel Margin="0,0,0,6">
-                                            <TextBlock Text="Скругление углов" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}"/>
+                                            <TextBlock Text="Скругление углов" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}"/>
                                             <TextBlock Text="{Binding AvatarCornerRadiusPercent, StringFormat='{}{0}%'}" DockPanel.Dock="Right" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"/>
                                         </DockPanel>
                                         <Grid Margin="0,0,0,14">
@@ -1861,7 +1872,7 @@
 
                                         <TextBlock Text="ФОРМА СООБЩЕНИЙ" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,6"/>
                                         <DockPanel Margin="0,0,0,6">
-                                            <TextBlock Text="Скругление блоков сообщений" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}"/>
+                                            <TextBlock Text="Скругление блоков сообщений" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}"/>
                                             <TextBlock Text="{Binding BubbleRadius, StringFormat='{}{0} px'}" DockPanel.Dock="Right" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"/>
                                         </DockPanel>
                                         <Grid Margin="0,0,0,14">
@@ -1877,7 +1888,7 @@
                                         </Grid>
 
                                         <CheckBox Content="Плавные анимации интерфейса" IsChecked="{Binding Settings.EnableAnimations, Mode=TwoWay}"
-                                                  Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,8"/>
+                                                  Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,8"/>
                                     </StackPanel>
 
                                     <!-- TAB 2: В чате -->
@@ -1891,7 +1902,7 @@
                                         </StackPanel>
 
                                         <DockPanel Margin="0,0,0,6">
-                                            <TextBlock Text="Прозрачность обоев" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}"/>
+                                            <TextBlock Text="Прозрачность обоев" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}"/>
                                             <TextBlock Text="{Binding Settings.WallpaperOpacity, StringFormat='{}{0:P0}'}" DockPanel.Dock="Right" FontSize="11" Foreground="{DynamicResource AccentBrush}"/>
                                         </DockPanel>
                                         <Slider Minimum="0.1" Maximum="1.0" Value="{Binding Settings.WallpaperOpacity, Mode=TwoWay}"
@@ -1899,7 +1910,7 @@
 
                                         <TextBlock Text="ВИДЕОСООБЩЕНИЯ В КРУЖОЧКЕ" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,6"/>
                                         <DockPanel Margin="0,0,0,6">
-                                            <TextBlock Text="Скругление видео-заметок" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}"/>
+                                            <TextBlock Text="Скругление видео-заметок" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}"/>
                                             <TextBlock Text="{Binding VideoNoteRadiusPercent, StringFormat='{}{0}%'}" DockPanel.Dock="Right" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"/>
                                         </DockPanel>
                                         <Grid Margin="0,0,0,16">
@@ -1916,32 +1927,32 @@
 
                                         <TextBlock Text="СИСТЕМНЫЕ ОПЦИИ" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,8"/>
                                         <CheckBox Content="Звуковые сигналы уведомлений" IsChecked="{Binding Settings.PlayNotificationSounds, Mode=TwoWay}"
-                                                  Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,8"/>
+                                                  Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,8"/>
                                         <CheckBox Content="Сворачивать в трей при закрытии окна" IsChecked="{Binding Settings.MinimizeToTray, Mode=TwoWay}"
-                                                  Foreground="{StaticResource TextPrimaryBrush}"/>
+                                                  Foreground="{DynamicResource TextPrimaryBrush}"/>
                                     </StackPanel>
 
                                     <!-- TAB 3: Браузер -->
                                     <StackPanel Visibility="{Binding SelectedSettingsTab, Converter={StaticResource EqualityToVis}, ConverterParameter=3}">
                                         <TextBlock Text="ВСТРОЕННЫЙ БРАУЗЕР" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,8"/>
                                         <CheckBox Content="Открывать веб-ссылки во встроенном окне" IsChecked="{Binding Settings.UseInternalBrowser, Mode=TwoWay}"
-                                                  Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,4"/>
+                                                  Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,4"/>
                                         <TextBlock Text="Позволяет безопасно просматривать ссылки прямо в мессенджере без перехода в сторонние браузеры."
-                                                   FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" Margin="24,0,0,14" TextWrapping="Wrap"/>
+                                                   FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" Margin="24,0,0,14" TextWrapping="Wrap"/>
 
                                         <TextBlock Text="ПОИСКОВАЯ СИСТЕМА" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,6"/>
-                                        <TextBlock Text="Поисковая система по умолчанию:" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,6"/>
+                                        <TextBlock Text="Поисковая система по умолчанию:" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,6"/>
                                         <ComboBox ItemsSource="{Binding SearchEngines}" SelectedItem="{Binding SelectedSearchEngine}"
-                                                  Foreground="{StaticResource TextPrimaryBrush}" Background="{StaticResource CardBrush}"
-                                                  BorderBrush="{StaticResource BorderBrush}" Padding="8,5" Margin="0,0,0,16"/>
+                                                  Foreground="{DynamicResource TextPrimaryBrush}" Background="{DynamicResource CardBrush}"
+                                                  BorderBrush="{DynamicResource BorderBrush}" Padding="8,5" Margin="0,0,0,16"/>
 
                                         <TextBlock Text="ВЕБ-ДВИЖОК И БЕЗОПАСНОСТЬ" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,8"/>
                                         <CheckBox Content="Включить поддержку JavaScript" IsChecked="{Binding Settings.BrowserEnableJs, Mode=TwoWay}"
-                                                  Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,8"/>
+                                                  Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,8"/>
                                         <CheckBox Content="Разрешить файлы Cookies и кэширование" IsChecked="{Binding Settings.BrowserEnableCookies, Mode=TwoWay}"
-                                                  Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,8"/>
+                                                  Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,8"/>
                                         <CheckBox Content="Режим настольного ПК по умолчанию (Desktop Mode)" IsChecked="{Binding Settings.BrowserDesktopMode, Mode=TwoWay}"
-                                                  Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,16"/>
+                                                  Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,16"/>
 
                                         <TextBlock Text="ОЧИСТКА ДАННЫХ БРАУЗЕРА" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,8"/>
                                         <Button Content="🧹 Очистить кэш и cookies браузера" Command="{Binding ClearBrowserCacheCommand}"
@@ -1952,10 +1963,10 @@
                                     <StackPanel Visibility="{Binding SelectedSettingsTab, Converter={StaticResource EqualityToVis}, ConverterParameter=4}">
                                         <TextBlock Text="ПАМЯТЬ И ХРАНИЛИЩЕ" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,8"/>
 
-                                        <Border Background="{StaticResource CardBrush}" CornerRadius="10" Padding="12" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" Margin="0,0,0,12">
+                                        <Border Background="{DynamicResource CardBrush}" CornerRadius="10" Padding="12" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Margin="0,0,0,12">
                                             <StackPanel>
                                                 <DockPanel Margin="0,0,0,4">
-                                                    <TextBlock Text="Всего занято:" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}"/>
+                                                    <TextBlock Text="Всего занято:" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}"/>
                                                     <TextBlock Text="{Binding StorageTotalText}" DockPanel.Dock="Right" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"/>
                                                 </DockPanel>
                                                 <TextBlock Text="Все фото, видео, аудио и документы сохраняются в локальном контейнере приложения."
@@ -1969,48 +1980,48 @@
                                                     Style="{StaticResource ModernButton}" DockPanel.Dock="Right" Padding="8,3" FontSize="11"/>
                                         </DockPanel>
 
-                                        <Border Background="{StaticResource CardBrush}" CornerRadius="10" Padding="10" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" Margin="0,0,0,12">
+                                        <Border Background="{DynamicResource CardBrush}" CornerRadius="10" Padding="10" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Margin="0,0,0,12">
                                             <StackPanel>
                                                 <DockPanel Margin="0,2,0,4">
                                                     <CheckBox IsChecked="{Binding CbStoragePhotos, Mode=TwoWay}" Content="📷 Фотографии"
-                                                              Foreground="{StaticResource TextPrimaryBrush}" FontSize="12" VerticalAlignment="Center"/>
-                                                    <TextBlock Text="{Binding StoragePhotosText}" DockPanel.Dock="Right" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center"/>
+                                                              Foreground="{DynamicResource TextPrimaryBrush}" FontSize="12" VerticalAlignment="Center"/>
+                                                    <TextBlock Text="{Binding StoragePhotosText}" DockPanel.Dock="Right" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center"/>
                                                 </DockPanel>
 
                                                 <DockPanel Margin="0,2,0,4">
                                                     <CheckBox IsChecked="{Binding CbStorageVideos, Mode=TwoWay}" Content="🎥 Видеозаписи и видео-заметки"
-                                                              Foreground="{StaticResource TextPrimaryBrush}" FontSize="12" VerticalAlignment="Center"/>
-                                                    <TextBlock Text="{Binding StorageVideosText}" DockPanel.Dock="Right" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center"/>
+                                                              Foreground="{DynamicResource TextPrimaryBrush}" FontSize="12" VerticalAlignment="Center"/>
+                                                    <TextBlock Text="{Binding StorageVideosText}" DockPanel.Dock="Right" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center"/>
                                                 </DockPanel>
 
                                                 <DockPanel Margin="0,2,0,4">
                                                     <CheckBox IsChecked="{Binding CbStorageAudio, Mode=TwoWay}" Content="🎵 Аудио и голосовые сообщения"
-                                                              Foreground="{StaticResource TextPrimaryBrush}" FontSize="12" VerticalAlignment="Center"/>
-                                                    <TextBlock Text="{Binding StorageAudioText}" DockPanel.Dock="Right" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center"/>
+                                                              Foreground="{DynamicResource TextPrimaryBrush}" FontSize="12" VerticalAlignment="Center"/>
+                                                    <TextBlock Text="{Binding StorageAudioText}" DockPanel.Dock="Right" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center"/>
                                                 </DockPanel>
 
                                                 <DockPanel Margin="0,2,0,4">
                                                     <CheckBox IsChecked="{Binding CbStorageGifs, Mode=TwoWay}" Content="🎭 GIF-анимации"
-                                                              Foreground="{StaticResource TextPrimaryBrush}" FontSize="12" VerticalAlignment="Center"/>
-                                                    <TextBlock Text="{Binding StorageGifsText}" DockPanel.Dock="Right" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center"/>
+                                                              Foreground="{DynamicResource TextPrimaryBrush}" FontSize="12" VerticalAlignment="Center"/>
+                                                    <TextBlock Text="{Binding StorageGifsText}" DockPanel.Dock="Right" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center"/>
                                                 </DockPanel>
 
                                                 <DockPanel Margin="0,2,0,4">
                                                     <CheckBox IsChecked="{Binding CbStorageFiles, Mode=TwoWay}" Content="📄 Файлы и документы"
-                                                              Foreground="{StaticResource TextPrimaryBrush}" FontSize="12" VerticalAlignment="Center"/>
-                                                    <TextBlock Text="{Binding StorageFilesText}" DockPanel.Dock="Right" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center"/>
+                                                              Foreground="{DynamicResource TextPrimaryBrush}" FontSize="12" VerticalAlignment="Center"/>
+                                                    <TextBlock Text="{Binding StorageFilesText}" DockPanel.Dock="Right" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center"/>
                                                 </DockPanel>
 
                                                 <DockPanel Margin="0,2,0,4">
                                                     <CheckBox IsChecked="{Binding CbStorageAvatars, Mode=TwoWay}" Content="👤 Кэш аватаров собеседников"
-                                                              Foreground="{StaticResource TextPrimaryBrush}" FontSize="12" VerticalAlignment="Center"/>
-                                                    <TextBlock Text="{Binding StorageAvatarsText}" DockPanel.Dock="Right" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center"/>
+                                                              Foreground="{DynamicResource TextPrimaryBrush}" FontSize="12" VerticalAlignment="Center"/>
+                                                    <TextBlock Text="{Binding StorageAvatarsText}" DockPanel.Dock="Right" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center"/>
                                                 </DockPanel>
 
                                                 <DockPanel Margin="0,2,0,2">
                                                     <CheckBox IsChecked="{Binding CbStorageCache, Mode=TwoWay}" Content="⚙️ Временный кэш приложения"
-                                                              Foreground="{StaticResource TextPrimaryBrush}" FontSize="12" VerticalAlignment="Center"/>
-                                                    <TextBlock Text="{Binding StorageCacheText}" DockPanel.Dock="Right" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center"/>
+                                                              Foreground="{DynamicResource TextPrimaryBrush}" FontSize="12" VerticalAlignment="Center"/>
+                                                    <TextBlock Text="{Binding StorageCacheText}" DockPanel.Dock="Right" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center"/>
                                                 </DockPanel>
                                             </StackPanel>
                                         </Border>
@@ -2032,40 +2043,40 @@
                                     <!-- TAB 5: Информация (Android Parity) -->
                                     <StackPanel Visibility="{Binding SelectedSettingsTab, Converter={StaticResource EqualityToVis}, ConverterParameter=5}">
                                         <StackPanel HorizontalAlignment="Center" Margin="0,4,0,12">
-                                            <Border Width="52" Height="52" CornerRadius="26" Background="{StaticResource CardBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" Margin="0,0,0,6" HorizontalAlignment="Center">
+                                            <Border Width="52" Height="52" CornerRadius="26" Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Margin="0,0,0,6" HorizontalAlignment="Center">
                                                 <Image Source="Assets/prime_logo_app.png" Width="34" Height="34" RenderOptions.BitmapScalingMode="HighQuality"/>
                                             </Border>
-                                            <TextBlock Text="Prime Desktop" FontSize="15" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}" HorizontalAlignment="Center"/>
+                                            <TextBlock Text="Prime Desktop" FontSize="15" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" HorizontalAlignment="Center"/>
                                             <TextBlock Text="Версия 0.1 Desk (Windows x64)" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" HorizontalAlignment="Center" Margin="0,2,0,0"/>
-                                            <TextBlock Text="«Всё нужное без лишнего!»" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" HorizontalAlignment="Center" Margin="0,2,0,0"/>
+                                            <TextBlock Text="«Всё нужное без лишнего!»" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" HorizontalAlignment="Center" Margin="0,2,0,0"/>
                                         </StackPanel>
 
                                         <!-- Card 1: Исходный код -->
-                                        <Border Background="{StaticResource CardBrush}" CornerRadius="10" Padding="12" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" Margin="0,0,0,8">
+                                        <Border Background="{DynamicResource CardBrush}" CornerRadius="10" Padding="12" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Margin="0,0,0,8">
                                             <DockPanel>
                                                 <Button Content="Открыть GitHub" Command="{Binding OpenGithubCommand}"
                                                         Style="{StaticResource ModernButton}" DockPanel.Dock="Right" Padding="10,5" FontSize="11"/>
                                                 <StackPanel VerticalAlignment="Center">
                                                     <TextBlock Text="Исходный код" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"/>
-                                                    <TextBlock Text="Репозиторий мессенджера на GitHub" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}"/>
+                                                    <TextBlock Text="Репозиторий мессенджера на GitHub" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}"/>
                                                 </StackPanel>
                                             </DockPanel>
                                         </Border>
 
                                         <!-- Card 2: Сообщить о проблеме -->
-                                        <Border Background="{StaticResource CardBrush}" CornerRadius="10" Padding="12" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" Margin="0,0,0,8">
+                                        <Border Background="{DynamicResource CardBrush}" CornerRadius="10" Padding="12" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Margin="0,0,0,8">
                                             <DockPanel>
                                                 <Button Content="Проверить обновления" Command="{Binding CheckUpdatesCommand}"
                                                         Style="{StaticResource ModernButton}" DockPanel.Dock="Right" Padding="10,5" FontSize="11"/>
                                                 <StackPanel VerticalAlignment="Center">
                                                     <TextBlock Text="Сообщить о проблеме" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"/>
-                                                    <TextBlock Text="Prime Messenger v0.1 Desk" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}"/>
+                                                    <TextBlock Text="Prime Messenger v0.1 Desk" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}"/>
                                                 </StackPanel>
                                             </DockPanel>
                                         </Border>
 
                                         <!-- Card 3: Благодарности (cardThanks) -->
-                                        <Border Background="{StaticResource CardBrush}" CornerRadius="10" Padding="12" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" Margin="0,0,0,8">
+                                        <Border Background="{DynamicResource CardBrush}" CornerRadius="10" Padding="12" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Margin="0,0,0,8">
                                             <StackPanel>
                                                 <DockPanel Margin="0,0,0,6">
                                                     <TextBlock Text="Благодарности" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center"/>
@@ -2073,23 +2084,23 @@
                                                             Command="{Binding SendHeartCommand}" ToolTip="Отправить благодарность"
                                                             Style="{StaticResource ModernButton}" Foreground="#FF2A55" DockPanel.Dock="Right" Padding="10,4" FontSize="11" FontWeight="Bold"/>
                                                 </DockPanel>
-                                                <Border Height="1" Background="{StaticResource BorderBrush}" Margin="0,2,0,6"/>
+                                                <Border Height="1" Background="{DynamicResource BorderBrush}" Margin="0,2,0,6"/>
                                                 <DockPanel Margin="0,2,0,2">
-                                                    <TextBlock Text="Главный разработчик: " FontSize="11" Foreground="{StaticResource TextPrimaryBrush}"/>
+                                                    <TextBlock Text="Главный разработчик: " FontSize="11" Foreground="{DynamicResource TextPrimaryBrush}"/>
                                                     <Button Content="Vaniahorosh" Command="{Binding OpenDevGithubCommand}"
                                                             Style="{StaticResource ModernButton}" Padding="4,1" Margin="2,0,0,0" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"/>
                                                 </DockPanel>
-                                                <TextBlock Text="Помощник программиста: Gemini, Claude code" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,2,0,2"/>
-                                                <TextBlock Text="Автор идеи: Иван" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,2,0,0"/>
+                                                <TextBlock Text="Помощник программиста: Gemini, Claude code" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,2,0,2"/>
+                                                <TextBlock Text="Автор идеи: Иван" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,2,0,0"/>
                                             </StackPanel>
                                         </Border>
 
                                         <!-- Card 4: Протокол и безопасность -->
-                                        <Border Background="{StaticResource CardBrush}" CornerRadius="10" Padding="10" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
+                                        <Border Background="{DynamicResource CardBrush}" CornerRadius="10" Padding="10" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
                                             <StackPanel>
                                                 <TextBlock Text="ПРОТОКОЛ И СОВМЕСТИМОСТЬ" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,2"/>
                                                 <TextBlock Text="UUID: fa87c0d0-afac-11de-8a39-0800200c9a66&#x0a;Аппаратное локальное шифрование AES-256-GCM. Полная совместимость с мобильной версией Prime Messenger."
-                                                           FontSize="10" Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap"/>
+                                                           FontSize="10" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap"/>
                                             </StackPanel>
                                         </Border>
                                     </StackPanel>
@@ -2179,9 +2190,9 @@
 
               Panel.ZIndex="90">
 
-            <Border Background="{StaticResource CardBrush}"
+            <Border Background="{DynamicResource CardBrush}"
 
-                    BorderBrush="{StaticResource BorderBrush}"
+                    BorderBrush="{DynamicResource BorderBrush}"
 
                     BorderThickness="1"
 
@@ -2221,9 +2232,9 @@
 
                         <StackPanel>
 
-                            <TextBlock Text="Поиск устройств Prime" Foreground="{StaticResource TextPrimaryBrush}" FontSize="16" FontWeight="Bold"/>
+                            <TextBlock Text="Поиск устройств Prime" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="16" FontWeight="Bold"/>
 
-                            <TextBlock Text="Периферия и наушники отфильтрованы" Foreground="{StaticResource TextSecondaryBrush}" FontSize="11" Margin="0,2,0,0"/>
+                            <TextBlock Text="Периферия и наушники отфильтрованы" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" Margin="0,2,0,0"/>
 
                         </StackPanel>
 
@@ -2233,7 +2244,7 @@
 
                     <!-- Devices List -->
 
-                    <Border Grid.Row="1" Background="{StaticResource BackgroundBrush}" CornerRadius="10" Padding="8" Margin="0,0,0,16">
+                    <Border Grid.Row="1" Background="{DynamicResource BackgroundBrush}" CornerRadius="10" Padding="8" Margin="0,0,0,16">
 
                         <ScrollViewer VerticalScrollBarVisibility="Auto">
 
@@ -2263,7 +2274,7 @@
 
                                         <DataTemplate>
 
-                                            <Border Background="{StaticResource CardBrush}" BorderBrush="{StaticResource BorderBrush}"
+                                            <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}"
 
                                                     BorderThickness="1" CornerRadius="10" Padding="12,10" Margin="0,3">
 
@@ -2279,9 +2290,9 @@
 
                                                     <StackPanel VerticalAlignment="Center">
 
-                                                        <TextBlock Text="{Binding DisplayName}" Foreground="{StaticResource TextPrimaryBrush}" FontWeight="SemiBold" FontSize="13"/>
+                                                        <TextBlock Text="{Binding DisplayName}" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold" FontSize="13"/>
 
-                                                        <TextBlock Text="Prime совместимое устройство" Foreground="{StaticResource TextSecondaryBrush}" FontSize="10"/>
+                                                        <TextBlock Text="Prime совместимое устройство" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10"/>
 
                                                     </StackPanel>
 

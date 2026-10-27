@@ -41,6 +41,7 @@ public partial class MainWindow : Window
         Loaded += (s, e) =>
         {
             App.Log("MainWindow Loaded");
+            ThemeManager.ApplyWindowDwm(this);
             if (DataContext is MainViewModel vm && vm.Settings.EnableScreenshotProtection)
             {
                 SecurityManager.SetScreenshotProtection(this, true);
@@ -99,6 +100,7 @@ public partial class MainWindow : Window
     protected override void OnSourceInitialized(EventArgs e)
     {
         base.OnSourceInitialized(e);
+        ThemeManager.ApplyWindowDwm(this);
         var handle = new WindowInteropHelper(this).Handle;
         var source = HwndSource.FromHwnd(handle);
         source?.AddHook(WindowProc);
