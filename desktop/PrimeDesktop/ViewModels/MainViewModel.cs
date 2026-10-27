@@ -1113,6 +1113,7 @@ public class MainViewModel : ViewModelBase
                 ViewedPhotoPath = path;
 
                 IsPhotoViewerOpen = true;
+                Services.WindowManager.OpenPhotoViewer(path, this);
 
             }
 
@@ -1123,6 +1124,7 @@ public class MainViewModel : ViewModelBase
         {
             IsPhotoViewerOpen = false;
 
+            Services.WindowManager.ClosePhotoViewer();
             ViewedPhotoPath = null;
 
         });

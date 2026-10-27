@@ -1125,7 +1125,6 @@
 
                 </Border>
 
-                </Grid>
 
 
 
@@ -1144,6 +1143,8 @@
                         </StackPanel>
                     </DockPanel>
                 </Border>
+
+                </Grid>
 
                 <!-- Empty Chat Placeholder (when no chat is selected) -->
 
