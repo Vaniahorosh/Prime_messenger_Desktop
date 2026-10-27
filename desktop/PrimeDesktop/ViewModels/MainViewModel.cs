@@ -372,6 +372,34 @@ public class MainViewModel : ViewModelBase
                     _settings.PropertyChanged += async (s, e) =>
                     {
                         CheckForPendingSettingsChanges();
+                        if (e.PropertyName == nameof(AppSettings.AvatarCornerRadiusPercent))
+                        {
+                            OnPropertyChanged(nameof(CanResetAvatarRadius));
+                        }
+                        else if (e.PropertyName == nameof(AppSettings.BubbleRadius))
+                        {
+                            OnPropertyChanged(nameof(CanResetBubbleRadius));
+                        }
+                        else if (e.PropertyName == nameof(AppSettings.WallpaperOpacity))
+                        {
+                            OnPropertyChanged(nameof(CanResetWallpaperOpacity));
+                        }
+                        else if (e.PropertyName == nameof(AppSettings.VideoNoteRadiusPercent))
+                        {
+                            OnPropertyChanged(nameof(CanResetVideoNoteRadius));
+                        }
+                        else if (e.PropertyName == nameof(AppSettings.SoundEffectsVolume))
+                        {
+                            OnPropertyChanged(nameof(CanResetSoundVolume));
+                        }
+                        else if (e.PropertyName == nameof(AppSettings.AccentColorHex))
+                        {
+                            OnPropertyChanged(nameof(CanResetAccentColor));
+                        }
+                        else if (e.PropertyName == nameof(AppSettings.ChatWallpaperPath))
+                        {
+                            OnPropertyChanged(nameof(CanResetWallpaper));
+                        }
                         try { await _storageService.SaveSettingsAsync(_settings); } catch {}
                     };
                 }
@@ -413,6 +441,13 @@ public class MainViewModel : ViewModelBase
 
             // Refresh UI bindings and corner radiuses
             OnPropertyChanged(nameof(Settings));
+            OnPropertyChanged(nameof(CanResetAvatarRadius));
+            OnPropertyChanged(nameof(CanResetBubbleRadius));
+            OnPropertyChanged(nameof(CanResetWallpaperOpacity));
+            OnPropertyChanged(nameof(CanResetVideoNoteRadius));
+            OnPropertyChanged(nameof(CanResetSoundVolume));
+            OnPropertyChanged(nameof(CanResetAccentColor));
+            OnPropertyChanged(nameof(CanResetWallpaper));
             OnPropertyChanged(nameof(BubbleCornerRadius));
             OnPropertyChanged(nameof(AvatarCornerRadius));
             OnPropertyChanged(nameof(HeaderAvatarCornerRadius));
@@ -557,6 +592,14 @@ public class MainViewModel : ViewModelBase
     public CornerRadius DrawerAvatarCornerRadius => new(72.0 * Settings.AvatarCornerRadiusPercent / 100.0);
 
     public CornerRadius PreviewAvatarCornerRadius => new(64.0 * Settings.AvatarCornerRadiusPercent / 100.0);
+
+    public bool CanResetAvatarRadius => Settings.AvatarCornerRadiusPercent != 50;
+    public bool CanResetBubbleRadius => Settings.BubbleRadius != 16;
+    public bool CanResetWallpaperOpacity => Math.Abs(Settings.WallpaperOpacity - 0.35) > 0.001;
+    public bool CanResetVideoNoteRadius => Settings.VideoNoteRadiusPercent != 50;
+    public bool CanResetSoundVolume => Settings.SoundEffectsVolume != 80;
+    public bool CanResetAccentColor => !string.Equals(Settings.AccentColorHex, "#4D9FFF", StringComparison.OrdinalIgnoreCase);
+    public bool CanResetWallpaper => !string.IsNullOrEmpty(Settings.ChatWallpaperPath);
 
     public int AvatarCornerRadiusPercent
 
@@ -856,6 +899,12 @@ public class MainViewModel : ViewModelBase
     public ICommand ChangeWallpaperCommand { get; }
 
     public ICommand ResetWallpaperCommand { get; }
+    public ICommand ResetAvatarRadiusCommand { get; }
+    public ICommand ResetBubbleRadiusCommand { get; }
+    public ICommand ResetWallpaperOpacityCommand { get; }
+    public ICommand ResetVideoNoteRadiusCommand { get; }
+    public ICommand ResetSoundVolumeCommand { get; }
+    public ICommand ResetAccentColorCommand { get; }
 
     public ICommand CloseActiveChatCommand { get; }
 
@@ -1967,6 +2016,46 @@ public class MainViewModel : ViewModelBase
             {
                 StatusMessage = $"Не удалось открыть проводник: {ex.Message}";
             }
+        });
+
+        ResetAvatarRadiusCommand = new RelayCommand(() =>
+        {
+            AvatarCornerRadiusPercent = 50;
+            OnPropertyChanged(nameof(CanResetAvatarRadius));
+        });
+
+        ResetBubbleRadiusCommand = new RelayCommand(() =>
+        {
+            BubbleRadius = 16;
+            OnPropertyChanged(nameof(CanResetBubbleRadius));
+        });
+
+        ResetWallpaperOpacityCommand = new RelayCommand(() =>
+        {
+            Settings.WallpaperOpacity = 0.35;
+            OnPropertyChanged(nameof(Settings));
+            OnPropertyChanged(nameof(CanResetWallpaperOpacity));
+            _ = _storageService.SaveSettingsAsync(Settings);
+        });
+
+        ResetVideoNoteRadiusCommand = new RelayCommand(() =>
+        {
+            VideoNoteRadiusPercent = 50;
+            OnPropertyChanged(nameof(CanResetVideoNoteRadius));
+        });
+
+        ResetSoundVolumeCommand = new RelayCommand(() =>
+        {
+            Settings.SoundEffectsVolume = 80;
+            OnPropertyChanged(nameof(Settings));
+            OnPropertyChanged(nameof(CanResetSoundVolume));
+            _ = _storageService.SaveSettingsAsync(Settings);
+        });
+
+        ResetAccentColorCommand = new RelayCommand(() =>
+        {
+            ChangeAccentColorCommand?.Execute("#4D9FFF");
+            OnPropertyChanged(nameof(CanResetAccentColor));
         });
 
         ResetWallpaperCommand = new RelayCommand(() =>

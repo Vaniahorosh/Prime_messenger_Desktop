@@ -40,6 +40,7 @@ public class AppSettings : INotifyPropertyChanged
     private bool _browserDesktopMode = false;
     private int _videoNoteRadiusPercent = 50;
     private int _thanksHeartCount = 0;
+    private bool _hasShownTrayNotification = false;
     private List<string> _forgottenDevices = new();
 
     public string MyUsername
@@ -235,6 +236,12 @@ public class AppSettings : INotifyPropertyChanged
     {
         get => _thanksHeartCount;
         set => SetField(ref _thanksHeartCount, value);
+    }
+
+    public bool HasShownTrayNotification
+    {
+        get => _hasShownTrayNotification;
+        set => SetField(ref _hasShownTrayNotification, value);
     }
 
     public List<string> ForgottenDevices

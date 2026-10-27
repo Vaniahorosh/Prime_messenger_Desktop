@@ -30,7 +30,7 @@ public partial class MainWindow : Window
             {
                 e.Cancel = true;
                 Hide();
-                TrayService?.ShowNotification("Прайм Мессенджер", "Приложение свернуто в системный трей.");
+                ShowTrayMinimizedNotificationIfNeeded();
             }
             App.Log($"MainWindow Closing (Cancel={e.Cancel})");
         };
@@ -317,7 +317,20 @@ public partial class MainWindow : Window
     private void BtnClose_Click(object sender, RoutedEventArgs e)
     {
         Hide();
-        TrayService?.ShowNotification("Прайм Мессенджер", "Приложение свернуто в системный трей.");
+        ShowTrayMinimizedNotificationIfNeeded();
+    }
+
+    private void ShowTrayMinimizedNotificationIfNeeded()
+    {
+        if (DataContext is ViewModels.MainViewModel vm && vm.Settings != null)
+        {
+            if (!vm.Settings.HasShownTrayNotification)
+            {
+                vm.Settings.HasShownTrayNotification = true;
+                _ = vm.ApplyAndSaveSettingsAsync();
+                TrayService?.ShowNotification("Прайм Мессенджер", "Приложение свернуто в системный трей.");
+            }
+        }
     }
 
     protected override void OnClosed(EventArgs e)
