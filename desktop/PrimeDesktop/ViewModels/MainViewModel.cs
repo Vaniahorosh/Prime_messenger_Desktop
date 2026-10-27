@@ -3,6 +3,7 @@ using System;
 using System.Collections.ObjectModel;
 
 using System.IO;
+using System.Net.NetworkInformation;
 
 using System.Linq;
 
@@ -593,7 +594,7 @@ public class MainViewModel : ViewModelBase
 
     public CornerRadius PreviewAvatarCornerRadius => new(64.0 * Settings.AvatarCornerRadiusPercent / 100.0);
 
-    public bool CanResetAvatarRadius => Settings.AvatarCornerRadiusPercent != 50;
+    public bool CanResetAvatarRadius => Settings.AvatarCornerRadiusPercent != 15;
     public bool CanResetBubbleRadius => Settings.BubbleRadius != 16;
     public bool CanResetWallpaperOpacity => Math.Abs(Settings.WallpaperOpacity - 0.35) > 0.001;
     public bool CanResetVideoNoteRadius => Settings.VideoNoteRadiusPercent != 50;
@@ -2020,7 +2021,7 @@ public class MainViewModel : ViewModelBase
 
         ResetAvatarRadiusCommand = new RelayCommand(() =>
         {
-            AvatarCornerRadiusPercent = 50;
+            AvatarCornerRadiusPercent = 15;
             OnPropertyChanged(nameof(CanResetAvatarRadius));
         });
 
@@ -2154,7 +2155,12 @@ public class MainViewModel : ViewModelBase
                 var cleanChats = new List<ChatItem>();
                 foreach (var c in chats)
                 {
-                    c.DeduplicateAvatarHistory();
+                    if (IsSelfDevice(c.DeviceAddress, c.DisplayName, c.Username) || IsSelfDevice(c.PeerId, c.DisplayName, c.Username))
+           {
+               App.Log($"[Init] Filtering out self chat '{c.DisplayName}' ({c.PeerId}) from loaded storage.");
+               continue;
+           }
+           c.DeduplicateAvatarHistory();
                     foreach (var m in c.Messages)
                     {
                         if (m.IsVideoNote)
@@ -2259,7 +2265,12 @@ public class MainViewModel : ViewModelBase
             {
                 foreach (var dev in paired)
                 {
-                    // If device was explicitly deleted or forgotten, do not re-add it
+                    // If device is self or was explicitly deleted/forgotten, do not add it
+                    if (IsSelfDevice(dev.DeviceAddress, dev.DisplayName, dev.Username) || IsSelfDevice(dev.PeerId, dev.DisplayName, dev.Username))
+                    {
+                        App.Log($"[Init] Skipping self device '{dev.DisplayName}' ({dev.PeerId} / {dev.DeviceAddress}).");
+                        continue;
+                    }
                     if (IsDeviceForgotten(dev.DeviceAddress) || IsDeviceForgotten(dev.PeerId))
                     {
                         App.Log($"[Init] Skipping forgotten/deleted device '{dev.DisplayName}' ({dev.PeerId} / {dev.DeviceAddress}).");
@@ -2937,6 +2948,63 @@ public async Task SendTextMessageAsync()
         await _bluetoothService.DisconnectAsync(addr);
     }
 
+    public bool IsSelfDevice(string? addrOrPeer, string? displayName = null, string? username = null)
+    {
+        try
+        {
+            // 1. Check against local username and display name
+            if (!string.IsNullOrWhiteSpace(username) && !string.IsNullOrWhiteSpace(Settings.MyUsername))
+            {
+                if (string.Equals(username.Trim(), Settings.MyUsername.Trim(), StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+
+            if (!string.IsNullOrWhiteSpace(displayName) && !string.IsNullOrWhiteSpace(Settings.MyDisplayName))
+            {
+                if (string.Equals(displayName.Trim(), Settings.MyDisplayName.Trim(), StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+
+            // Also check current machine name / hostname
+            string hostName = Environment.MachineName;
+            if (!string.IsNullOrWhiteSpace(displayName) && !string.IsNullOrWhiteSpace(hostName))
+            {
+                if (string.Equals(displayName.Trim(), hostName.Trim(), StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+
+            // 2. Check MAC addresses of all local network / bluetooth adapters
+            if (!string.IsNullOrWhiteSpace(addrOrPeer))
+            {
+                string norm = BluetoothRfcommService.NormalizeMacAddress(addrOrPeer);
+                if (!string.IsNullOrWhiteSpace(norm))
+                {
+                    foreach (var nic in NetworkInterface.GetAllNetworkInterfaces())
+                    {
+                        var bytes = nic.GetPhysicalAddress().GetAddressBytes();
+                        if (bytes != null && bytes.Length == 6)
+                        {
+                            string nicMac = string.Join(":", bytes.Select(b => b.ToString("X2")));
+                            if (string.Equals(norm, nicMac, StringComparison.OrdinalIgnoreCase))
+                            {
+                                return true;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        catch { }
+
+        return false;
+    }
+
     public bool IsDeviceForgotten(string? addrOrPeer)
     {
         if (string.IsNullOrWhiteSpace(addrOrPeer)) return false;
@@ -3399,6 +3467,11 @@ public async Task SendTextMessageAsync()
                 }
 
                 string rawHw = _bluetoothService.ResolveHardwareAddress(address);
+                if (IsSelfDevice(address, name) || IsSelfDevice(rawHw, name))
+                {
+                    App.Log($"[Connection] Ignoring connection from self device '{name}' ({address})");
+                    return;
+                }
                 if (IsDeviceForgotten(address) || IsDeviceForgotten(rawHw) || IsDeviceForgotten(name))
                 {
                     App.Log($"[Connection] Ignoring connection from forgotten device '{name}' ({address})");
@@ -3483,6 +3556,10 @@ public async Task SendTextMessageAsync()
                 }
 
                 string rawHw = _bluetoothService.ResolveHardwareAddress(fromAddress);
+                if (IsSelfDevice(fromAddress) || IsSelfDevice(rawHw))
+                {
+                    return;
+                }
                 if (IsDeviceForgotten(fromAddress) || IsDeviceForgotten(rawHw))
                 {
                     return;
@@ -4024,6 +4101,11 @@ public async Task SendTextMessageAsync()
                             {
                                 foreach (var syncChat in syncedList)
                                 {
+                                    if (IsSelfDevice(syncChat.DeviceAddress, syncChat.DisplayName, syncChat.Username) ||
+                                        IsSelfDevice(syncChat.PeerId, syncChat.DisplayName, syncChat.Username))
+                                    {
+                                        continue;
+                                    }
                                     if (IsDeviceForgotten(syncChat.DeviceAddress) || IsDeviceForgotten(syncChat.PeerId)) continue;
                                     var existing = FindChatByAddressOrPeer(syncChat.PeerId) ?? 
                                                    FindChatByAddressOrPeer(syncChat.DeviceAddress) ?? 

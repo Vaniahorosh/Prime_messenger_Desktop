@@ -19,7 +19,7 @@ public class AppSettings : INotifyPropertyChanged
     private string _themeMode = "system";
     private bool _enableAcrylic = true;
     private bool _enableAnimations = true;
-    private int _avatarCornerRadiusPercent = 50;
+    private int _avatarCornerRadiusPercent = 15;
     private int _bubbleRadius = 16;
     private bool _playNotificationSounds = true;
     private bool _playOutgoingSound = true;
@@ -29,7 +29,7 @@ public class AppSettings : INotifyPropertyChanged
     private bool _showToastNotifications = true;
     private bool _showMessagePreviewInNotifications = true;
     private bool _minimizeToTray = true;
-    private bool _enableScreenshotProtection = true;
+    private bool _enableScreenshotProtection = false;
     private bool _maskDeviceIdentifiers = true;
     private int _companionPort = 8989;
     private bool _autoConnectBluetooth = true;

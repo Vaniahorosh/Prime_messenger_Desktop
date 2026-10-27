@@ -605,7 +605,14 @@
                                         <Button Content="🗑️ Удалить все чаты и историю сообщений" Command="{Binding ClearAllChatsCommand}"
                                                 Style="{StaticResource ModernButton}" Foreground="#FF6B6B" Padding="12,6" Margin="0,0,0,4" HorizontalAlignment="Left"/>
                                         <TextBlock Text="Безвозвратно удаляет локальную базу сообщений и кэш контактов."
-                                                   FontSize="11" Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap"/>
+                                                   FontSize="11" Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" Margin="0,0,0,16"/>
+
+                                        <TextBlock Text="БЕЗОПАСНОСТЬ И КОНФИДЕНЦИАЛЬНОСТЬ" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,6"/>
+                                        <CheckBox Content="Запретить снимок или съемку мессенджера"
+                                                  IsChecked="{Binding Settings.EnableScreenshotProtection, Mode=TwoWay}"
+                                                  Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,4"/>
+                                        <TextBlock Text="Блокирует создание скриншотов, запись экрана и захват окна мессенджера сторонними программами (Windows Display Affinity)."
+                                                   FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap"/>
                                     </StackPanel>
 
                                     <!-- TAB 5: Информация (Android Parity) -->
