@@ -8,7 +8,50 @@ namespace PrimeDesktop.Services;
 
 public static class WindowManager
 {
+    private static SettingsWindow? _settingsWindow;
     private static PhotoViewerWindow? _photoViewerWindow;
+
+    public static void OpenSettings(MainViewModel vm)
+    {
+        Application.Current?.Dispatcher.Invoke(() =>
+        {
+            if (_settingsWindow != null && _settingsWindow.IsLoaded)
+            {
+                if (_settingsWindow.WindowState == WindowState.Minimized)
+                    _settingsWindow.WindowState = WindowState.Normal;
+                _settingsWindow.Activate();
+                return;
+            }
+
+            _settingsWindow = new SettingsWindow
+            {
+                Owner = Application.Current?.MainWindow,
+                DataContext = vm
+            };
+
+            _settingsWindow.Closed += (s, e) =>
+            {
+                _settingsWindow = null;
+                vm.IsSettingsOpen = false;
+            };
+
+            vm.IsSettingsOpen = true;
+            _settingsWindow.Show();
+            _settingsWindow.Activate();
+        });
+    }
+
+    public static void CloseSettings()
+    {
+        Application.Current?.Dispatcher.Invoke(() =>
+        {
+            if (_settingsWindow != null && _settingsWindow.IsLoaded)
+            {
+                _settingsWindow.Close();
+            }
+            _settingsWindow = null;
+        });
+    }
 
     public static void OpenPhotoViewer(string photoPath, MainViewModel? vm = null)
     {

@@ -813,7 +813,13 @@ public class MainViewModel : ViewModelBase
         ToggleSettingsCommand = new RelayCommand(() =>
         {
             IsSettingsOpen = !IsSettingsOpen;
-            if (IsSettingsOpen) { UpdateMediaCacheSize(); _ = CalculateStorageBreakdownAsync(); }
+            if (IsSettingsOpen) {
+                UpdateMediaCacheSize();
+                _ = CalculateStorageBreakdownAsync();
+                Services.WindowManager.OpenSettings(this);
+            } else {
+                Services.WindowManager.CloseSettings();
+            }
         });
 
         ResetMyAvatarCommand = new RelayCommand(() =>
@@ -1517,6 +1523,7 @@ public class MainViewModel : ViewModelBase
             }
 
             IsSettingsOpen = false;
+            Services.WindowManager.CloseSettings();
             await BroadcastMyProfileAndAvatarAsync();
 
             StatusMessage = "Настройки успешно сохранены";
