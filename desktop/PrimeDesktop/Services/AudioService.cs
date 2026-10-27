@@ -26,6 +26,7 @@ namespace PrimeDesktop.Services
         public bool IsRecording { get; private set; }
         public TimeSpan RecordingDuration => _recordTimer.Elapsed;
         public ChatMessage? ActiveMessage => _activeMessage;
+        public event Action<ChatMessage?>? PlaybackStateChanged;
 
         public AudioService()
         {
@@ -193,6 +194,7 @@ namespace PrimeDesktop.Services
                     try { _mediaPlayer?.Pause(); } catch { }
                     message.IsPlaying = false;
                     _playbackTimer?.Stop();
+                    PlaybackStateChanged?.Invoke(null);
                 }
                 else
                 {
@@ -206,6 +208,7 @@ namespace PrimeDesktop.Services
                         _mediaPlayer?.Play();
                         message.IsPlaying = true;
                         _playbackTimer?.Start();
+                        PlaybackStateChanged?.Invoke(message);
                     }
                     catch
                     {
@@ -229,6 +232,7 @@ namespace PrimeDesktop.Services
                 _mediaPlayer?.Open(new Uri(Path.GetFullPath(message.FilePath), UriKind.Absolute));
                 _mediaPlayer?.Play();
                 _playbackTimer?.Start();
+                PlaybackStateChanged?.Invoke(message);
             }
             catch
             {
@@ -302,6 +306,7 @@ namespace PrimeDesktop.Services
                     currentMsg.IsPlaying = false;
                     currentMsg.PlaybackProgress = 0.0;
                     currentMsg.CurrentPlayTime = "0:00";
+                    PlaybackStateChanged?.Invoke(null);
                 }
             }
             catch { }

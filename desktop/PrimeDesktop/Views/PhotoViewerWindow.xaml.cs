@@ -109,6 +109,11 @@ namespace PrimeDesktop.Views
                 return;
 
             var item = _items[_currentIndex];
+            if (DataContext is ViewModels.MainViewModel vm)
+            {
+                vm.SendMyActivityState(item.IsVideo ? "VIEWING_VIDEO" : "VIEWING_PHOTO");
+            }
+
             if (!File.Exists(item.FilePath))
             {
                 TxtFileName.Text = item.FileName ?? "Файл не найден";
@@ -670,6 +675,10 @@ namespace PrimeDesktop.Views
         private void Window_Closed(object? sender, EventArgs e)
         {
             StopVideo();
+            if (DataContext is ViewModels.MainViewModel vm)
+            {
+                vm.SendMyActivityState("IDLE", true);
+            }
         }
 
         #endregion

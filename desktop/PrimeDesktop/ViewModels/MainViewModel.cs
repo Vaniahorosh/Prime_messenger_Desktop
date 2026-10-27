@@ -56,6 +56,11 @@ public class MainViewModel : ViewModelBase
 
     private AppSettings _settings = new();
 
+    private readonly Dictionary<string, System.Windows.Threading.DispatcherTimer> _chatActivityTimers = new();
+    private string _myCurrentActivityState = "IDLE";
+    private DateTime _lastActivitySentTime = DateTime.MinValue;
+    private System.Windows.Threading.DispatcherTimer? _myActivityIdleTimer;
+
     public ObservableCollection<ChatItem> FilteredChats
 
     {
@@ -150,22 +155,22 @@ public class MainViewModel : ViewModelBase
     }
 
     public string InputMessageText
-
     {
         get => _inputMessageText;
-
         set
-
         {
             if (SetProperty(ref _inputMessageText, value))
-
             {
-                NotifyTyping();
-
+                if (!string.IsNullOrWhiteSpace(value))
+                {
+                    NotifyTyping();
+                }
+                else
+                {
+                    SendMyActivityState("IDLE", true);
+                }
             }
-
         }
-
     }
 
     public ChatMessage? ReplyMessage
@@ -1037,6 +1042,19 @@ public class MainViewModel : ViewModelBase
 
     {
         _settings.PropertyChanged += (s, e) => CheckForPendingSettingsChanges();
+
+        _audioService.PlaybackStateChanged += (msg) =>
+        {
+            if (msg != null)
+            {
+                SendMyActivityState(msg.IsMusic ? "LISTENING_MUSIC" : "LISTENING_AUDIO");
+            }
+            else
+            {
+                SendMyActivityState("IDLE", true);
+            }
+        };
+
         SendMessageCommand = new RelayCommand(async () => await SendTextMessageAsync(), () => HasSelectedChat && !string.IsNullOrWhiteSpace(InputMessageText));
 
         AttachFileCommand = new RelayCommand(async () =>
@@ -1056,8 +1074,6 @@ public class MainViewModel : ViewModelBase
             IsAttachmentTrayOpen = false;
             await SendGifAttachmentAsync();
         }, () => HasSelectedChat);
-
-        AttachPhotoCommand = new RelayCommand(async () => await SendAttachmentAsync(PacketType.Photo), () => HasSelectedChat);
 
         CancelReplyCommand = new RelayCommand(() => ReplyMessage = null);
 
@@ -1124,7 +1140,9 @@ public class MainViewModel : ViewModelBase
             IsReadingMode = !IsReadingMode;
             if (IsReadingMode)
             {
+                SendMyActivityState("READING_MODE", true);
                 string addr = !string.IsNullOrWhiteSpace(SelectedChat.DeviceAddress) ? SelectedChat.DeviceAddress : SelectedChat.PeerId;
+                await Task.Delay(100);
                 await _bluetoothService.DisconnectAsync(addr);
                 SelectedChat.IsOnline = false;
                 SelectedChat.ConnectionState = DeviceConnectionState.Disconnected;
@@ -1132,6 +1150,7 @@ public class MainViewModel : ViewModelBase
             }
             else
             {
+                SendMyActivityState("IDLE", true);
                 await ConnectSelectedChatAsync();
                 StatusMessage = $"Подключение к {SelectedChat.DisplayName}...";
             }
@@ -1384,6 +1403,7 @@ public class MainViewModel : ViewModelBase
                 if (_audioService.StartRecording())
                 {
                     IsRecordingVoice = true;
+                    SendMyActivityState("RECORDING_VOICE", true);
                     SoundEffectService.PlayRecordStart(Settings);
                     StatusMessage = "Запись голосового сообщения...";
                 }
@@ -1392,6 +1412,7 @@ public class MainViewModel : ViewModelBase
             {
                 var (path, duration) = _audioService.StopRecording();
                 IsRecordingVoice = false;
+                SendMyActivityState("IDLE", true);
                 SoundEffectService.PlayRecordStop(Settings);
                 StatusMessage = "Запись завершена";
 
@@ -2452,6 +2473,8 @@ public async Task SendTextMessageAsync()
         var targetChat = SelectedChat;
         if (targetChat == null) return;
 
+        SendMyActivityState(type == PacketType.Photo ? "SELECTING_MEDIA" : "SELECTING_FILE", true);
+
         var dialog = new OpenFileDialog();
         if (type == PacketType.Photo)
         {
@@ -2466,7 +2489,13 @@ public async Task SendTextMessageAsync()
             dialog.Multiselect = false;
         }
 
-        if (dialog.ShowDialog() != true) return;
+        if (dialog.ShowDialog() != true)
+        {
+            SendMyActivityState("IDLE", true);
+            return;
+        }
+
+        SendMyActivityState(type == PacketType.Photo ? "SENDING_PHOTO" : "SENDING_FILE", true);
 
         string targetAddr = !string.IsNullOrWhiteSpace(targetChat.DeviceAddress) ? targetChat.DeviceAddress : targetChat.PeerId;
 
@@ -2516,6 +2545,10 @@ public async Task SendTextMessageAsync()
             {
                 StatusMessage = $"Collage send failed: {ex.Message}";
             }
+            finally
+            {
+                SendMyActivityState("IDLE", true);
+            }
 
             await _storageService.SaveChatsAsync(_allChats);
             return;
@@ -2555,6 +2588,10 @@ public async Task SendTextMessageAsync()
         {
             StatusMessage = $"Attachment send failed: {ex.Message}";
         }
+        finally
+        {
+            SendMyActivityState("IDLE", true);
+        }
 
         await _storageService.SaveChatsAsync(_allChats);
     }
@@ -2564,6 +2601,8 @@ public async Task SendTextMessageAsync()
         var targetChat = SelectedChat;
         if (targetChat == null) return;
 
+        SendMyActivityState("SELECTING_MEDIA", true);
+
         var dialog = new Microsoft.Win32.OpenFileDialog
         {
             Title = "Выберите GIF-анимацию",
@@ -2571,7 +2610,13 @@ public async Task SendTextMessageAsync()
             Multiselect = false
         };
 
-        if (dialog.ShowDialog() != true) return;
+        if (dialog.ShowDialog() != true)
+        {
+            SendMyActivityState("IDLE", true);
+            return;
+        }
+
+        SendMyActivityState("SENDING_PHOTO", true);
 
         string targetAddr = !string.IsNullOrWhiteSpace(targetChat.DeviceAddress) ? targetChat.DeviceAddress : targetChat.PeerId;
         if (targetChat.IsBluetoothDevice && !targetChat.IsOnline && !targetChat.PeerId.StartsWith("peer_prime"))
@@ -2612,28 +2657,70 @@ public async Task SendTextMessageAsync()
             singleMsg.IsDelivered = false;
             StatusMessage = "Ошибка отправки GIF-анимации";
         }
+        finally
+        {
+            SendMyActivityState("IDLE", true);
+        }
 
         _ = _storageService.SaveChatsAsync(_allChats);
     }
 
     private DateTime _lastTypingSentTime = DateTime.MinValue;
 
-    private void NotifyTyping()
+    public void SendMyActivityState(string state, bool force = false)
     {
         if (SelectedChat == null) return;
-        if ((DateTime.UtcNow - _lastTypingSentTime).TotalSeconds < 2.5) return;
-        _lastTypingSentTime = DateTime.UtcNow;
+        state = string.IsNullOrWhiteSpace(state) ? "IDLE" : state.Trim();
 
-        _ = Task.Run(async () =>
+        if (!force && state == _myCurrentActivityState && (DateTime.UtcNow - _lastActivitySentTime).TotalSeconds < 2.5)
         {
-            try
+            return;
+        }
+
+        _myCurrentActivityState = state;
+        _lastActivitySentTime = DateTime.UtcNow;
+
+        string targetAddr = !string.IsNullOrWhiteSpace(SelectedChat.DeviceAddress) ? SelectedChat.DeviceAddress : SelectedChat.PeerId;
+        if (!string.IsNullOrWhiteSpace(targetAddr))
+        {
+            _ = Task.Run(async () =>
             {
-                string targetAddr = !string.IsNullOrWhiteSpace(SelectedChat.DeviceAddress) ? SelectedChat.DeviceAddress : SelectedChat.PeerId;
-                byte[] typingPayload = PrimePacket.BuildTypingPayload("STATE:TYPING");
-                await _bluetoothService.SendPacketAsync(targetAddr, PacketType.Typing, typingPayload);
+                try
+                {
+                    byte[] payload = PrimePacket.BuildTypingPayload($"STATE:{state}");
+                    await _bluetoothService.SendPacketAsync(targetAddr, PacketType.Typing, payload);
+                }
+                catch { }
+            });
+        }
+
+        App.Current?.Dispatcher?.Invoke(() =>
+        {
+            _myActivityIdleTimer?.Stop();
+            if (state != "IDLE")
+            {
+                double timeoutSeconds = 4.5;
+                var upper = state.ToUpperInvariant();
+                if (upper.StartsWith("RECORDING") || upper.StartsWith("SENDING")) timeoutSeconds = 12.0;
+                else if (upper.StartsWith("SELECTING") || upper.StartsWith("VIEWING") || upper.StartsWith("LISTENING")) timeoutSeconds = 7.0;
+
+                _myActivityIdleTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(timeoutSeconds) };
+                _myActivityIdleTimer.Tick += (s, e) =>
+                {
+                    _myActivityIdleTimer.Stop();
+                    if (_myCurrentActivityState == state)
+                    {
+                        SendMyActivityState("IDLE", true);
+                    }
+                };
+                _myActivityIdleTimer.Start();
             }
-            catch { }
         });
+    }
+
+    private void NotifyTyping()
+    {
+        SendMyActivityState("TYPING");
     }
 
     public async Task ScanDevicesAsync()
@@ -3479,16 +3566,53 @@ public async Task SendTextMessageAsync()
 
                 case PacketType.Typing:
                     string typingData = System.Text.Encoding.UTF8.GetString(payload).Trim();
-                    bool isTypingState = typingData.Contains("TYPING");
-                    chat.IsTyping = isTypingState;
-                    if (isTypingState)
+                    string action = "TYPING";
+                    if (typingData.StartsWith("STATE:", StringComparison.OrdinalIgnoreCase))
                     {
-                        var timer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(3.5) };
+                        action = typingData.Substring(6).Trim();
+                    }
+                    else if (!string.IsNullOrEmpty(typingData))
+                    {
+                        action = typingData;
+                    }
+
+                    string chatIdKey = !string.IsNullOrWhiteSpace(chat.DeviceAddress) ? chat.DeviceAddress : chat.PeerId;
+                    if (string.IsNullOrWhiteSpace(chatIdKey)) chatIdKey = chat.DisplayName;
+
+                    if (_chatActivityTimers.TryGetValue(chatIdKey, out var existingTimer))
+                    {
+                        existingTimer.Stop();
+                        _chatActivityTimers.Remove(chatIdKey);
+                    }
+
+                    if (string.Equals(action, "IDLE", StringComparison.OrdinalIgnoreCase))
+                    {
+                        chat.IsTyping = false;
+                        chat.ActivityState = "IDLE";
+                    }
+                    else
+                    {
+                        chat.ActivityState = action;
+                        chat.IsTyping = action.Equals("TYPING", StringComparison.OrdinalIgnoreCase);
+
+                        double timeoutSeconds = 5.0;
+                        var upper = action.ToUpperInvariant();
+                        if (upper.StartsWith("RECORDING") || upper.StartsWith("SENDING")) timeoutSeconds = 12.0;
+                        else if (upper.StartsWith("SELECTING") || upper.StartsWith("VIEWING") || upper.StartsWith("LISTENING")) timeoutSeconds = 7.0;
+                        else if (upper == "TYPING") timeoutSeconds = 4.5;
+
+                        var timer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(timeoutSeconds) };
                         timer.Tick += (s, e) =>
                         {
-                            chat.IsTyping = false;
                             timer.Stop();
+                            _chatActivityTimers.Remove(chatIdKey);
+                            if (chat.ActivityState == action)
+                            {
+                                chat.ActivityState = "IDLE";
+                                chat.IsTyping = false;
+                            }
                         };
+                        _chatActivityTimers[chatIdKey] = timer;
                         timer.Start();
                     }
                     break;

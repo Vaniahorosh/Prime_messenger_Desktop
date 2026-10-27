@@ -23,6 +23,7 @@ public class ChatItem : INotifyPropertyChanged
     private int _unreadCount;
     private bool _isOnline;
     private bool _isTyping;
+    private string _activityState = "IDLE";
     private string? _avatarPath;
     private DeviceConnectionState _connectionState = DeviceConnectionState.Disconnected;
     private string _peerId = string.Empty;
@@ -260,6 +261,19 @@ public class ChatItem : INotifyPropertyChanged
         }
     }
 
+    public string ActivityState
+    {
+        get => _activityState;
+        set
+        {
+            if (SetField(ref _activityState, value ?? "IDLE"))
+            {
+                OnPropertyChanged(nameof(StatusText));
+                OnPropertyChanged(nameof(StatusColorHex));
+            }
+        }
+    }
+
     public DeviceConnectionState ConnectionState
     {
         get => _connectionState;
@@ -278,6 +292,26 @@ public class ChatItem : INotifyPropertyChanged
     {
         get
         {
+            if (!string.IsNullOrEmpty(ActivityState) && !ActivityState.Equals("IDLE", StringComparison.OrdinalIgnoreCase))
+            {
+                var upper = ActivityState.ToUpperInvariant();
+                if (upper == "TYPING") return "Печатает...";
+                if (upper == "RECORDING_VOICE" || upper == "RECORDING_AUDIO") return "Записывает голосовое...";
+                if (upper == "RECORDING_VIDEO_NOTE") return "Записывает видеокружок...";
+                if (upper == "SENDING_VIDEO_NOTE") return "Отправка видеокружка...";
+                if (upper == "SELECTING_MEDIA") return "Выбирает медиа...";
+                if (upper == "SELECTING_FILE") return "Выбирает файл...";
+                if (upper == "SENDING_PHOTO") return "Отправка фото...";
+                if (upper == "SENDING_VIDEO") return "Отправка видео...";
+                if (upper == "SENDING_MEDIA") return "Отправка медиа...";
+                if (upper == "SENDING_FILE") return "Отправка файла...";
+                if (upper == "VIEWING_PHOTO") return "Смотрит фото";
+                if (upper == "VIEWING_VIDEO") return "Смотрит видео";
+                if (upper == "VIEWING_FILE") return "Смотрит файл";
+                if (upper == "LISTENING_MUSIC" || upper == "LISTENING_AUDIO" || upper.StartsWith("LISTENING_TRACK")) return "Слушает аудио...";
+                if (upper == "READING_MODE") return "В режиме чтения";
+                return "Активность...";
+            }
             if (IsTyping) return "Печатает...";
             return ConnectionState switch
             {
@@ -292,6 +326,16 @@ public class ChatItem : INotifyPropertyChanged
     {
         get
         {
+            if (!string.IsNullOrEmpty(ActivityState) && !ActivityState.Equals("IDLE", StringComparison.OrdinalIgnoreCase))
+            {
+                var upper = ActivityState.ToUpperInvariant();
+                if (upper.StartsWith("RECORDING")) return "#4D9FFF"; // Accent brand blue
+                if (upper.StartsWith("SENDING") || upper.StartsWith("SELECTING")) return "#2EA043"; // Success green
+                if (upper.StartsWith("VIEWING")) return "#A371F7"; // Purple
+                if (upper.StartsWith("LISTENING")) return "#E36209"; // Orange
+                if (upper == "READING_MODE") return "#58A6FF";
+                return "#2EA043";
+            }
             if (IsTyping) return "#2EA043";
             return ConnectionState switch
             {

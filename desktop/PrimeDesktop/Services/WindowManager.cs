@@ -140,13 +140,19 @@ public static class WindowManager
             _photoViewerWindow.Closed += (s, e) =>
             {
                 _photoViewerWindow = null;
-                if (vm != null) vm.IsPhotoViewerOpen = false;
+                if (vm != null)
+                {
+                    vm.IsPhotoViewerOpen = false;
+                    vm.SendMyActivityState("IDLE", true);
+                }
             };
 
             if (vm != null)
             {
                 vm.ViewedPhotoPath = photoPath;
                 vm.IsPhotoViewerOpen = true;
+                bool isVid = PhotoViewerWindow.IsVideoPath(photoPath);
+                vm.SendMyActivityState(isVid ? "VIEWING_VIDEO" : "VIEWING_PHOTO");
             }
 
             _photoViewerWindow.Show();
