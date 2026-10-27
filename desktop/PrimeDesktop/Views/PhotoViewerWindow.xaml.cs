@@ -1,301 +1,677 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media.Imaging;
+using System.Windows.Threading;
 using Microsoft.Win32;
 using PrimeDesktop.Services;
 
-namespace PrimeDesktop.Views;
-
-public partial class PhotoViewerWindow : Window
+namespace PrimeDesktop.Views
 {
-    private string? _currentPath;
-    private BitmapImage? _bitmap;
-    private Point _lastDragPoint;
-    private bool _isDragging = false;
-    private double _currentZoom = 1.0;
-
-    public PhotoViewerWindow(string imagePath)
+    public class MediaViewerItem
     {
-        InitializeComponent();
-
-        StateChanged += Window_StateChanged;
-        Loaded += Window_Loaded;
-        PreviewKeyDown += Window_PreviewKeyDown;
-
-        LoadPhoto(imagePath);
+        public string FilePath { get; set; } = string.Empty;
+        public string Sender { get; set; } = string.Empty;
+        public string FormattedTime { get; set; } = string.Empty;
+        public bool IsVideo { get; set; }
+        public string FileName { get; set; } = string.Empty;
     }
 
-    private void Window_Loaded(object sender, RoutedEventArgs e)
+    public partial class PhotoViewerWindow : Window
     {
-        ThemeManager.ApplyWindowDwm(this);
-        WindowUtils.EnableWindowMinMaxHook(this);
-    }
+        private List<MediaViewerItem> _items = new();
+        private int _currentIndex;
 
-    public void LoadPhoto(string path)
-    {
-        if (string.IsNullOrWhiteSpace(path) || !File.Exists(path)) return;
+        private BitmapImage? _bitmap;
+        private Point _lastDragPoint;
+        private bool _isDragging;
+        private double _currentZoom = 1.0;
 
-        try
+        private readonly DispatcherTimer _videoTimer;
+        private readonly DispatcherTimer _volumeHudTimer;
+        private bool _isVideoPlaying;
+        private bool _isVideoMuted;
+        private double _videoVolume = 1.0;
+        private double _videoSpeed = 1.0;
+        private bool _isUserSeeking;
+
+        public PhotoViewerWindow(string initialPath) : this(initialPath, null)
         {
-            _currentPath = path;
-            TxtFileName.Text = Path.GetFileName(path);
-
-            var bi = new BitmapImage();
-            bi.BeginInit();
-            bi.CacheOption = BitmapCacheOption.OnLoad;
-            bi.UriSource = new Uri(path, UriKind.Absolute);
-            bi.EndInit();
-            bi.Freeze();
-
-            _bitmap = bi;
-            TargetImage.Source = bi;
-
-            long sizeKb = new FileInfo(path).Length / 1024;
-            TxtPhotoDetails.Text = $"• {bi.PixelWidth} × {bi.PixelHeight} px ({sizeKb} КБ)";
-
-            ResetZoomAndPosition();
         }
-        catch (Exception ex)
+
+        public PhotoViewerWindow(string initialPath, List<MediaViewerItem>? items)
         {
-            App.Log($"[PhotoViewer ERROR] Failed to load image: {ex.Message}");
+            InitializeComponent();
+
+            _videoTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(100) };
+            _videoTimer.Tick += VideoTimer_Tick;
+
+            _volumeHudTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(1200) };
+            _volumeHudTimer.Tick += (s, e) =>
+            {
+                _volumeHudTimer.Stop();
+                VolumeHud.Visibility = Visibility.Collapsed;
+            };
+
+            PreviewMouseWheel += Window_PreviewMouseWheel;
+            PreviewKeyDown += Window_PreviewKeyDown;
+            StateChanged += Window_StateChanged;
+            Closed += Window_Closed;
+
+            SetMediaList(initialPath, items);
         }
-    }
 
-    private void ResetZoomAndPosition()
-    {
-        _currentZoom = 1.0;
-        ImageScale.ScaleX = 1.0;
-        ImageScale.ScaleY = 1.0;
-        ImageTranslate.X = 0;
-        ImageTranslate.Y = 0;
-        BtnZoomReset.Content = "100%";
-    }
-
-    private void ApplyZoom(double newZoom, Point? center = null)
-    {
-        newZoom = Math.Clamp(newZoom, 0.1, 10.0);
-        _currentZoom = newZoom;
-
-        ImageScale.ScaleX = newZoom;
-        ImageScale.ScaleY = newZoom;
-        BtnZoomReset.Content = $"{Math.Round(newZoom * 100)}%";
-
-        if (newZoom <= 1.0)
+        public static bool IsVideoPath(string? path)
         {
-            ImageTranslate.X = 0;
-            ImageTranslate.Y = 0;
+            if (string.IsNullOrWhiteSpace(path)) return false;
+            string ext = Path.GetExtension(path).ToLowerInvariant();
+            return ext == ".mp4" || ext == ".webm" || ext == ".mov" || ext == ".avi" ||
+                   ext == ".mkv" || ext == ".3gp" || ext == ".wmv";
         }
-    }
 
-    #region Window TitleBar & Chrome Actions
+        public void SetMediaList(string initialPath, List<MediaViewerItem>? items)
+        {
+            if (items != null && items.Count > 0)
+            {
+                _items = new List<MediaViewerItem>(items);
+                int found = _items.FindIndex(m => m.FilePath.Equals(initialPath, StringComparison.OrdinalIgnoreCase));
+                _currentIndex = found >= 0 ? found : 0;
+            }
+            else
+            {
+                _items = new List<MediaViewerItem>
+                {
+                    new MediaViewerItem
+                    {
+                        FilePath = initialPath,
+                        Sender = "Прайм",
+                        FormattedTime = DateTime.Now.ToString("HH:mm"),
+                        IsVideo = IsVideoPath(initialPath),
+                        FileName = Path.GetFileName(initialPath)
+                    }
+                };
+                _currentIndex = 0;
+            }
 
-    private void TitleBar_MouseDown(object sender, MouseButtonEventArgs e)
-    {
-        if (e.ChangedButton == MouseButton.Left)
+            DisplayCurrentMedia();
+        }
+
+        public void LoadPhoto(string path)
+        {
+            SetMediaList(path, null);
+        }
+
+        private void DisplayCurrentMedia()
+        {
+            if (_items.Count == 0 || _currentIndex < 0 || _currentIndex >= _items.Count)
+                return;
+
+            var item = _items[_currentIndex];
+            if (!File.Exists(item.FilePath))
+            {
+                TxtFileName.Text = item.FileName ?? "Файл не найден";
+                TxtMediaDetails.Text = "Файл отсутствует на диске";
+                return;
+            }
+
+            TxtFileName.Text = !string.IsNullOrEmpty(item.FileName) ? item.FileName : Path.GetFileName(item.FilePath);
+
+            // Update bottom-right info badge
+            string senderPart = string.IsNullOrWhiteSpace(item.FormattedTime)
+                ? item.Sender
+                : $"{item.Sender} • {item.FormattedTime}";
+            TxtInfoSender.Text = !string.IsNullOrWhiteSpace(senderPart) ? senderPart : "Прайм";
+
+            string typeName = item.IsVideo ? "Видео" : "Фото";
+            TxtInfoCounter.Text = $"{typeName} {_currentIndex + 1} из {_items.Count}";
+
+            // Update navigation arrows
+            BtnPrevMedia.Visibility = _currentIndex > 0 ? Visibility.Visible : Visibility.Collapsed;
+            BtnNextMedia.Visibility = _currentIndex < _items.Count - 1 ? Visibility.Visible : Visibility.Collapsed;
+
+            long sizeKb = new FileInfo(item.FilePath).Length / 1024;
+
+            if (item.IsVideo)
+            {
+                // VIDEO MODE
+                PhotoScrollViewer.Visibility = Visibility.Collapsed;
+                PhotoZoomPanel.Visibility = Visibility.Collapsed;
+
+                VideoContainer.Visibility = Visibility.Visible;
+                VideoControlBar.Visibility = Visibility.Visible;
+
+                try
+                {
+                    PART_Video.Source = new Uri(Path.GetFullPath(item.FilePath), UriKind.Absolute);
+                    PART_Video.SpeedRatio = _videoSpeed;
+                    PART_Video.IsMuted = _isVideoMuted;
+                    PART_Video.Play();
+                    _isVideoPlaying = true;
+                    IconVidPlay.Visibility = Visibility.Collapsed;
+                    IconVidPause.Visibility = Visibility.Visible;
+                    VideoPauseOverlay.Visibility = Visibility.Collapsed;
+                    _videoTimer.Start();
+                }
+                catch (Exception ex)
+                {
+                    App.Log($"[MediaViewer] Failed to play video: {ex.Message}");
+                }
+
+                TxtMediaDetails.Text = $"• {sizeKb} КБ";
+            }
+            else
+            {
+                // PHOTO MODE
+                StopVideo();
+                VideoContainer.Visibility = Visibility.Collapsed;
+                VideoControlBar.Visibility = Visibility.Collapsed;
+
+                PhotoScrollViewer.Visibility = Visibility.Visible;
+                PhotoZoomPanel.Visibility = Visibility.Visible;
+
+                try
+                {
+                    var bi = new BitmapImage();
+                    bi.BeginInit();
+                    bi.CacheOption = BitmapCacheOption.OnLoad;
+                    bi.UriSource = new Uri(Path.GetFullPath(item.FilePath), UriKind.Absolute);
+                    bi.EndInit();
+                    bi.Freeze();
+
+                    _bitmap = bi;
+                    TargetImage.Source = bi;
+                    TxtMediaDetails.Text = $"• {bi.PixelWidth} × {bi.PixelHeight} px ({sizeKb} КБ)";
+                    ResetZoomAndPosition();
+                }
+                catch (Exception ex)
+                {
+                    App.Log($"[MediaViewer] Failed to load image: {ex.Message}");
+                    TxtMediaDetails.Text = $"• {sizeKb} КБ";
+                }
+            }
+        }
+
+        private void StopVideo()
+        {
+            _videoTimer.Stop();
+            _isVideoPlaying = false;
+            try
+            {
+                PART_Video.Stop();
+                PART_Video.Close();
+                PART_Video.Source = null;
+            }
+            catch { }
+        }
+
+        private void NavigatePrev()
+        {
+            if (_currentIndex > 0)
+            {
+                _currentIndex--;
+                DisplayCurrentMedia();
+            }
+        }
+
+        private void NavigateNext()
+        {
+            if (_currentIndex < _items.Count - 1)
+            {
+                _currentIndex++;
+                DisplayCurrentMedia();
+            }
+        }
+
+        private void BtnPrev_Click(object sender, RoutedEventArgs e)
+        {
+            NavigatePrev();
+        }
+
+        private void BtnNext_Click(object sender, RoutedEventArgs e)
+        {
+            NavigateNext();
+        }
+
+        private void Window_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
+        {
+            // If Control is pressed and looking at a photo: zoom in / out
+            if (Keyboard.Modifiers.HasFlag(ModifierKeys.Control))
+            {
+                var cur = _items[_currentIndex];
+                if (!cur.IsVideo)
+                {
+                    double factor = e.Delta > 0 ? 1.2 : 0.8;
+                    ApplyZoom(_currentZoom * factor);
+                    e.Handled = true;
+                    return;
+                }
+            }
+
+            // Normal mouse wheel: navigate next / previous media!
+            if (e.Delta < 0)
+            {
+                NavigateNext();
+                e.Handled = true;
+            }
+            else if (e.Delta > 0)
+            {
+                NavigatePrev();
+                e.Handled = true;
+            }
+        }
+
+        private void Backdrop_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            // If user clicked the transparent backdrop area outside the media
+            if (e.OriginalSource == PART_Backdrop)
+            {
+                Close();
+            }
+        }
+
+        private void Header_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
             if (e.ClickCount == 2)
             {
                 BtnMaximize_Click(sender, e);
+            }
+            else if (e.LeftButton == MouseButtonState.Pressed)
+            {
+                DragMove();
+            }
+        }
+
+        #region Video Player Events
+
+        private void Video_MediaOpened(object sender, RoutedEventArgs e)
+        {
+            if (PART_Video.NaturalDuration.HasTimeSpan)
+            {
+                var dur = PART_Video.NaturalDuration.TimeSpan;
+                TxtVideoTotal.Text = $"{(int)dur.TotalMinutes}:{dur.Seconds:D2}";
+                SliderVideoProgress.Maximum = dur.TotalSeconds;
+            }
+        }
+
+        private void Video_MediaEnded(object sender, RoutedEventArgs e)
+        {
+            // Loop video
+            try
+            {
+                PART_Video.Position = TimeSpan.Zero;
+                PART_Video.Play();
+            }
+            catch { }
+        }
+
+        private void Video_MediaFailed(object? sender, ExceptionRoutedEventArgs e)
+        {
+            _videoTimer.Stop();
+            _isVideoPlaying = false;
+            VideoPauseOverlay.Visibility = Visibility.Visible;
+        }
+
+        private void VideoTimer_Tick(object? sender, EventArgs e)
+        {
+            if (_isUserSeeking) return;
+
+            try
+            {
+                var pos = PART_Video.Position;
+                TxtVideoCurrent.Text = $"{(int)pos.TotalMinutes}:{pos.Seconds:D2}";
+                if (SliderVideoProgress.Maximum > 0)
+                {
+                    SliderVideoProgress.Value = pos.TotalSeconds;
+                }
+            }
+            catch { }
+        }
+
+        private void Video_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            ToggleVideoPlayPause();
+            e.Handled = true;
+        }
+
+        private void BtnVideoPlayPause_Click(object sender, RoutedEventArgs e)
+        {
+            ToggleVideoPlayPause();
+            e.Handled = true;
+        }
+
+        private void ToggleVideoPlayPause()
+        {
+            try
+            {
+                if (_isVideoPlaying)
+                {
+                    PART_Video.Pause();
+                    _isVideoPlaying = false;
+                    _videoTimer.Stop();
+                    IconVidPlay.Visibility = Visibility.Visible;
+                    IconVidPause.Visibility = Visibility.Collapsed;
+                    VideoPauseOverlay.Visibility = Visibility.Visible;
+                }
+                else
+                {
+                    PART_Video.Play();
+                    _isVideoPlaying = true;
+                    _videoTimer.Start();
+                    IconVidPlay.Visibility = Visibility.Collapsed;
+                    IconVidPause.Visibility = Visibility.Visible;
+                    VideoPauseOverlay.Visibility = Visibility.Collapsed;
+                }
+            }
+            catch { }
+        }
+
+        private void BtnVideoMute_Click(object sender, RoutedEventArgs e)
+        {
+            _isVideoMuted = !_isVideoMuted;
+            PART_Video.IsMuted = _isVideoMuted;
+            IconVidSoundOn.Visibility = _isVideoMuted ? Visibility.Collapsed : Visibility.Visible;
+            IconVidSoundOff.Visibility = _isVideoMuted ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        private void BtnVideoSpeed_Click(object sender, RoutedEventArgs e)
+        {
+            _videoSpeed = _videoSpeed switch
+            {
+                >= 1.95 => 1.0,
+                >= 1.45 => 2.0,
+                _ => 1.5
+            };
+            PART_Video.SpeedRatio = _videoSpeed;
+            TxtVideoSpeed.Text = _videoSpeed switch
+            {
+                >= 1.95 => "2x",
+                >= 1.45 => "1.5x",
+                _ => "1x"
+            };
+        }
+
+        private void Slider_PreviewMouseDown(object sender, MouseButtonEventArgs e)
+        {
+            _isUserSeeking = true;
+        }
+
+        private void Slider_PreviewMouseUp(object sender, MouseButtonEventArgs e)
+        {
+            _isUserSeeking = false;
+            try
+            {
+                PART_Video.Position = TimeSpan.FromSeconds(SliderVideoProgress.Value);
+            }
+            catch { }
+        }
+
+        private void Slider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+        {
+            if (_isUserSeeking)
+            {
+                var ts = TimeSpan.FromSeconds(e.NewValue);
+                TxtVideoCurrent.Text = $"{(int)ts.TotalMinutes}:{ts.Seconds:D2}";
+            }
+        }
+
+        private void AdjustVideoVolume(double delta)
+        {
+            _videoVolume = Math.Clamp(_videoVolume + delta, 0.0, 1.0);
+            PART_Video.Volume = _videoVolume;
+            if (_videoVolume <= 0.001)
+            {
+                _isVideoMuted = true;
+                PART_Video.IsMuted = true;
+                IconVidSoundOn.Visibility = Visibility.Collapsed;
+                IconVidSoundOff.Visibility = Visibility.Visible;
+                IconHudVolume.Data = (System.Windows.Media.Geometry)FindResource("IconVolumeMute");
+            }
+            else
+            {
+                _isVideoMuted = false;
+                PART_Video.IsMuted = false;
+                IconVidSoundOn.Visibility = Visibility.Visible;
+                IconVidSoundOff.Visibility = Visibility.Collapsed;
+                IconHudVolume.Data = (System.Windows.Media.Geometry)FindResource("IconVolumeUp");
+            }
+
+            TxtHudVolume.Text = $"{Math.Round(_videoVolume * 100)}%";
+            VolumeHud.Visibility = Visibility.Visible;
+            _volumeHudTimer.Stop();
+            _volumeHudTimer.Start();
+        }
+
+        #endregion
+
+        #region Photo Zoom & Pan
+
+        private void ResetZoomAndPosition()
+        {
+            _currentZoom = 1.0;
+            ImageScale.ScaleX = 1.0;
+            ImageScale.ScaleY = 1.0;
+            ImageTranslate.X = 0;
+            ImageTranslate.Y = 0;
+            BtnZoomReset.Content = "100%";
+        }
+
+        private void ApplyZoom(double newZoom)
+        {
+            newZoom = Math.Clamp(newZoom, 0.1, 10.0);
+            _currentZoom = newZoom;
+
+            ImageScale.ScaleX = newZoom;
+            ImageScale.ScaleY = newZoom;
+            BtnZoomReset.Content = $"{Math.Round(newZoom * 100)}%";
+
+            if (newZoom <= 1.0)
+            {
+                ImageTranslate.X = 0;
+                ImageTranslate.Y = 0;
+            }
+        }
+
+        private void ScrollViewer_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            if (e.ClickCount == 2)
+            {
+                if (_currentZoom > 1.05)
+                    ResetZoomAndPosition();
+                else
+                    ApplyZoom(2.0);
                 return;
             }
 
-            if (WindowState == WindowState.Maximized)
+            if (_currentZoom > 1.0)
             {
-                var mousePos = PointToScreen(e.GetPosition(this));
-                var ratio = e.GetPosition(this).X / Math.Max(ActualWidth, 1);
-                WindowState = WindowState.Normal;
-                Left = mousePos.X - (ActualWidth * ratio);
-                Top = mousePos.Y - 18;
+                _isDragging = true;
+                _lastDragPoint = e.GetPosition(PhotoScrollViewer);
+                PhotoScrollViewer.CaptureMouse();
             }
-
-            DragMove();
         }
-    }
 
-    private void BtnMinimize_Click(object sender, RoutedEventArgs e)
-    {
-        WindowState = WindowState.Minimized;
-    }
-
-    private void BtnMaximize_Click(object sender, RoutedEventArgs e)
-    {
-        WindowState = (WindowState == WindowState.Maximized) ? WindowState.Normal : WindowState.Maximized;
-    }
-
-    private void BtnClose_Click(object sender, RoutedEventArgs e)
-    {
-        Close();
-    }
-
-    private void Window_StateChanged(object? sender, EventArgs e)
-    {
-        if (IconMaximize == null || IconRestore == null || BtnMaximize == null) return;
-
-        if (WindowState == WindowState.Maximized)
+        private void ScrollViewer_MouseMove(object sender, MouseEventArgs e)
         {
-            IconMaximize.Visibility = Visibility.Collapsed;
-            IconRestore.Visibility = Visibility.Visible;
-            BtnMaximize.ToolTip = "Восстановить";
-        }
-        else
-        {
-            IconMaximize.Visibility = Visibility.Visible;
-            IconRestore.Visibility = Visibility.Collapsed;
-            BtnMaximize.ToolTip = "Развернуть";
-        }
-    }
+            if (_isDragging && _currentZoom > 1.0)
+            {
+                var currentPoint = e.GetPosition(PhotoScrollViewer);
+                double deltaX = currentPoint.X - _lastDragPoint.X;
+                double deltaY = currentPoint.Y - _lastDragPoint.Y;
 
-    private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
-    {
-        if (e.Key == Key.Escape)
+                ImageTranslate.X += deltaX;
+                ImageTranslate.Y += deltaY;
+
+                _lastDragPoint = currentPoint;
+            }
+        }
+
+        private void ScrollViewer_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+        {
+            if (_isDragging)
+            {
+                _isDragging = false;
+                PhotoScrollViewer.ReleaseMouseCapture();
+            }
+        }
+
+        private void BtnZoomIn_Click(object sender, RoutedEventArgs e) => ApplyZoom(_currentZoom * 1.25);
+        private void BtnZoomOut_Click(object sender, RoutedEventArgs e) => ApplyZoom(_currentZoom * 0.8);
+        private void BtnZoom100_Click(object sender, RoutedEventArgs e) => ResetZoomAndPosition();
+        private void BtnZoomFit_Click(object sender, RoutedEventArgs e) => ResetZoomAndPosition();
+
+        #endregion
+
+        #region Actions & Keyboard
+
+        private void BtnCopy_Click(object sender, RoutedEventArgs e)
+        {
+            if (_items.Count == 0) return;
+            var cur = _items[_currentIndex];
+            try
+            {
+                if (!cur.IsVideo && _bitmap != null)
+                {
+                    Clipboard.SetImage(_bitmap);
+                }
+                else if (File.Exists(cur.FilePath))
+                {
+                    var files = new System.Collections.Specialized.StringCollection { cur.FilePath };
+                    Clipboard.SetFileDropList(files);
+                }
+            }
+            catch (Exception ex)
+            {
+                App.Log($"[MediaViewer] Clipboard copy failed: {ex.Message}");
+            }
+        }
+
+        private void BtnSave_Click(object sender, RoutedEventArgs e)
+        {
+            if (_items.Count == 0) return;
+            var cur = _items[_currentIndex];
+            if (string.IsNullOrEmpty(cur.FilePath) || !File.Exists(cur.FilePath)) return;
+
+            try
+            {
+                string ext = Path.GetExtension(cur.FilePath).ToLowerInvariant();
+                var dlg = new SaveFileDialog
+                {
+                    Title = "Сохранить медиафайл",
+                    FileName = Path.GetFileName(cur.FilePath),
+                    Filter = ext switch
+                    {
+                        ".mp4" => "Видео MP4 (*.mp4)|*.mp4|Все файлы (*.*)|*.*",
+                        ".webm" => "Видео WebM (*.webm)|*.webm|Все файлы (*.*)|*.*",
+                        ".png" => "Изображение PNG (*.png)|*.png|Все файлы (*.*)|*.*",
+                        ".gif" => "GIF-анимация (*.gif)|*.gif|Все файлы (*.*)|*.*",
+                        _ => "Все файлы (*.*)|*.*"
+                    }
+                };
+
+                if (dlg.ShowDialog(this) == true)
+                {
+                    File.Copy(cur.FilePath, dlg.FileName, overwrite: true);
+                }
+            }
+            catch (Exception ex)
+            {
+                App.Log($"[MediaViewer] Save failed: {ex.Message}");
+            }
+        }
+
+        private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Escape)
+            {
+                Close();
+                e.Handled = true;
+            }
+            else if (e.Key == Key.Left)
+            {
+                NavigatePrev();
+                e.Handled = true;
+            }
+            else if (e.Key == Key.Right)
+            {
+                NavigateNext();
+                e.Handled = true;
+            }
+            else if (e.Key == Key.Up)
+            {
+                var cur = _items[_currentIndex];
+                if (cur.IsVideo)
+                {
+                    AdjustVideoVolume(+0.05);
+                    e.Handled = true;
+                }
+            }
+            else if (e.Key == Key.Down)
+            {
+                var cur = _items[_currentIndex];
+                if (cur.IsVideo)
+                {
+                    AdjustVideoVolume(-0.05);
+                    e.Handled = true;
+                }
+            }
+            else if (e.Key == Key.Space)
+            {
+                var cur = _items[_currentIndex];
+                if (cur.IsVideo)
+                {
+                    ToggleVideoPlayPause();
+                    e.Handled = true;
+                }
+            }
+            else if (e.Key == Key.S && (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control)
+            {
+                BtnSave_Click(sender, e);
+                e.Handled = true;
+            }
+            else if (e.Key == Key.C && (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control)
+            {
+                BtnCopy_Click(sender, e);
+                e.Handled = true;
+            }
+        }
+
+        private void BtnMinimize_Click(object sender, RoutedEventArgs e)
+        {
+            WindowState = WindowState.Minimized;
+        }
+
+        private void BtnMaximize_Click(object sender, RoutedEventArgs e)
+        {
+            WindowState = (WindowState == WindowState.Maximized) ? WindowState.Normal : WindowState.Maximized;
+        }
+
+        private void BtnClose_Click(object sender, RoutedEventArgs e)
         {
             Close();
-            e.Handled = true;
         }
-        else if (e.Key == Key.S && (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control)
-        {
-            BtnSave_Click(sender, e);
-            e.Handled = true;
-        }
-        else if (e.Key == Key.C && (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control)
-        {
-            BtnCopy_Click(sender, e);
-            e.Handled = true;
-        }
-        else if (e.Key == Key.OemPlus || e.Key == Key.Add)
-        {
-            BtnZoomIn_Click(sender, e);
-            e.Handled = true;
-        }
-        else if (e.Key == Key.OemMinus || e.Key == Key.Subtract)
-        {
-            BtnZoomOut_Click(sender, e);
-            e.Handled = true;
-        }
-    }
 
-    #endregion
-
-    #region Zoom & Pan Viewport
-
-    private void ScrollViewer_MouseWheel(object sender, MouseWheelEventArgs e)
-    {
-        double factor = e.Delta > 0 ? 1.15 : 0.85;
-        ApplyZoom(_currentZoom * factor);
-        e.Handled = true;
-    }
-
-    private void ScrollViewer_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
-    {
-        if (e.ClickCount == 2)
+        private void Window_StateChanged(object? sender, EventArgs e)
         {
-            if (_currentZoom > 1.05)
-                ResetZoomAndPosition();
+            if (IconMaximize == null || IconRestore == null) return;
+            if (WindowState == WindowState.Maximized)
+            {
+                IconMaximize.Visibility = Visibility.Collapsed;
+                IconRestore.Visibility = Visibility.Visible;
+            }
             else
-                ApplyZoom(2.0);
-            return;
-        }
-
-        if (_currentZoom > 1.0)
-        {
-            _isDragging = true;
-            _lastDragPoint = e.GetPosition(PhotoScrollViewer);
-            PhotoScrollViewer.CaptureMouse();
-        }
-    }
-
-    private void ScrollViewer_MouseMove(object sender, MouseEventArgs e)
-    {
-        if (_isDragging && _currentZoom > 1.0)
-        {
-            var currentPoint = e.GetPosition(PhotoScrollViewer);
-            double deltaX = currentPoint.X - _lastDragPoint.X;
-            double deltaY = currentPoint.Y - _lastDragPoint.Y;
-
-            ImageTranslate.X += deltaX;
-            ImageTranslate.Y += deltaY;
-
-            _lastDragPoint = currentPoint;
-        }
-    }
-
-    private void ScrollViewer_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
-    {
-        if (_isDragging)
-        {
-            _isDragging = false;
-            PhotoScrollViewer.ReleaseMouseCapture();
-        }
-    }
-
-    private void BtnZoomIn_Click(object sender, RoutedEventArgs e)
-    {
-        ApplyZoom(_currentZoom * 1.25);
-    }
-
-    private void BtnZoomOut_Click(object sender, RoutedEventArgs e)
-    {
-        ApplyZoom(_currentZoom * 0.8);
-    }
-
-    private void BtnZoom100_Click(object sender, RoutedEventArgs e)
-    {
-        ResetZoomAndPosition();
-    }
-
-    private void BtnZoomFit_Click(object sender, RoutedEventArgs e)
-    {
-        ResetZoomAndPosition();
-    }
-
-    #endregion
-
-    #region Action Buttons
-
-    private void BtnCopy_Click(object sender, RoutedEventArgs e)
-    {
-        if (_bitmap == null) return;
-        try
-        {
-            Clipboard.SetImage(_bitmap);
-        }
-        catch (Exception ex)
-        {
-            App.Log($"[PhotoViewer ERROR] Clipboard copy failed: {ex.Message}");
-        }
-    }
-
-    private void BtnSave_Click(object sender, RoutedEventArgs e)
-    {
-        if (string.IsNullOrEmpty(_currentPath) || !File.Exists(_currentPath)) return;
-
-        try
-        {
-            string ext = Path.GetExtension(_currentPath).ToLowerInvariant();
-            var dlg = new SaveFileDialog
             {
-                Title = "Сохранить изображение",
-                FileName = Path.GetFileName(_currentPath),
-                Filter = ext switch
-                {
-                    ".png" => "Изображение PNG (*.png)|*.png|Все файлы (*.*)|*.*",
-                    ".gif" => "GIF-анимация (*.gif)|*.gif|Все файлы (*.*)|*.*",
-                    _ => "Изображение JPEG (*.jpg)|*.jpg|Все файлы (*.*)|*.*"
-                }
-            };
-
-            if (dlg.ShowDialog(this) == true)
-            {
-                File.Copy(_currentPath, dlg.FileName, overwrite: true);
+                IconMaximize.Visibility = Visibility.Visible;
+                IconRestore.Visibility = Visibility.Collapsed;
             }
         }
-        catch (Exception ex)
-        {
-            App.Log($"[PhotoViewer ERROR] Save failed: {ex.Message}");
-        }
-    }
 
-    #endregion
+        private void Window_Closed(object? sender, EventArgs e)
+        {
+            StopVideo();
+        }
+
+        #endregion
+    }
 }

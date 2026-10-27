@@ -1,120 +1,208 @@
 <Window x:Class="PrimeDesktop.Views.PhotoViewerWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Просмотр фотографии — Прайм"
+        Title="Просмотр медиа — Прайм"
         Icon="../Assets/prime.ico"
-        Height="720" Width="980"
+        Height="760" Width="1060"
         MinHeight="480" MinWidth="640"
         WindowStartupLocation="CenterOwner"
-        WindowStyle="None" AllowsTransparency="False"
-        Background="{DynamicResource BackgroundBrush}">
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent">
 
-    <WindowChrome.WindowChrome>
-        <WindowChrome CaptionHeight="36" ResizeBorderThickness="6" GlassFrameThickness="0" CornerRadius="0"/>
-    </WindowChrome.WindowChrome>
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/PrimeDesktop;component/Resources/PrimeIcons.xaml"/>
+                <ResourceDictionary Source="/PrimeDesktop;component/Resources/Styles.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Window.Resources>
 
-    <Grid>
-        <Grid.RowDefinitions>
-            <RowDefinition Height="36"/> <!-- Custom TitleBar -->
-            <RowDefinition Height="46"/> <!-- Action Toolbar -->
-            <RowDefinition Height="*"/>  <!-- Photo Viewport -->
-        </Grid.RowDefinitions>
+    <!-- Translucent Dark Backdrop -->
+    <Border x:Name="PART_Backdrop"
+            Background="#C8090C15"
+            MouseLeftButtonDown="Backdrop_MouseLeftButtonDown">
+        <Grid>
+            <!-- Top Floating Header Bar -->
+            <Grid VerticalAlignment="Top" Height="48" Margin="16,12,16,0" Panel.ZIndex="10"
+                  MouseLeftButtonDown="Header_MouseLeftButtonDown">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
 
-        <!-- Custom Windows 11 TitleBar -->
-        <Grid Grid.Row="0" Background="{DynamicResource HeaderBrush}" MouseLeftButtonDown="TitleBar_MouseDown">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="Auto"/>
-            </Grid.ColumnDefinitions>
+                <!-- Left: File Name & Details -->
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock x:Name="TxtFileName" Text="Медиафайл" Foreground="White" FontSize="13" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" MaxWidth="360"/>
+                    <TextBlock x:Name="TxtMediaDetails" Text="" Foreground="#AAFFFFFF" FontSize="11" Margin="10,0,0,0" VerticalAlignment="Center"/>
+                </StackPanel>
 
-            <!-- App Title & Icon -->
-            <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="14,0,0,0">
-                <Image Source="../Assets/prime_logo_app.png" Width="20" Height="20" Margin="0,0,8,0" RenderOptions.BitmapScalingMode="HighQuality"/>
-                <TextBlock Text="Просмотр фотографии — Прайм" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="12" FontWeight="SemiBold"/>
-            </StackPanel>
+                <!-- Right: Action Buttons & Window Controls -->
+                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                    <!-- Photo Zoom Controls (hidden for video) -->
+                    <StackPanel x:Name="PhotoZoomPanel" Orientation="Horizontal" Margin="0,0,10,0">
+                        <Button Content="🔍 -" Style="{StaticResource ModernButton}" Click="BtnZoomOut_Click" ToolTip="Уменьшить" Padding="8,4" Margin="0,0,4,0" Background="#35000000"/>
+                        <Button x:Name="BtnZoomReset" Content="100%" Style="{StaticResource ModernButton}" Click="BtnZoom100_Click" ToolTip="Масштаб 1:1" Padding="8,4" Margin="0,0,4,0" Background="#35000000"/>
+                        <Button Content="🔍 +" Style="{StaticResource ModernButton}" Click="BtnZoomIn_Click" ToolTip="Увеличить" Padding="8,4" Margin="0,0,4,0" Background="#35000000"/>
+                        <Button Content="↔ По окну" Style="{StaticResource ModernButton}" Click="BtnZoomFit_Click" ToolTip="Вписать" Padding="8,4" Margin="0,0,8,0" Background="#35000000"/>
+                    </StackPanel>
 
-            <!-- Window Control Buttons (Windows 11 Caption Buttons) -->
-            <StackPanel Grid.Column="2" Orientation="Horizontal" WindowChrome.IsHitTestVisibleInChrome="True">
-                <Button x:Name="BtnMinimize"
-                        Style="{StaticResource CaptionButtonStyle}"
-                        ToolTip="Свернуть"
-                        Click="BtnMinimize_Click">
-                    <Path Width="10" Height="1" Stretch="None" Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" StrokeThickness="1" SnapsToDevicePixels="True" Data="M 0,0.5 H 10"/>
-                </Button>
+                    <Button Content="📋 Копировать" Style="{StaticResource ModernButton}" Click="BtnCopy_Click" ToolTip="Копировать (Ctrl+C)" Padding="10,4" Margin="0,0,6,0" Background="#35000000"/>
+                    <Button Content="💾 Сохранить" Style="{StaticResource AccentButton}" Click="BtnSave_Click" ToolTip="Сохранить файл (Ctrl+S)" Padding="12,4" Margin="0,0,12,0"/>
 
-                <Button x:Name="BtnMaximize"
-                        Style="{StaticResource CaptionButtonStyle}"
-                        ToolTip="Развернуть"
-                        Click="BtnMaximize_Click">
-                    <Grid>
-                        <!-- Maximize icon (square) -->
-                        <Path x:Name="IconMaximize" Width="10" Height="10" Stretch="None" Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" StrokeThickness="1" SnapsToDevicePixels="True" Data="M 0.5,0.5 H 9.5 V 9.5 H 0.5 Z" Visibility="Visible"/>
-                        <!-- Restore icon (overlapping squares) -->
-                        <Path x:Name="IconRestore" Width="10" Height="10" Stretch="None" Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" StrokeThickness="1" SnapsToDevicePixels="True" Data="M 2.5,0.5 H 9.5 V 7.5 H 7.5 M 0.5,2.5 H 7.5 V 9.5 H 0.5 Z" Visibility="Collapsed"/>
+                    <!-- Minimize, Maximize, Close -->
+                    <Button Style="{StaticResource CaptionButtonStyle}" ToolTip="Свернуть" Click="BtnMinimize_Click" Width="32" Height="32">
+                        <Path Width="10" Height="1" Stretch="None" Stroke="White" StrokeThickness="1" SnapsToDevicePixels="True" Data="M 0,0.5 H 10"/>
+                    </Button>
+                    <Button x:Name="BtnMaximize" Style="{StaticResource CaptionButtonStyle}" ToolTip="Развернуть" Click="BtnMaximize_Click" Width="32" Height="32">
+                        <Grid>
+                            <Path x:Name="IconMaximize" Width="10" Height="10" Stretch="None" Stroke="White" StrokeThickness="1" SnapsToDevicePixels="True" Data="M 0.5,0.5 H 9.5 V 9.5 H 0.5 Z"/>
+                            <Path x:Name="IconRestore" Width="10" Height="10" Stretch="None" Stroke="White" StrokeThickness="1" SnapsToDevicePixels="True" Data="M 2.5,0.5 H 9.5 V 7.5 H 7.5 M 0.5,2.5 H 7.5 V 9.5 H 0.5 Z" Visibility="Collapsed"/>
+                        </Grid>
+                    </Button>
+                    <Button Style="{StaticResource CloseCaptionButtonStyle}" ToolTip="Закрыть (Esc)" Click="BtnClose_Click" Width="32" Height="32">
+                        <Path Width="10" Height="10" Stretch="None" Stroke="White" StrokeThickness="1" SnapsToDevicePixels="True" Data="M 0,0 L 10,10 M 10,0 L 0,10"/>
+                    </Button>
+                </StackPanel>
+            </Grid>
+
+            <!-- Center Viewport Area -->
+            <Grid Margin="0,50,0,0">
+                <!-- Volume HUD Indicator (Top-Center) -->
+                <Border x:Name="VolumeHud" HorizontalAlignment="Center" VerticalAlignment="Top"
+                        Margin="0,20,0,0" Background="#E0000000" BorderBrush="{DynamicResource AccentBrush}"
+                        BorderThickness="1.5" CornerRadius="14" Padding="16,7" Visibility="Collapsed" Panel.ZIndex="30">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <Path x:Name="IconHudVolume" Data="{StaticResource IconVolumeUp}" Fill="{DynamicResource AccentBrush}" Width="16" Height="16" Stretch="Uniform" Margin="0,0,8,0"/>
+                        <TextBlock x:Name="TxtHudVolume" Text="100%" Foreground="White" FontSize="13" FontWeight="Bold"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- 1. PHOTO VIEWPORT -->
+                <ScrollViewer x:Name="PhotoScrollViewer"
+                              HorizontalScrollBarVisibility="Hidden"
+                              VerticalScrollBarVisibility="Hidden"
+                              Focusable="False"
+                              PreviewMouseLeftButtonDown="ScrollViewer_MouseLeftButtonDown"
+                              PreviewMouseMove="ScrollViewer_MouseMove"
+                              PreviewMouseLeftButtonUp="ScrollViewer_MouseLeftButtonUp"
+                              Cursor="Hand">
+                    <Grid x:Name="ImageGrid" HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <Image x:Name="TargetImage"
+                               RenderOptions.BitmapScalingMode="HighQuality"
+                               Stretch="Uniform"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center">
+                            <Image.RenderTransform>
+                                <TransformGroup>
+                                    <ScaleTransform x:Name="ImageScale" ScaleX="1" ScaleY="1"/>
+                                    <TranslateTransform x:Name="ImageTranslate" X="0" Y="0"/>
+                                </TransformGroup>
+                            </Image.RenderTransform>
+                        </Image>
                     </Grid>
-                </Button>
+                </ScrollViewer>
 
-                <Button x:Name="BtnClose"
-                        Style="{StaticResource CloseCaptionButtonStyle}"
-                        ToolTip="Закрыть (Esc)"
-                        Click="BtnClose_Click">
-                    <Path Width="10" Height="10" Stretch="None" Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" StrokeThickness="1" SnapsToDevicePixels="True" Data="M 0,0 L 10,10 M 10,0 L 0,10"/>
-                </Button>
-            </StackPanel>
-        </Grid>
+                <!-- 2. VIDEO VIEWPORT -->
+                <Grid x:Name="VideoContainer" Visibility="Collapsed" HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <MediaElement x:Name="PART_Video"
+                                  LoadedBehavior="Manual"
+                                  UnloadedBehavior="Stop"
+                                  Stretch="Uniform"
+                                  MediaOpened="Video_MediaOpened"
+                                  MediaEnded="Video_MediaEnded"
+                                  MediaFailed="Video_MediaFailed"
+                                  MouseLeftButtonDown="Video_MouseLeftButtonDown"/>
 
-        <!-- Top Action Toolbar -->
-        <Border Grid.Row="1" Background="{DynamicResource HeaderBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,1" Padding="14,0">
-            <DockPanel VerticalAlignment="Center">
-                <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
-                    <!-- Zoom Controls -->
-                    <Button Content="🔍 -" Style="{StaticResource ModernButton}" Click="BtnZoomOut_Click" ToolTip="Уменьшить" Padding="8,4" Margin="0,0,4,0"/>
-                    <Button x:Name="BtnZoomReset" Content="100%" Style="{StaticResource ModernButton}" Click="BtnZoom100_Click" ToolTip="Масштаб 1:1" Padding="8,4" Margin="0,0,4,0"/>
-                    <Button Content="🔍 +" Style="{StaticResource ModernButton}" Click="BtnZoomIn_Click" ToolTip="Увеличить" Padding="8,4" Margin="0,0,4,0"/>
-                    <Button Content="↔ По окну" Style="{StaticResource ModernButton}" Click="BtnZoomFit_Click" ToolTip="Вписать по размеру окна" Padding="8,4" Margin="0,0,12,0"/>
-
-                    <Rectangle Width="1" Height="20" Fill="{DynamicResource BorderBrush}" Margin="0,0,12,0"/>
-
-                    <!-- Action Buttons -->
-                    <Button Content="📋 Копировать" Style="{StaticResource ModernButton}" Click="BtnCopy_Click" ToolTip="Копировать в буфер (Ctrl+C)" Padding="10,4" Margin="0,0,6,0"/>
-                    <Button Content="💾 Сохранить как..." Style="{StaticResource AccentButton}" Click="BtnSave_Click" ToolTip="Сохранить на диск (Ctrl+S)" Padding="12,4"/>
-                </StackPanel>
-
-                <!-- Left info -->
-                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                    <TextBlock x:Name="TxtFileName" Text="Фотография" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="12" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" MaxWidth="320"/>
-                    <TextBlock x:Name="TxtPhotoDetails" Text="" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" Margin="10,0,0,0" VerticalAlignment="Center"/>
-                </StackPanel>
-            </DockPanel>
-        </Border>
-
-        <!-- Main Photo Viewport -->
-        <Border Grid.Row="2" Background="#0A0D14" ClipToBounds="True">
-            <ScrollViewer x:Name="PhotoScrollViewer"
-                          HorizontalScrollBarVisibility="Hidden"
-                          VerticalScrollBarVisibility="Hidden"
-                          Focusable="False"
-                          MouseWheel="ScrollViewer_MouseWheel"
-                          PreviewMouseLeftButtonDown="ScrollViewer_MouseLeftButtonDown"
-                          PreviewMouseMove="ScrollViewer_MouseMove"
-                          PreviewMouseLeftButtonUp="ScrollViewer_MouseLeftButtonUp"
-                          Cursor="Hand">
-                <Grid x:Name="ImageGrid" HorizontalAlignment="Center" VerticalAlignment="Center">
-                    <Image x:Name="TargetImage"
-                           RenderOptions.BitmapScalingMode="HighQuality"
-                           Stretch="Uniform"
-                           HorizontalAlignment="Center"
-                           VerticalAlignment="Center">
-                        <Image.RenderTransform>
-                            <TransformGroup>
-                                <ScaleTransform x:Name="ImageScale" ScaleX="1" ScaleY="1"/>
-                                <TranslateTransform x:Name="ImageTranslate" X="0" Y="0"/>
-                            </TransformGroup>
-                        </Image.RenderTransform>
-                    </Image>
+                    <!-- Big Play/Pause Center Indicator -->
+                    <Border x:Name="VideoPauseOverlay" Width="64" Height="64" CornerRadius="32"
+                            Background="#88000000" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1.5"
+                            HorizontalAlignment="Center" VerticalAlignment="Center" Cursor="Hand"
+                            MouseLeftButtonDown="Video_MouseLeftButtonDown" Visibility="Collapsed">
+                        <Path Data="{StaticResource IconPlay}" Fill="White" Width="22" Height="22" Margin="3,0,0,0"
+                              Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
                 </Grid>
-            </ScrollViewer>
-        </Border>
-    </Grid>
+
+                <!-- Floating Video Control Bar (Bottom-Center, only for videos) -->
+                <Border x:Name="VideoControlBar" VerticalAlignment="Bottom" HorizontalAlignment="Center"
+                        Margin="0,0,0,24" Background="#AA000000" BorderBrush="#30FFFFFF" BorderThickness="1"
+                        CornerRadius="16" Padding="14,6" Visibility="Collapsed" Panel.ZIndex="10">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <!-- Play/Pause -->
+                        <Button Style="{StaticResource ModernButton}" Width="32" Height="32" Padding="0" Click="BtnVideoPlayPause_Click">
+                            <Grid>
+                                <Path x:Name="IconVidPlay" Data="{StaticResource IconPlay}" Fill="White" Width="14" Height="14" Stretch="Uniform"/>
+                                <Path x:Name="IconVidPause" Data="{StaticResource IconPause}" Fill="White" Width="14" Height="14" Stretch="Uniform" Visibility="Collapsed"/>
+                            </Grid>
+                        </Button>
+
+                        <!-- Current Time -->
+                        <TextBlock x:Name="TxtVideoCurrent" Text="0:00" Foreground="White" FontSize="11.5" VerticalAlignment="Center" Margin="8,0,8,0"/>
+
+                        <!-- Seek Slider -->
+                        <Slider x:Name="SliderVideoProgress" Width="260" VerticalAlignment="Center"
+                                Minimum="0" Maximum="100" Value="0"
+                                PreviewMouseDown="Slider_PreviewMouseDown"
+                                PreviewMouseUp="Slider_PreviewMouseUp"
+                                ValueChanged="Slider_ValueChanged"/>
+
+                        <!-- Total Time -->
+                        <TextBlock x:Name="TxtVideoTotal" Text="0:00" Foreground="#AAFFFFFF" FontSize="11.5" VerticalAlignment="Center" Margin="8,0,10,0"/>
+
+                        <!-- Mute / Unmute -->
+                        <Button Style="{StaticResource ModernButton}" Width="28" Height="28" Padding="0" Click="BtnVideoMute_Click" ToolTip="Звук">
+                            <Grid>
+                                <Path x:Name="IconVidSoundOn" Data="{StaticResource IconVolumeUp}" Fill="White" Width="13" Height="13" Stretch="Uniform"/>
+                                <Path x:Name="IconVidSoundOff" Data="{StaticResource IconVolumeMute}" Fill="#FF7777" Width="13" Height="13" Stretch="Uniform" Visibility="Collapsed"/>
+                            </Grid>
+                        </Button>
+
+                        <!-- Speed Button -->
+                        <Border CornerRadius="12" Background="#30FFFFFF" Margin="8,0,0,0">
+                            <Button Style="{StaticResource ModernButton}" Padding="6,2" Height="24"
+                                    Background="Transparent" BorderThickness="0"
+                                    Click="BtnVideoSpeed_Click" ToolTip="Скорость">
+                                <TextBlock x:Name="TxtVideoSpeed" Text="1x" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"/>
+                            </Button>
+                        </Border>
+                    </StackPanel>
+                </Border>
+
+                <!-- Left Navigation Arrow ❮ -->
+                <Border x:Name="BtnPrevMedia"
+                        Width="44" Height="44" CornerRadius="22" Background="#60000000" BorderBrush="#25FFFFFF" BorderThickness="1"
+                        HorizontalAlignment="Left" VerticalAlignment="Center" Margin="20,0,0,0"
+                        Panel.ZIndex="10">
+                    <Button Style="{StaticResource ModernButton}" Width="42" Height="42" Background="Transparent" BorderThickness="0"
+                            Click="BtnPrev_Click" ToolTip="Предыдущее (Влево / Колесо вверх)">
+                        <TextBlock Text="❮" Foreground="White" FontSize="18" FontWeight="Bold" Margin="-2,0,0,0"/>
+                    </Button>
+                </Border>
+
+                <!-- Right Navigation Arrow ❯ -->
+                <Border x:Name="BtnNextMedia"
+                        Width="44" Height="44" CornerRadius="22" Background="#60000000" BorderBrush="#25FFFFFF" BorderThickness="1"
+                        HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,20,0"
+                        Panel.ZIndex="10">
+                    <Button Style="{StaticResource ModernButton}" Width="42" Height="42" Background="Transparent" BorderThickness="0"
+                            Click="BtnNext_Click" ToolTip="Следующее (Вправо / Колесо вниз)">
+                        <TextBlock Text="❯" Foreground="White" FontSize="18" FontWeight="Bold" Margin="2,0,0,0"/>
+                    </Button>
+                </Border>
+
+                <!-- Bottom-Right Info Badge (От кого + Номер фото/видео) -->
+                <Border HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                        Margin="0,0,24,24" Background="#88000000" BorderBrush="#25FFFFFF" BorderThickness="1"
+                        CornerRadius="10" Padding="12,8" Panel.ZIndex="10">
+                    <StackPanel HorizontalAlignment="Right">
+                        <TextBlock x:Name="TxtInfoSender" Text="Отправитель" Foreground="White" FontWeight="SemiBold" FontSize="12.5" HorizontalAlignment="Right"/>
+                        <TextBlock x:Name="TxtInfoCounter" Text="Фото 1 из 1" Foreground="#AAFFFFFF" FontSize="11" Margin="0,2,0,0" HorizontalAlignment="Right"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Grid>
+    </Border>
 </Window>

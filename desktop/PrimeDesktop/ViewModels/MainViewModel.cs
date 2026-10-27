@@ -1310,18 +1310,19 @@ public class MainViewModel : ViewModelBase
         });
 
         OpenPhotoViewerCommand = new RelayCommand(param =>
-
         {
-            if (param is string path && File.Exists(path))
-
+            string? path = param as string;
+            if (param is ChatMessage msg)
             {
-                ViewedPhotoPath = path;
-
-                IsPhotoViewerOpen = true;
-                Services.WindowManager.OpenPhotoViewer(path, this);
-
+                path = msg.FilePath;
             }
 
+            if (!string.IsNullOrEmpty(path) && File.Exists(path))
+            {
+                ViewedPhotoPath = path;
+                IsPhotoViewerOpen = true;
+                Services.WindowManager.OpenPhotoViewer(path, this);
+            }
         });
 
         ClosePhotoViewerCommand = new RelayCommand(() =>
@@ -1343,6 +1344,12 @@ public class MainViewModel : ViewModelBase
             }
             if (!string.IsNullOrEmpty(path) && File.Exists(path))
             {
+                if (Views.PhotoViewerWindow.IsVideoPath(path) || (param is ChatMessage cm && (cm.IsPhoto || cm.IsVideoNote)))
+                {
+                    Services.WindowManager.OpenPhotoViewer(path, this);
+                    return;
+                }
+
                 try
                 {
                     System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo

@@ -62,16 +62,63 @@ public static class WindowManager
         {
             vm ??= Application.Current?.MainWindow?.DataContext as MainViewModel;
 
+            var mediaList = new List<MediaViewerItem>();
+            if (vm?.SelectedChat != null)
+            {
+                foreach (var msg in vm.SelectedChat.Messages)
+                {
+                    if (msg.IsCollage && msg.CollagePaths != null)
+                    {
+                        foreach (var cp in msg.CollagePaths)
+                        {
+                            if (File.Exists(cp))
+                            {
+                                mediaList.Add(new MediaViewerItem
+                                {
+                                    FilePath = cp,
+                                    Sender = msg.Sender,
+                                    FormattedTime = msg.FormattedTime,
+                                    IsVideo = false,
+                                    FileName = Path.GetFileName(cp)
+                                });
+                            }
+                        }
+                    }
+                    else if (msg.IsPhoto && !string.IsNullOrEmpty(msg.FilePath) && File.Exists(msg.FilePath))
+                    {
+                        mediaList.Add(new MediaViewerItem
+                        {
+                            FilePath = msg.FilePath,
+                            Sender = msg.Sender,
+                            FormattedTime = msg.FormattedTime,
+                            IsVideo = false,
+                            FileName = msg.FileName ?? Path.GetFileName(msg.FilePath)
+                        });
+                    }
+                    else if ((msg.IsVideoNote || PhotoViewerWindow.IsVideoPath(msg.FilePath)) && !string.IsNullOrEmpty(msg.FilePath) && File.Exists(msg.FilePath))
+                    {
+                        mediaList.Add(new MediaViewerItem
+                        {
+                            FilePath = msg.FilePath,
+                            Sender = msg.Sender,
+                            FormattedTime = msg.FormattedTime,
+                            IsVideo = true,
+                            FileName = msg.FileName ?? Path.GetFileName(msg.FilePath)
+                        });
+                    }
+                }
+            }
+
             if (_photoViewerWindow != null && _photoViewerWindow.IsLoaded)
             {
-                _photoViewerWindow.LoadPhoto(photoPath);
+                _photoViewerWindow.SetMediaList(photoPath, mediaList);
                 if (_photoViewerWindow.WindowState == WindowState.Minimized)
                     _photoViewerWindow.WindowState = WindowState.Normal;
                 _photoViewerWindow.Activate();
                 return;
             }
 
-            _photoViewerWindow = new PhotoViewerWindow(photoPath)
+            _photoViewerWindow = new PhotoViewerWindow(photoPath, mediaList)
             {
                 Owner = Application.Current?.MainWindow,
                 DataContext = vm
