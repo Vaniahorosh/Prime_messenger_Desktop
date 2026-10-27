@@ -290,6 +290,17 @@
 
                                     <Border.ContextMenu>
                                         <ContextMenu Style="{StaticResource ModernContextMenu}">
+                                            <MenuItem Header="🔕 Отключить уведомления"
+                                                      Style="{StaticResource ModernMenuItem}"
+                                                      Command="{Binding DataContext.ToggleMuteChatCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                      CommandParameter="{Binding}"
+                                                      Visibility="{Binding IsMuted, Converter={StaticResource InverseBoolToVis}}"/>
+                                            <MenuItem Header="🔔 Включить уведомления"
+                                                      Style="{StaticResource ModernMenuItem}"
+                                                      Command="{Binding DataContext.ToggleMuteChatCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                      CommandParameter="{Binding}"
+                                                      Visibility="{Binding IsMuted, Converter={StaticResource BoolToVis}}"/>
+                                            <Separator Background="#223145" Margin="4,3"/>
                                             <MenuItem Header="🗑️ Удалить этот чат"
                                                       Style="{StaticResource DangerMenuItem}"
                                                       Command="{Binding DataContext.DeleteChatCommand, RelativeSource={RelativeSource AncestorType=Window}}"
@@ -359,19 +370,17 @@
 
 
                                         <!-- Time & Unread Badge -->
-
                                         <StackPanel Grid.Column="2" HorizontalAlignment="Right" VerticalAlignment="Center">
-
-                                            <TextBlock Text="{Binding LastMessageTime}" Foreground="{StaticResource TextMutedBrush}" FontSize="11"/>
-
+                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                                <Path Data="{StaticResource IconBellOff}" Fill="{StaticResource TextMutedBrush}" Width="10" Height="10" Stretch="Uniform"
+                                                      Margin="0,0,4,0" VerticalAlignment="Center"
+                                                      Visibility="{Binding IsMuted, Converter={StaticResource BoolToVis}}" ToolTip="Уведомления отключены"/>
+                                                <TextBlock Text="{Binding LastMessageTime}" Foreground="{StaticResource TextMutedBrush}" FontSize="11"/>
+                                            </StackPanel>
                                             <Border Background="{StaticResource BadgeBrush}" CornerRadius="10" MinWidth="18" Height="18" Margin="0,4,0,0"
-
                                                     Visibility="{Binding UnreadCount, Converter={StaticResource BoolToVis}}">
-
                                                 <TextBlock Text="{Binding UnreadCount}" Foreground="White" FontSize="10" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="4,0"/>
-
                                             </Border>
-
                                         </StackPanel>
 
                                     </Grid>
@@ -434,9 +443,16 @@
                     <DockPanel VerticalAlignment="Center">
 
                         <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
-
+                            <Button Style="{StaticResource ModernButton}" Command="{Binding ToggleMuteChatCommand}" CommandParameter="{Binding SelectedChat}"
+                                    ToolTip="Включить / отключить уведомления" Width="36" Height="34" Padding="0" Margin="0,0,6,0">
+                                <Grid>
+                                    <Path Data="{StaticResource IconBell}" Fill="{StaticResource TextMutedBrush}" Width="15" Height="15" Stretch="Uniform"
+                                          Visibility="{Binding SelectedChat.IsMuted, Converter={StaticResource InverseBoolToVis}}"/>
+                                    <Path Data="{StaticResource IconBellOff}" Fill="#FF6B6B" Width="15" Height="15" Stretch="Uniform"
+                                          Visibility="{Binding SelectedChat.IsMuted, Converter={StaticResource BoolToVis}}"/>
+                                </Grid>
+                            </Button>
                             <Button Content="ℹ" Style="{StaticResource ModernButton}" Command="{Binding ToggleMediaDrawerCommand}" ToolTip="Профиль и медиа" Width="36" Height="34" Padding="0"/>
-
                         </StackPanel>
 
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">

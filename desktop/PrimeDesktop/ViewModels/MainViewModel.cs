@@ -742,6 +742,8 @@ public class MainViewModel : ViewModelBase
     public ICommand PlayVoiceMessageCommand { get; }
     public ICommand SeekVoiceMessageCommand { get; }
     public ICommand ToggleVoiceSpeedCommand { get; }
+    public ICommand TestNotificationSoundCommand { get; }
+    public ICommand ToggleMuteChatCommand { get; }
 
     private bool _isPhotoViewerOpen;
 
@@ -1230,23 +1232,17 @@ public class MainViewModel : ViewModelBase
 
             {
                 if (_audioService.StartRecording())
-
                 {
                     IsRecordingVoice = true;
-
+                    SoundEffectService.PlayRecordStart(Settings);
                     StatusMessage = "Запись голосового сообщения...";
-
                 }
-
             }
-
             else
-
             {
                 var (path, duration) = _audioService.StopRecording();
-
                 IsRecordingVoice = false;
-
+                SoundEffectService.PlayRecordStop(Settings);
                 StatusMessage = "Запись завершена";
 
                 if (!string.IsNullOrEmpty(path))
@@ -1291,6 +1287,25 @@ public class MainViewModel : ViewModelBase
                     _ => 1.5
                 };
                 _audioService.SetSpeed(msg, nextSpeed);
+            }
+        });
+
+        TestNotificationSoundCommand = new RelayCommand(() =>
+        {
+            SoundEffectService.PlayTest(Settings);
+        });
+
+        ToggleMuteChatCommand = new RelayCommand(param =>
+        {
+            if (param is ChatItem chat)
+            {
+                chat.IsMuted = !chat.IsMuted;
+                _ = _storageService.SaveChatsAsync(_allChats);
+            }
+            else if (SelectedChat != null)
+            {
+                SelectedChat.IsMuted = !SelectedChat.IsMuted;
+                _ = _storageService.SaveChatsAsync(_allChats);
             }
         });
 
@@ -2025,6 +2040,7 @@ public async Task SendTextMessageAsync()
         };
 
         targetChat.Messages.Add(message);
+        SoundEffectService.PlaySent(Settings);
 
         targetChat.LastMessage = text;
 
@@ -2153,6 +2169,7 @@ public async Task SendTextMessageAsync()
         };
 
         targetChat.Messages.Add(message);
+        SoundEffectService.PlaySent(Settings);
 
         targetChat.LastMessage = "📷 Фотография";
 
@@ -2234,6 +2251,7 @@ public async Task SendTextMessageAsync()
             };
 
             targetChat.Messages.Add(message);
+        SoundEffectService.PlaySent(Settings);
             targetChat.LastMessage = "📷 Коллаж";
             targetChat.LastMessageTime = message.FormattedTime;
 
@@ -2922,8 +2940,7 @@ public async Task SendTextMessageAsync()
                     chat.LastMessageTime = msg.FormattedTime;
 
                     if (SelectedChat != chat) chat.UnreadCount++;
-
-                    MainWindow.TrayService?.ShowNotification(chat.DisplayName, text);
+                    NotifyIncomingMessage(chat, text);
 
                     _ = Task.Run(async () =>
 
@@ -2983,6 +3000,7 @@ public async Task SendTextMessageAsync()
                     chat.Messages.Add(photoMsg);
                     chat.LastMessageTime = photoMsg.FormattedTime;
                     if (SelectedChat != chat) chat.UnreadCount++;
+                    NotifyIncomingMessage(chat, chat.LastMessage);
 
                     _ = Task.Run(async () =>
                     {
@@ -3032,6 +3050,7 @@ public async Task SendTextMessageAsync()
                     else chat.LastMessage = $"📎 {fName}";
                     chat.LastMessageTime = incomingFileMsg.FormattedTime;
                     if (SelectedChat != chat) chat.UnreadCount++;
+                    NotifyIncomingMessage(chat, chat.LastMessage);
                     OnPropertyChanged(nameof(SharedMedia));
                     OnPropertyChanged(nameof(SharedFiles));
                     OnPropertyChanged(nameof(SharedAudio));
@@ -3128,6 +3147,7 @@ public async Task SendTextMessageAsync()
                     chat.LastMessageTime = voiceMsg.FormattedTime;
 
                     if (SelectedChat != chat) chat.UnreadCount++;
+                    NotifyIncomingMessage(chat, chat.LastMessage);
 
                     break;
 
@@ -3328,6 +3348,39 @@ public async Task SendTextMessageAsync()
 
         });
 
+    }
+
+    private void NotifyIncomingMessage(ChatItem chat, string messageText)
+    {
+        if (chat == null || chat.IsMuted) return;
+
+        SoundEffectService.PlayReceived(Settings);
+
+        if (Settings.ShowToastNotifications)
+        {
+            bool isCurrentChatFocused = Application.Current != null &&
+                                        Application.Current.MainWindow != null &&
+                                        Application.Current.MainWindow.IsActive &&
+                                        SelectedChat == chat;
+            if (!isCurrentChatFocused)
+            {
+                string preview = Settings.ShowMessagePreviewInNotifications ? messageText : "Новое сообщение";
+                ToastNotificationService.Show(chat, preview, targetChat =>
+                {
+                    if (Application.Current != null && Application.Current.MainWindow != null)
+                    {
+                        if (Application.Current.MainWindow.WindowState == WindowState.Minimized)
+                            Application.Current.MainWindow.WindowState = WindowState.Normal;
+                        Application.Current.MainWindow.Activate();
+                    }
+                    SelectedChat = targetChat;
+                });
+            }
+        }
+        else
+        {
+            MainWindow.TrayService?.ShowNotification(chat.DisplayName, messageText);
+        }
     }
 
     private void OnNetworkError(string source, string message)

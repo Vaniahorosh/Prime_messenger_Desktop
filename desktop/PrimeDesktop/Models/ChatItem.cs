@@ -26,6 +26,7 @@ public class ChatItem : INotifyPropertyChanged
     private DeviceConnectionState _connectionState = DeviceConnectionState.Disconnected;
     private string _peerId = string.Empty;
     private string _deviceAddress = string.Empty;
+    private bool _isMuted;
 
     public string Id { get; set; } = Guid.NewGuid().ToString();
 
@@ -165,6 +166,12 @@ public class ChatItem : INotifyPropertyChanged
     }
 
     public bool IsOnlineIndicatorVisible => ConnectionState == DeviceConnectionState.Connected;
+
+    public bool IsMuted
+    {
+        get => _isMuted;
+        set => SetField(ref _isMuted, value);
+    }
 
     public string Initials
     {

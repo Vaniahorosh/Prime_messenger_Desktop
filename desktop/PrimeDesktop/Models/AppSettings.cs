@@ -21,6 +21,12 @@ public class AppSettings : INotifyPropertyChanged
     private int _avatarCornerRadiusPercent = 50;
     private int _bubbleRadius = 16;
     private bool _playNotificationSounds = true;
+    private bool _playOutgoingSound = true;
+    private bool _playIncomingSound = true;
+    private bool _playVoiceRecordSound = true;
+    private int _soundEffectsVolume = 80;
+    private bool _showToastNotifications = true;
+    private bool _showMessagePreviewInNotifications = true;
     private bool _minimizeToTray = true;
     private bool _enableScreenshotProtection = true;
     private bool _maskDeviceIdentifiers = true;
@@ -119,6 +125,42 @@ public class AppSettings : INotifyPropertyChanged
     {
         get => _playNotificationSounds;
         set => SetField(ref _playNotificationSounds, value);
+    }
+
+    public bool PlayOutgoingSound
+    {
+        get => _playOutgoingSound;
+        set => SetField(ref _playOutgoingSound, value);
+    }
+
+    public bool PlayIncomingSound
+    {
+        get => _playIncomingSound;
+        set => SetField(ref _playIncomingSound, value);
+    }
+
+    public bool PlayVoiceRecordSound
+    {
+        get => _playVoiceRecordSound;
+        set => SetField(ref _playVoiceRecordSound, value);
+    }
+
+    public int SoundEffectsVolume
+    {
+        get => _soundEffectsVolume;
+        set => SetField(ref _soundEffectsVolume, Math.Clamp(value, 0, 100));
+    }
+
+    public bool ShowToastNotifications
+    {
+        get => _showToastNotifications;
+        set => SetField(ref _showToastNotifications, value);
+    }
+
+    public bool ShowMessagePreviewInNotifications
+    {
+        get => _showMessagePreviewInNotifications;
+        set => SetField(ref _showMessagePreviewInNotifications, value);
     }
 
     public bool MinimizeToTray

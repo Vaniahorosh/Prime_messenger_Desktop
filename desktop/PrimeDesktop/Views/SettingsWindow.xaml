@@ -356,9 +356,43 @@
                                             </Border>
                                         </Grid>
 
-                                        <TextBlock Text="СИСТЕМНЫЕ ОПЦИИ" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,8"/>
-                                        <CheckBox Content="Звуковые сигналы уведомлений" IsChecked="{Binding Settings.PlayNotificationSounds, Mode=TwoWay}"
+                                        <TextBlock Text="УВЕДОМЛЕНИЯ И ЗВУКИ" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" Margin="0,12,0,8"/>
+                                        <CheckBox Content="Всплывающие уведомления на рабочем столе" IsChecked="{Binding Settings.ShowToastNotifications, Mode=TwoWay}"
                                                   Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,8"/>
+                                        <CheckBox Content="Показывать текст сообщения в превью" IsChecked="{Binding Settings.ShowMessagePreviewInNotifications, Mode=TwoWay}"
+                                                  Foreground="{DynamicResource TextPrimaryBrush}" Margin="24,0,0,8"
+                                                  IsEnabled="{Binding Settings.ShowToastNotifications}"/>
+
+                                        <CheckBox Content="Звуковые сигналы и эффекты" IsChecked="{Binding Settings.PlayNotificationSounds, Mode=TwoWay}"
+                                                  Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,8"/>
+
+                                        <StackPanel Margin="24,0,0,8" IsEnabled="{Binding Settings.PlayNotificationSounds}">
+                                            <CheckBox Content="Звук входящего сообщения" IsChecked="{Binding Settings.PlayIncomingSound, Mode=TwoWay}"
+                                                      Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,6"/>
+                                            <CheckBox Content="Звук отправки сообщения" IsChecked="{Binding Settings.PlayOutgoingSound, Mode=TwoWay}"
+                                                      Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,6"/>
+                                            <CheckBox Content="Звук записи голосового сообщения" IsChecked="{Binding Settings.PlayVoiceRecordSound, Mode=TwoWay}"
+                                                      Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,10"/>
+
+                                            <DockPanel Margin="0,0,0,4">
+                                                <TextBlock Text="Громкость звуковых эффектов" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                                <TextBlock Text="{Binding Settings.SoundEffectsVolume, StringFormat='{}{0}%'}" DockPanel.Dock="Right"
+                                                           FontSize="12" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"/>
+                                            </DockPanel>
+                                            <Grid Margin="0,0,0,6">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <Slider Grid.Column="0" Minimum="0" Maximum="100" Value="{Binding Settings.SoundEffectsVolume, Mode=TwoWay}"
+                                                        VerticalAlignment="Center" Margin="0,0,12,0"/>
+                                                <Button Grid.Column="1" Style="{StaticResource ModernButton}" Content="Проверить 🔔"
+                                                        Command="{Binding TestNotificationSoundCommand}"
+                                                        Padding="10,3" Height="26" Background="#25FFFFFF"/>
+                                            </Grid>
+                                        </StackPanel>
+
+                                        <TextBlock Text="СИСТЕМНЫЕ ОПЦИИ" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" Margin="0,10,0,8"/>
                                         <CheckBox Content="Сворачивать в трей при закрытии окна" IsChecked="{Binding Settings.MinimizeToTray, Mode=TwoWay}"
                                                   Foreground="{DynamicResource TextPrimaryBrush}"/>
                                     </StackPanel>
