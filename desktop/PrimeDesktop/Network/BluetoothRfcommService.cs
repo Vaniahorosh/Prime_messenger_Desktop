@@ -387,6 +387,12 @@ public class BluetoothRfcommService : IPrimeNetworkService
         return Task.CompletedTask;
     }
 
+    public bool IsConnected(string deviceAddressOrIp)
+    {
+        string rawAddress = ResolveHardwareAddress(deviceAddressOrIp);
+        return _activeStreams.ContainsKey(rawAddress) && _activeSockets.ContainsKey(rawAddress);
+    }
+
     public void ForgetDevice(string peerIdOrAddress)
     {
         string rawAddress = ResolveHardwareAddress(peerIdOrAddress);

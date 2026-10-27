@@ -31,8 +31,7 @@ public class MainViewModel : ViewModelBase
     private readonly AudioService _audioService = new();
 
     private readonly BluetoothRfcommService _bluetoothService = new();
-
-    // Local network (Wi-Fi) disabled - purely Bluetooth RFCOMM
+    private readonly CompanionBridgeService _companionService = new();
 
     private ObservableCollection<ChatItem> _allChats = new();
 
@@ -1707,6 +1706,10 @@ public class MainViewModel : ViewModelBase
         {
             if (param is ChatItem item)
             {
+                UnmarkDeviceForgotten(item.DeviceAddress);
+                UnmarkDeviceForgotten(item.PeerId);
+                _ = _storageService.SaveSettingsAsync(Settings);
+
                 var existing = FindChatByAddressOrPeer(item.PeerId) ?? 
                                FindChatByAddressOrPeer(item.DeviceAddress) ?? 
                                FindChatByAddressOrPeer(null, item.DisplayName);
@@ -1966,6 +1969,12 @@ public class MainViewModel : ViewModelBase
 
         _bluetoothService.ErrorOccurred += OnNetworkError;
 
+        _companionService.PacketReceived += OnPacketReceived;
+
+        _companionService.ConnectionStateChanged += OnConnectionStateChanged;
+
+        _companionService.ErrorOccurred += OnNetworkError;
+
         _ = InitializeAsync();
 
     }
@@ -2062,6 +2071,18 @@ public class MainViewModel : ViewModelBase
             App.Log($"[Init] Starting Bluetooth RFCOMM server for '{Settings.MyDisplayName}'...");
             await _bluetoothService.StartServerAsync();
 
+            try
+            {
+                _companionService.MyDisplayName = Settings.MyDisplayName;
+                _companionService.MyUsername = Settings.MyUsername;
+                App.Log($"[Init] Starting Companion Wi-Fi server...");
+                await _companionService.StartServerAsync();
+            }
+            catch (Exception ex)
+            {
+                App.Log($"[Init] Companion Wi-Fi server failed to start: {ex.Message}");
+            }
+
             // Automatically discover paired Bluetooth devices and add them to chats if not present
             var paired = await _bluetoothService.DiscoverDevicesAsync();
             App.Log($"[Init] Discovered {paired.Count} paired devices.");
@@ -2069,6 +2090,13 @@ public class MainViewModel : ViewModelBase
             {
                 foreach (var dev in paired)
                 {
+                    // If device was explicitly deleted or forgotten, do not re-add it
+                    if (IsDeviceForgotten(dev.DeviceAddress) || IsDeviceForgotten(dev.PeerId))
+                    {
+                        App.Log($"[Init] Skipping forgotten/deleted device '{dev.DisplayName}' ({dev.PeerId} / {dev.DeviceAddress}).");
+                        continue;
+                    }
+
                     if (!string.IsNullOrWhiteSpace(dev.DeviceAddress) && !string.IsNullOrWhiteSpace(dev.PeerId))
                     {
                         _bluetoothService.RegisterPeerAddress(dev.PeerId, dev.DeviceAddress);
@@ -2664,64 +2692,162 @@ public async Task SendTextMessageAsync()
         await _bluetoothService.DisconnectAsync(addr);
     }
 
+    public bool IsDeviceForgotten(string? addrOrPeer)
+    {
+        if (string.IsNullOrWhiteSpace(addrOrPeer)) return false;
+        var norm = addrOrPeer.Trim().ToUpperInvariant();
+        var hw = _bluetoothService.ResolveHardwareAddress(norm);
+        var normHw = !string.IsNullOrWhiteSpace(hw) ? BluetoothRfcommService.NormalizeMacAddress(hw) : string.Empty;
+
+        lock (Settings.ForgottenDevices)
+        {
+            return Settings.ForgottenDevices.Any(f =>
+            {
+                var fNorm = f.Trim().ToUpperInvariant();
+                if (fNorm == norm) return true;
+                if (!string.IsNullOrEmpty(normHw) && BluetoothRfcommService.NormalizeMacAddress(fNorm) == normHw) return true;
+                return false;
+            });
+        }
+    }
+
+    public void MarkDeviceForgotten(string? addrOrPeer)
+    {
+        if (string.IsNullOrWhiteSpace(addrOrPeer)) return;
+        var norm = addrOrPeer.Trim().ToUpperInvariant();
+        lock (Settings.ForgottenDevices)
+        {
+            if (!Settings.ForgottenDevices.Contains(norm))
+            {
+                Settings.ForgottenDevices.Add(norm);
+            }
+            var hw = _bluetoothService.ResolveHardwareAddress(norm);
+            if (!string.IsNullOrWhiteSpace(hw))
+            {
+                var normHw = BluetoothRfcommService.NormalizeMacAddress(hw);
+                if (!string.IsNullOrWhiteSpace(normHw) && !Settings.ForgottenDevices.Contains(normHw))
+                {
+                    Settings.ForgottenDevices.Add(normHw);
+                }
+            }
+        }
+    }
+
+    public void UnmarkDeviceForgotten(string? addrOrPeer)
+    {
+        if (string.IsNullOrWhiteSpace(addrOrPeer)) return;
+        var norm = addrOrPeer.Trim().ToUpperInvariant();
+        var hw = _bluetoothService.ResolveHardwareAddress(norm);
+        var normHw = !string.IsNullOrWhiteSpace(hw) ? BluetoothRfcommService.NormalizeMacAddress(hw) : string.Empty;
+
+        lock (Settings.ForgottenDevices)
+        {
+            Settings.ForgottenDevices.RemoveAll(f =>
+            {
+                var fNorm = f.Trim().ToUpperInvariant();
+                if (fNorm == norm) return true;
+                if (!string.IsNullOrEmpty(normHw) && BluetoothRfcommService.NormalizeMacAddress(fNorm) == normHw) return true;
+                return false;
+            });
+        }
+    }
+
     public async Task ConnectWifiCompanionAsync()
     {
-        await Task.CompletedTask;
+        try
+        {
+            StatusMessage = "Поиск смартфона по Wi-Fi...";
+            var devices = await _companionService.DiscoverDevicesAsync();
+            if (devices.Count > 0)
+            {
+                var target = devices[0];
+                StatusMessage = $"Подключение к {target.DisplayName} по Wi-Fi ({target.DeviceAddress})...";
+                bool connected = await _companionService.ConnectAsync(target.DeviceAddress);
+                if (connected)
+                {
+                    StatusMessage = $"Синхронизация по Wi-Fi активна: {target.DisplayName}";
+                    return;
+                }
+            }
+            StatusMessage = "Смартфон в сети Wi-Fi не найден. Убедитесь, что Prime запущен на телефоне.";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Ошибка подключения Wi-Fi: {ex.Message}";
+        }
     }
 
     private async Task ConfirmAndDeleteChatAsync(ChatItem chat)
-
     {
         var result = MessageBox.Show(
-
             $"Вы действительно хотите удалить переписку и контакт «{chat.DisplayName}»?\n\nДиалог будет навсегда удален из списка чатов, а устройство полностью забыто.",
-
             "Удаление чата",
-
             MessageBoxButton.YesNo,
-
             MessageBoxImage.Warning);
 
         if (result != MessageBoxResult.Yes) return;
 
-        byte[] payload = System.Text.Encoding.UTF8.GetBytes($"DELETE_CHAT:name={Settings.MyDisplayName};");
+        string targetAddr = !string.IsNullOrWhiteSpace(chat.DeviceAddress) ? chat.DeviceAddress : chat.PeerId;
+
+        // Remember as forgotten in persistent settings
+        MarkDeviceForgotten(chat.DeviceAddress);
+        MarkDeviceForgotten(chat.PeerId);
+        _ = _storageService.SaveSettingsAsync(Settings);
+
+        byte[] payload = System.Text.Encoding.UTF8.GetBytes($"DELETE_CHAT:name={Settings.MyDisplayName};login={Settings.MyUsername};");
 
         try
-
         {
-            
-                await _bluetoothService.SendPacketAsync(chat.DeviceAddress, PacketType.ChatDeleted, payload);
+            if (!string.IsNullOrWhiteSpace(targetAddr))
+            {
+                if (!_bluetoothService.IsConnected(targetAddr) && !_companionService.IsConnected(targetAddr))
+                {
+                    // Attempt quick connect to deliver deletion packet
+                    try
+                    {
+                        using var cts = new CancellationTokenSource(1500);
+                        await _bluetoothService.ConnectAsync(targetAddr);
+                    }
+                    catch { }
+                }
 
+                if (_companionService.IsConnected(targetAddr))
+                {
+                    await _companionService.SendPacketAsync(targetAddr, PacketType.ChatDeleted, payload);
+                    await Task.Delay(100);
+                }
+                else if (_bluetoothService.IsConnected(targetAddr))
+                {
+                    await _bluetoothService.SendPacketAsync(targetAddr, PacketType.ChatDeleted, payload);
+                    await Task.Delay(100);
+                }
+            }
         }
-
         catch { }
 
         try
-
         {
-            
-                await _bluetoothService.DisconnectAsync(chat.DeviceAddress);
-
+            if (!string.IsNullOrWhiteSpace(targetAddr))
+            {
+                await _bluetoothService.DisconnectAsync(targetAddr);
+                await _companionService.DisconnectAsync(targetAddr);
+            }
         }
-
         catch { }
 
         // Forget device completely
-
         _bluetoothService.ForgetDevice(chat.DeviceAddress);
-
         _bluetoothService.ForgetDevice(chat.PeerId);
+        _companionService.ForgetDevice(chat.DeviceAddress);
+        _companionService.ForgetDevice(chat.PeerId);
 
         var discovered = DiscoveredDevices.FirstOrDefault(d => d.PeerId == chat.PeerId || d.DeviceAddress == chat.DeviceAddress);
-
         if (discovered != null) DiscoveredDevices.Remove(discovered);
 
         AvatarManager.DeleteAvatar(chat.DeviceAddress);
-
         AvatarManager.DeleteAvatar(chat.PeerId);
 
         _allChats.Remove(chat);
-
         ApplySearchFilter();
 
         bool isCurrent = SelectedChat == null || SelectedChat == chat || (!string.IsNullOrEmpty(chat.PeerId) && SelectedChat.PeerId == chat.PeerId) || (!string.IsNullOrEmpty(chat.DeviceAddress) && SelectedChat.DeviceAddress == chat.DeviceAddress);
@@ -3520,29 +3646,28 @@ public async Task SendTextMessageAsync()
                     break;
 
                 case PacketType.ChatDeleted:
-
                     try
-
                     {
-                        
-                            _ = _bluetoothService.DisconnectAsync(chat.DeviceAddress);
-
+                        _ = _bluetoothService.DisconnectAsync(chat.DeviceAddress);
+                        _ = _companionService.DisconnectAsync(chat.DeviceAddress);
                     }
-
                     catch { }
 
-                    _bluetoothService.ForgetDevice(chat.DeviceAddress);
+                    MarkDeviceForgotten(chat.DeviceAddress);
+                    MarkDeviceForgotten(chat.PeerId);
+                    _ = _storageService.SaveSettingsAsync(Settings);
 
+                    _bluetoothService.ForgetDevice(chat.DeviceAddress);
                     _bluetoothService.ForgetDevice(chat.PeerId);
+                    _companionService.ForgetDevice(chat.DeviceAddress);
+                    _companionService.ForgetDevice(chat.PeerId);
 
                     var disc = DiscoveredDevices.FirstOrDefault(d => d.PeerId == chat.PeerId || d.DeviceAddress == chat.DeviceAddress);
-
                     if (disc != null) DiscoveredDevices.Remove(disc);
 
                     _allChats.Remove(chat);
 
                     AvatarManager.DeleteAvatar(chat.DeviceAddress);
-
                     AvatarManager.DeleteAvatar(chat.PeerId);
 
                     ApplySearchFilter();
@@ -3556,9 +3681,7 @@ public async Task SendTextMessageAsync()
                     _ = _storageService.SaveChatsAsync(_allChats);
 
                     MainWindow.TrayService?.ShowNotification("Прайм Мессенджер", $"Собеседник {chat.DisplayName} удалил чат.");
-
                     StatusMessage = $"Собеседник {chat.DisplayName} удалил чат. Устройство забыто";
-
                     break;
 
             }

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
 using System.Runtime.CompilerServices;
@@ -39,6 +40,7 @@ public class AppSettings : INotifyPropertyChanged
     private bool _browserDesktopMode = false;
     private int _videoNoteRadiusPercent = 50;
     private int _thanksHeartCount = 0;
+    private List<string> _forgottenDevices = new();
 
     public string MyUsername
     {
@@ -233,6 +235,12 @@ public class AppSettings : INotifyPropertyChanged
     {
         get => _thanksHeartCount;
         set => SetField(ref _thanksHeartCount, value);
+    }
+
+    public List<string> ForgottenDevices
+    {
+        get => _forgottenDevices;
+        set => SetField(ref _forgottenDevices, value ?? new());
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;

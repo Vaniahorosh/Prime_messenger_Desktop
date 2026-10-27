@@ -16,6 +16,7 @@ public interface IPrimeNetworkService
 
     Task<bool> ConnectAsync(string deviceAddressOrIp);
     Task DisconnectAsync(string deviceAddressOrIp);
+    bool IsConnected(string deviceAddressOrIp);
     void ForgetDevice(string deviceAddressOrIp);
     void RegisterPeerAddress(string peerId, string rawHardwareAddress);
     string ResolveHardwareAddress(string peerIdOrAddress);

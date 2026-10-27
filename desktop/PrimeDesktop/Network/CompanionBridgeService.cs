@@ -195,6 +195,11 @@ public class CompanionBridgeService : IPrimeNetworkService
 
     }
 
+    public bool IsConnected(string peerIdOrIp)
+    {
+        return _client != null && _client.Connected && _stream != null;
+    }
+
     public void ForgetDevice(string peerIdOrIp)
 
     {
