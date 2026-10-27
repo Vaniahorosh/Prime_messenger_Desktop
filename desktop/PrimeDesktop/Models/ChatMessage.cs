@@ -132,23 +132,35 @@ public class ChatMessage : INotifyPropertyChanged
     public bool HasText => !string.IsNullOrWhiteSpace(Text);
 
     [JsonIgnore]
-    public bool IsPhoto => Type == PacketType.Photo;
+    public bool IsPhoto => Type == PacketType.Photo || (HasAttachment && !string.IsNullOrEmpty(FileName) &&
+                           (FileName.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase) ||
+                            FileName.EndsWith(".jpeg", StringComparison.OrdinalIgnoreCase) ||
+                            FileName.EndsWith(".png", StringComparison.OrdinalIgnoreCase) ||
+                            FileName.EndsWith(".webp", StringComparison.OrdinalIgnoreCase) ||
+                            FileName.EndsWith(".gif", StringComparison.OrdinalIgnoreCase)));
 
     [JsonIgnore]
     public bool IsSinglePhoto => IsPhoto && !IsCollage;
 
     [JsonIgnore]
-    public bool IsFile => Type == PacketType.File && !IsVideoNote;
-
-    [JsonIgnore]
-    public bool IsVoice => Type == PacketType.Voice;
+    public bool IsVoice => Type == PacketType.Voice || (HasAttachment && !string.IsNullOrEmpty(FileName) &&
+                           (FileName.StartsWith("voice_", StringComparison.OrdinalIgnoreCase) ||
+                            FileName.StartsWith("rec_voice_", StringComparison.OrdinalIgnoreCase) ||
+                            FileName.EndsWith(".opus", StringComparison.OrdinalIgnoreCase) ||
+                            Text == "Голосовое сообщение"));
 
     [JsonIgnore]
     public bool IsMusic => HasAttachment && !string.IsNullOrEmpty(FileName) &&
                            (FileName.EndsWith(".mp3", StringComparison.OrdinalIgnoreCase) ||
                             FileName.EndsWith(".wav", StringComparison.OrdinalIgnoreCase) ||
                             FileName.EndsWith(".flac", StringComparison.OrdinalIgnoreCase) ||
-                            FileName.EndsWith(".ogg", StringComparison.OrdinalIgnoreCase));
+                            FileName.EndsWith(".ogg", StringComparison.OrdinalIgnoreCase) ||
+                            FileName.EndsWith(".m4a", StringComparison.OrdinalIgnoreCase) ||
+                            FileName.EndsWith(".aac", StringComparison.OrdinalIgnoreCase) ||
+                            FileName.EndsWith(".wma", StringComparison.OrdinalIgnoreCase));
+
+    [JsonIgnore]
+    public bool IsFile => !IsPhoto && !IsVoice && !IsVideoNote && (Type == PacketType.File || HasAttachment);
 
     public event PropertyChangedEventHandler? PropertyChanged;
     protected void OnPropertyChanged([CallerMemberName] string? name = null)

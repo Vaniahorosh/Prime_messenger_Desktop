@@ -140,24 +140,31 @@
         <Grid Grid.Row="1" x:Name="MainContentGrid">
 
             <Grid.ColumnDefinitions>
-
-                <ColumnDefinition Width="320" MinWidth="240" MaxWidth="500"/> <!-- Col 0: Sidebar -->
-
-                <ColumnDefinition Width="Auto"/>                               <!-- Col 1: Splitter 1 -->
-
-                <ColumnDefinition Width="*"/>                                  <!-- Col 2: Chat View -->
-
-                <ColumnDefinition Width="Auto"/>                               <!-- Col 3: Splitter 2 -->
-
-                <ColumnDefinition Width="Auto" MinWidth="0" MaxWidth="550"/>   <!-- Col 4: Profile & Info Drawer -->
-
+                <ColumnDefinition Width="320" MinWidth="72" MaxWidth="450"/> <!-- Col 0: Sidebar (can shrink to 72px for avatar rail) -->
+                <ColumnDefinition Width="Auto"/>                             <!-- Col 1: Splitter 1 -->
+                <ColumnDefinition Width="*"/>                                <!-- Col 2: Chat View -->
+                <ColumnDefinition Width="Auto"/>                             <!-- Col 3: Splitter 2 -->
+                <ColumnDefinition MaxWidth="500">                            <!-- Col 4: Profile & Info Drawer -->
+                    <ColumnDefinition.Style>
+                        <Style TargetType="ColumnDefinition">
+                            <Setter Property="Width" Value="330"/>
+                            <Setter Property="MinWidth" Value="280"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsMediaDrawerOpen}" Value="False">
+                                    <Setter Property="Width" Value="0"/>
+                                    <Setter Property="MinWidth" Value="0"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </ColumnDefinition.Style>
+                </ColumnDefinition>
             </Grid.ColumnDefinitions>
 
 
 
             <!-- Column 0: Left Sidebar -->
 
-            <Border Grid.Column="0" Background="{StaticResource SidebarBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,1,0">
+            <Border Grid.Column="0" ClipToBounds="True" Background="{DynamicResource SidebarBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,1,0">
 
                 <Grid>
 
@@ -265,7 +272,7 @@
 
                                             <ColumnDefinition Width="Auto"/>
 
-                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="*" MinWidth="0"/>
 
                                             <ColumnDefinition Width="Auto"/>
 
@@ -899,7 +906,8 @@
 
                 <!-- Row 2: Reply Bar & Message Input Area -->
 
-                <Border Grid.Row="2" Background="{DynamicResource HeaderBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0" Padding="14,10">
+                <Border Grid.Row="2" Background="{DynamicResource HeaderBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0" Padding="14,10"
+                        Visibility="{Binding IsReadingMode, Converter={StaticResource InverseBoolToVis}}">
 
                     <StackPanel>
 
@@ -1121,6 +1129,22 @@
 
 
 
+                <!-- Reading Mode Banner (Displayed when in reading mode) -->
+                <Border Grid.Row="2" Background="{DynamicResource HeaderBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0" Padding="16,10"
+                        Visibility="{Binding IsReadingMode, Converter={StaticResource BoolToVis}}">
+                    <DockPanel>
+                        <Button Content="🔗 Соединиться" Style="{StaticResource AccentButton}" DockPanel.Dock="Right" Padding="14,6" Margin="12,0,0,0"
+                                Command="{Binding ToggleReadingModeCommand}"/>
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock Text="📖" FontSize="16" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock Text="Режим чтения включен" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold" FontSize="13"/>
+                                <TextBlock Text="Связь отключена. Чтобы отправлять сообщения, нажмите «Соединиться»." Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </DockPanel>
+                </Border>
+
                 <!-- Empty Chat Placeholder (when no chat is selected) -->
 
                 <Grid Visibility="{Binding HasSelectedChat, Converter={StaticResource InverseBoolToVis}}"
@@ -1175,13 +1199,14 @@
 
                           ResizeBehavior="PreviousAndNext" Width="5" Cursor="SizeWE"
 
-                          Background="{DynamicResource BorderBrush}" Opacity="0.5"/>
+                          Background="{DynamicResource BorderBrush}" Opacity="0.5"
+                          Visibility="{Binding IsMediaDrawerOpen, Converter={StaticResource BoolToVis}}"/>
 
 
 
             <!-- Column 4: Profile & Info Drawer (PersonInformationActivity.kt layout) -->
 
-            <Border Grid.Column="4" Width="330" Background="{StaticResource SidebarBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1,0,0,0"
+            <Border Grid.Column="4" Background="{DynamicResource SidebarBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1,0,0,0"
 
                     Visibility="{Binding IsMediaDrawerOpen, Converter={StaticResource BoolToVis}}">
 
@@ -1327,7 +1352,6 @@
 
                                             <TextBlock Text="{Binding SelectedChat.DisplayName}" Foreground="White" FontSize="18" FontWeight="Bold" TextTrimming="CharacterEllipsis"/>
 
-                                            <TextBlock Text="{Binding SelectedChat.Username, StringFormat='@{0}'}" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,2,0,4"/>
 
                                             <StackPanel Orientation="Horizontal">
 
@@ -1383,22 +1407,14 @@
 
 
 
-                                <!-- Change Avatar -->
-
+                                <!-- Reading Mode / Connect Toggle Button -->
                                 <Button Grid.Column="1" Style="{StaticResource ModernButton}" Margin="2,0,2,0" Padding="0,8"
-
-                                        Command="{Binding ChangeContactAvatarCommand}"
-
-                                        ToolTip="Сменить аватар контакта">
-
+                                        Command="{Binding ToggleReadingModeCommand}"
+                                        ToolTip="{Binding ReadingModeToolTip}">
                                     <StackPanel HorizontalAlignment="Center">
-
-                                        <TextBlock Text="📷" FontSize="14" HorizontalAlignment="Center"/>
-
-                                        <TextBlock Text="Сменить" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,3,0,0" HorizontalAlignment="Center"/>
-
+                                        <TextBlock Text="{Binding ReadingModeButtonIcon}" FontSize="14" HorizontalAlignment="Center"/>
+                                        <TextBlock Text="{Binding ReadingModeButtonText}" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,3,0,0" HorizontalAlignment="Center"/>
                                     </StackPanel>
-
                                 </Button>
 
 
@@ -1693,27 +1709,6 @@
 
 
 
-                            <!-- Theme Accent Colors Section (Live DynamicResource update) -->
-
-                            <TextBlock Text="ЦВЕТОВОЙ АКЦЕНТ" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" Margin="2,16,0,8"/>
-
-                            <WrapPanel Margin="0,0,0,14">
-
-                                <Button Background="#4D9FFF" ToolTip="Синий" Command="{Binding ChangeAccentColorCommand}" CommandParameter="#4D9FFF" Width="26" Height="26" Margin="3" Style="{StaticResource ModernButton}"/>
-
-                                <Button Background="#26A69A" ToolTip="Изумруд" Command="{Binding ChangeAccentColorCommand}" CommandParameter="#26A69A" Width="26" Height="26" Margin="3" Style="{StaticResource ModernButton}"/>
-
-                                <Button Background="#B388FF" ToolTip="Пурпур" Command="{Binding ChangeAccentColorCommand}" CommandParameter="#B388FF" Width="26" Height="26" Margin="3" Style="{StaticResource ModernButton}"/>
-
-                                <Button Background="#FFB74D" ToolTip="Янтарь" Command="{Binding ChangeAccentColorCommand}" CommandParameter="#FFB74D" Width="26" Height="26" Margin="3" Style="{StaticResource ModernButton}"/>
-
-                                <Button Background="#FF5252" ToolTip="Рубин" Command="{Binding ChangeAccentColorCommand}" CommandParameter="#FF5252" Width="26" Height="26" Margin="3" Style="{StaticResource ModernButton}"/>
-
-                                <Button Background="#4DD0E1" ToolTip="Циан" Command="{Binding ChangeAccentColorCommand}" CommandParameter="#4DD0E1" Width="26" Height="26" Margin="3" Style="{StaticResource ModernButton}"/>
-
-                                <Button Background="#FF4081" ToolTip="Розовый" Command="{Binding ChangeAccentColorCommand}" CommandParameter="#FF4081" Width="26" Height="26" Margin="3" Style="{StaticResource ModernButton}"/>
-
-                            </WrapPanel>
 
                         </StackPanel>
 

@@ -68,14 +68,17 @@ public class MainViewModel : ViewModelBase
 
     {
         get => _selectedChat;
-
         set
         {
             if (SetProperty(ref _selectedChat, value))
             {
                 if (_selectedChat != null)
                 {
-                    _selectedChat.UnreadCount = 0;
+                    IsReadingMode = false;
+                    OnPropertyChanged(nameof(SharedMedia));
+                    OnPropertyChanged(nameof(SharedFiles));
+                    OnPropertyChanged(nameof(SharedAudio));
+
                     _ = _storageService.SaveChatsAsync(_allChats);
 
                     if (Settings != null && Settings.AutoConnectBluetooth && _selectedChat.IsBluetoothDevice && 
@@ -228,6 +231,25 @@ public class MainViewModel : ViewModelBase
     public ICommand ConnectChatCommand { get; }
 
     public ICommand DisconnectChatCommand { get; }
+
+    private bool _isReadingMode;
+    public bool IsReadingMode
+    {
+        get => _isReadingMode;
+        set
+        {
+            if (SetProperty(ref _isReadingMode, value))
+            {
+                OnPropertyChanged(nameof(ReadingModeButtonText));
+                OnPropertyChanged(nameof(ReadingModeButtonIcon));
+                OnPropertyChanged(nameof(ReadingModeToolTip));
+            }
+        }
+    }
+    public string ReadingModeButtonText => IsReadingMode ? "Соединиться" : "Чтение";
+    public string ReadingModeButtonIcon => IsReadingMode ? "🔗" : "📖";
+    public string ReadingModeToolTip => IsReadingMode ? "Восстановить соединение с собеседником" : "Режим чтения (принудительно отключить связь)";
+    public ICommand ToggleReadingModeCommand { get; }
 
     public ICommand ToggleSettingsCommand { get; }
 
@@ -678,16 +700,13 @@ public class MainViewModel : ViewModelBase
     }
 
     public System.Collections.Generic.IEnumerable<ChatMessage> SharedMedia =>
-
-        SelectedChat?.Messages.Where(m => m.IsPhoto || m.IsVideoNote) ?? Enumerable.Empty<ChatMessage>();
+        SelectedChat?.Messages.Where(m => m.IsPhoto || m.IsVideoNote || (!string.IsNullOrEmpty(m.FileName) && (m.FileName.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase) || m.FileName.EndsWith(".jpeg", StringComparison.OrdinalIgnoreCase) || m.FileName.EndsWith(".png", StringComparison.OrdinalIgnoreCase) || m.FileName.EndsWith(".webp", StringComparison.OrdinalIgnoreCase) || m.FileName.EndsWith(".gif", StringComparison.OrdinalIgnoreCase) || m.FileName.EndsWith(".mp4", StringComparison.OrdinalIgnoreCase)))) ?? Enumerable.Empty<ChatMessage>();
 
     public System.Collections.Generic.IEnumerable<ChatMessage> SharedFiles =>
-
-        SelectedChat?.Messages.Where(m => m.IsFile) ?? Enumerable.Empty<ChatMessage>();
+        SelectedChat?.Messages.Where(m => m.IsFile && !m.IsMusic && !m.IsVoice && !m.IsPhoto) ?? Enumerable.Empty<ChatMessage>();
 
     public System.Collections.Generic.IEnumerable<ChatMessage> SharedAudio =>
-
-        SelectedChat?.Messages.Where(m => m.IsVoice || m.IsMusic) ?? Enumerable.Empty<ChatMessage>();
+        SelectedChat?.Messages.Where(m => m.IsVoice || m.IsMusic || (!string.IsNullOrEmpty(m.FileName) && (m.FileName.EndsWith(".mp3", StringComparison.OrdinalIgnoreCase) || m.FileName.EndsWith(".wav", StringComparison.OrdinalIgnoreCase) || m.FileName.EndsWith(".ogg", StringComparison.OrdinalIgnoreCase) || m.FileName.EndsWith(".m4a", StringComparison.OrdinalIgnoreCase) || m.FileName.EndsWith(".opus", StringComparison.OrdinalIgnoreCase) || m.FileName.EndsWith(".flac", StringComparison.OrdinalIgnoreCase)))) ?? Enumerable.Empty<ChatMessage>();
 
     public MainViewModel()
 
@@ -772,6 +791,24 @@ public class MainViewModel : ViewModelBase
         ConnectChatCommand = new RelayCommand(async () => await ConnectSelectedChatAsync(), () => HasSelectedChat);
 
         DisconnectChatCommand = new RelayCommand(async () => await DisconnectSelectedChatAsync(), () => HasSelectedChat);
+        ToggleReadingModeCommand = new RelayCommand(async () =>
+        {
+            if (SelectedChat == null) return;
+            IsReadingMode = !IsReadingMode;
+            if (IsReadingMode)
+            {
+                string addr = !string.IsNullOrWhiteSpace(SelectedChat.DeviceAddress) ? SelectedChat.DeviceAddress : SelectedChat.PeerId;
+                await _bluetoothService.DisconnectAsync(addr);
+                SelectedChat.IsOnline = false;
+                SelectedChat.ConnectionState = DeviceConnectionState.Disconnected;
+                StatusMessage = "Режим чтения включен (связь принудительно отключена)";
+            }
+            else
+            {
+                await ConnectSelectedChatAsync();
+                StatusMessage = $"Подключение к {SelectedChat.DisplayName}...";
+            }
+        }, () => HasSelectedChat);
 
         ToggleSettingsCommand = new RelayCommand(() =>
         {
@@ -1860,7 +1897,10 @@ public async Task SendTextMessageAsync()
 
         {
             
-                await _bluetoothService.SendPacketAsync(targetChat.DeviceAddress, PacketType.Voice, fileBytes);
+            string vFileName = System.IO.Path.GetFileName(filePath);
+            byte[] payload = PrimePacket.BuildFilePayload(msg.Id, vFileName, fileBytes, duration, isVoice: true);
+            string targetAddr = !string.IsNullOrWhiteSpace(targetChat.DeviceAddress) ? targetChat.DeviceAddress : targetChat.PeerId;
+            await _bluetoothService.SendPacketAsync(targetAddr, PacketType.File, payload);
 
             msg.IsDelivered = true;
 
@@ -2767,6 +2807,12 @@ public async Task SendTextMessageAsync()
                     string fPath = Path.Combine(fDir, $"file_{DateTime.Now:yyyyMMdd_HHmmss}_{fName}");
                     File.WriteAllBytes(fPath, fBytes);
 
+                    string lowerName = fName.ToLowerInvariant();
+                    bool isVoiceMsg = fIsVoice || lowerName.Contains("voice_") || lowerName.StartsWith("rec_voice_") || lowerName.EndsWith(".opus");
+                    bool isAudioMsg = !isVoiceMsg && (lowerName.EndsWith(".mp3") || lowerName.EndsWith(".m4a") || lowerName.EndsWith(".aac") || lowerName.EndsWith(".wav") || lowerName.EndsWith(".ogg") || lowerName.EndsWith(".flac"));
+                    bool isPhotoMsg = !isVoiceMsg && !isAudioMsg && (lowerName.EndsWith(".jpg") || lowerName.EndsWith(".jpeg") || lowerName.EndsWith(".png") || lowerName.EndsWith(".webp") || lowerName.EndsWith(".gif"));
+                    bool isVideoMsg = !isVoiceMsg && !isAudioMsg && !isPhotoMsg && (lowerName.EndsWith(".mp4") || lowerName.EndsWith(".mkv") || lowerName.EndsWith(".mov") || lowerName.EndsWith(".avi") || lowerName.EndsWith(".webm"));
+
                     var incomingFileMsg = new ChatMessage
                     {
                         Id = fMsgId,
@@ -2775,16 +2821,24 @@ public async Task SendTextMessageAsync()
                         FilePath = fPath,
                         FileName = fName,
                         FileSizeBytes = fBytes.Length,
-                        Duration = fDuration,
-                        Type = fIsVoice ? PacketType.Voice : PacketType.File,
+                        Duration = !string.IsNullOrWhiteSpace(fDuration) && fDuration != "00:00" ? fDuration : (isVoiceMsg ? "0:00" : ""),
+                        Type = isPhotoMsg ? PacketType.Photo : (isVoiceMsg ? PacketType.Voice : PacketType.File),
+                        IsVideoNote = isVideoMsg,
                         IsFromMe = false,
                         FormattedTime = DateTime.Now.ToString("HH:mm")
                     };
 
                     chat.Messages.Add(incomingFileMsg);
-                    chat.LastMessage = fIsVoice ? "🎤 Голосовое сообщение" : $"📎 {fName}";
+                    if (isVoiceMsg) chat.LastMessage = "🎤 Голосовое сообщение";
+                    else if (isAudioMsg) chat.LastMessage = $"🎵 {fName}";
+                    else if (isPhotoMsg) chat.LastMessage = $"📷 {fName}";
+                    else if (isVideoMsg) chat.LastMessage = $"📹 {fName}";
+                    else chat.LastMessage = $"📎 {fName}";
                     chat.LastMessageTime = incomingFileMsg.FormattedTime;
                     if (SelectedChat != chat) chat.UnreadCount++;
+                    OnPropertyChanged(nameof(SharedMedia));
+                    OnPropertyChanged(nameof(SharedFiles));
+                    OnPropertyChanged(nameof(SharedAudio));
 
                     _ = Task.Run(async () =>
                     {
@@ -2978,6 +3032,56 @@ public async Task SendTextMessageAsync()
 
                     chat.IsOnline = pres.StartsWith("ONLINE", StringComparison.OrdinalIgnoreCase);
 
+                    break;
+
+                case PacketType.SyncChats:
+                    try
+                    {
+                        string syncJson = System.Text.Encoding.UTF8.GetString(payload);
+                        if (!string.IsNullOrWhiteSpace(syncJson))
+                        {
+                            var syncedList = System.Text.Json.JsonSerializer.Deserialize<System.Collections.Generic.List<ChatItem>>(syncJson);
+                            if (syncedList != null && syncedList.Count > 0)
+                            {
+                                foreach (var syncChat in syncedList)
+                                {
+                                    var existing = _allChats.FirstOrDefault(c =>
+                                        (!string.IsNullOrEmpty(c.DeviceAddress) && c.DeviceAddress.Equals(syncChat.DeviceAddress, StringComparison.OrdinalIgnoreCase)) ||
+                                        (!string.IsNullOrEmpty(c.PeerId) && c.PeerId.Equals(syncChat.PeerId, StringComparison.OrdinalIgnoreCase)));
+                                    if (existing != null)
+                                    {
+                                        foreach (var m in syncChat.Messages)
+                                        {
+                                            if (!existing.Messages.Any(x => x.Id == m.Id))
+                                            {
+                                                existing.Messages.Add(m);
+                                            }
+                                        }
+                                        if (syncChat.Messages.Count > 0)
+                                        {
+                                            var last = existing.Messages.LastOrDefault();
+                                            if (last != null)
+                                            {
+                                                existing.LastMessage = last.Text ?? existing.LastMessage;
+                                                existing.LastMessageTime = last.FormattedTime;
+                                            }
+                                        }
+                                    }
+                                    else
+                                    {
+                                        _allChats.Add(syncChat);
+                                    }
+                                }
+                                _ = _storageService.SaveChatsAsync(_allChats);
+                                ApplySearchFilter();
+                                StatusMessage = "Чаты синхронизированы с телефоном";
+                            }
+                        }
+                    }
+                    catch (Exception syncEx)
+                    {
+                        App.Log($"[SyncChats ERROR] Failed to parse sync payload: {syncEx.Message}");
+                    }
                     break;
 
                 case PacketType.ChatDeleted:
