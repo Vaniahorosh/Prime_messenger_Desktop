@@ -1210,11 +1210,15 @@ public class MainViewModel : ViewModelBase
         });
 
         DeleteMessageCommand = new RelayCommand(async param =>
-
         {
             if (param is ChatMessage msg && SelectedChat != null)
-
             {
+                if (!msg.IsFromMe)
+                {
+                    StatusMessage = "Нельзя удалять чужие сообщения";
+                    return;
+                }
+
                 SelectedChat.Messages.Remove(msg);
 
                 SelectedChat.LastMessage = SelectedChat.Messages.LastOrDefault()?.Text ?? "";
@@ -2203,6 +2207,33 @@ public class MainViewModel : ViewModelBase
                             if (!isRealVn)
                             {
                                 m.IsVideoNote = false;
+                            }
+                            else
+                            {
+                                string shapeTag = "";
+                                if (!string.IsNullOrEmpty(m.Text) && m.Text.StartsWith("VIDEO_NOTE:", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    shapeTag = m.Text.Substring("VIDEO_NOTE:".Length).Trim();
+                                }
+                                else if (!string.IsNullOrEmpty(m.FileName) && m.FileName.StartsWith("vn_", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    string withoutExt = Path.GetFileNameWithoutExtension(m.FileName);
+                                    var fnParts = withoutExt.Split('_');
+                                    if (fnParts.Length >= 3) shapeTag = fnParts[2].Trim();
+                                }
+                                if (!string.IsNullOrWhiteSpace(shapeTag))
+                                {
+                                    if (int.TryParse(shapeTag, out int r))
+                                        m.VideoNoteRadiusPercent = Math.Clamp(r, 0, 50);
+                                    else if (shapeTag.Equals("square", StringComparison.OrdinalIgnoreCase))
+                                        m.VideoNoteRadiusPercent = 0;
+                                    else if (shapeTag.Equals("circle", StringComparison.OrdinalIgnoreCase))
+                                        m.VideoNoteRadiusPercent = 50;
+                                    else if (shapeTag.Equals("star", StringComparison.OrdinalIgnoreCase))
+                                        m.VideoNoteRadiusPercent = 35;
+                                    else if (shapeTag.Equals("prime", StringComparison.OrdinalIgnoreCase))
+                                        m.VideoNoteRadiusPercent = 25;
+                                }
                             }
                         }
                     }
