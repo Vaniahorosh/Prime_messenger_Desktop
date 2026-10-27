@@ -368,7 +368,11 @@ public class MainViewModel : ViewModelBase
             {
                 if (_settings != null)
                 {
-                    _settings.PropertyChanged += (s, e) => CheckForPendingSettingsChanges();
+                    _settings.PropertyChanged += async (s, e) =>
+                    {
+                        CheckForPendingSettingsChanges();
+                        try { await _storageService.SaveSettingsAsync(_settings); } catch {}
+                    };
                 }
             }
         }
@@ -386,6 +390,51 @@ public class MainViewModel : ViewModelBase
     {
         _initialSettingsSnapshot = GetSettingsSnapshot();
         HasPendingSettingsChanges = false;
+    }
+
+    public async Task ApplyAndSaveSettingsAsync()
+    {
+        try
+        {
+            await _storageService.SaveSettingsAsync(Settings);
+
+            // Apply Theme & Accent Color & Acrylic DWM
+            ThemeManager.ApplyTheme(Settings.ThemeMode, Settings.AccentColorHex);
+
+            // Apply Screenshot Protection to all open windows
+            if (Application.Current != null)
+            {
+                foreach (Window win in Application.Current.Windows)
+                {
+                    SecurityManager.SetScreenshotProtection(win, Settings.EnableScreenshotProtection);
+                }
+            }
+
+            // Refresh UI bindings and corner radiuses
+            OnPropertyChanged(nameof(Settings));
+            OnPropertyChanged(nameof(BubbleCornerRadius));
+            OnPropertyChanged(nameof(AvatarCornerRadius));
+            OnPropertyChanged(nameof(HeaderAvatarCornerRadius));
+            OnPropertyChanged(nameof(DrawerAvatarCornerRadius));
+            OnPropertyChanged(nameof(PreviewAvatarCornerRadius));
+            OnPropertyChanged(nameof(VideoNoteCornerRadius));
+            OnPropertyChanged(nameof(VideoNoteChatCornerRadius));
+            OnPropertyChanged(nameof(MyDisplayName));
+            OnPropertyChanged(nameof(MyUsername));
+            OnPropertyChanged(nameof(IsDarkThemeSelected));
+            OnPropertyChanged(nameof(IsLightThemeSelected));
+            OnPropertyChanged(nameof(IsSystemTheme));
+            OnPropertyChanged(nameof(IsDarkTheme));
+
+            CaptureSettingsSnapshot();
+            await BroadcastMyProfileAndAvatarAsync();
+
+            StatusMessage = "Настройки успешно сохранены и применены";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Ошибка сохранения настроек: {ex.Message}";
+        }
     }
 
     public void CheckForPendingSettingsChanges()
@@ -1044,7 +1093,11 @@ public class MainViewModel : ViewModelBase
     public MainViewModel()
 
     {
-        _settings.PropertyChanged += (s, e) => CheckForPendingSettingsChanges();
+        _settings.PropertyChanged += async (s, e) =>
+        {
+            CheckForPendingSettingsChanges();
+            try { await _storageService.SaveSettingsAsync(_settings); } catch {}
+        };
 
         _audioService.PlaybackStateChanged += (msg) =>
         {
@@ -1953,22 +2006,8 @@ public class MainViewModel : ViewModelBase
         }, () => HasSelectedChat);
 
         SaveSettingsCommand = new RelayCommand(async () =>
-
         {
-            await _storageService.SaveSettingsAsync(Settings);
-
-            if (Application.Current.MainWindow != null)
-
-            {
-                SecurityManager.SetScreenshotProtection(Application.Current.MainWindow, Settings.EnableScreenshotProtection);
-
-            }
-
-            CaptureSettingsSnapshot();
-            await BroadcastMyProfileAndAvatarAsync();
-
-            StatusMessage = "Настройки успешно сохранены";
-
+            await ApplyAndSaveSettingsAsync();
         });
 
         ChangeAccentColorCommand = new RelayCommand(param =>
@@ -2025,6 +2064,19 @@ public class MainViewModel : ViewModelBase
                 var cleanChats = new List<ChatItem>();
                 foreach (var c in chats)
                 {
+                    foreach (var m in c.Messages)
+                    {
+                        if (m.IsVideoNote)
+                        {
+                            string f = (m.FileName ?? m.FilePath ?? "").ToLowerInvariant();
+                            bool isRealVn = f.StartsWith("vn_") || f.StartsWith("rec_circle_") || f.StartsWith("rec_videonote_") ||
+                                            (m.Text != null && m.Text.StartsWith("VIDEO_NOTE:", StringComparison.OrdinalIgnoreCase));
+                            if (!isRealVn)
+                            {
+                                m.IsVideoNote = false;
+                            }
+                        }
+                    }
                     // Filter out corrupt / error-named chats and obsolete system chat
                     if (IsStatusKeyword(c.DisplayName) || 
                         c.DisplayName == "Ошибка подключения" || 
@@ -2564,6 +2616,7 @@ public async Task SendTextMessageAsync()
 
         string lowerSingle = fileName.ToLowerInvariant();
         bool isVidSingle = lowerSingle.EndsWith(".mp4") || lowerSingle.EndsWith(".mkv") || lowerSingle.EndsWith(".mov") || lowerSingle.EndsWith(".avi") || lowerSingle.EndsWith(".webm");
+        bool isVideoNote = isVidSingle && (lowerSingle.StartsWith("vn_") || lowerSingle.StartsWith("rec_circle_") || lowerSingle.StartsWith("rec_videonote_"));
 
         var singleMsg = new ChatMessage
         {
@@ -2573,21 +2626,25 @@ public async Task SendTextMessageAsync()
             FileName = fileName,
             FileSizeBytes = fileBytes.Length,
             Type = type,
-            IsVideoNote = isVidSingle,
+            IsVideoNote = isVideoNote,
             VideoNoteRadiusPercent = Settings.VideoNoteRadiusPercent,
             IsFromMe = true,
             FormattedTime = DateTime.Now.ToString("HH:mm")
         };
 
         targetChat.Messages.Add(singleMsg);
-        targetChat.LastMessage = type == PacketType.Photo ? "📷 Фотография" : $"📎 {fileName}";
+        SoundEffectService.PlaySent(Settings);
+        if (type == PacketType.Photo) targetChat.LastMessage = "📷 Фотография";
+        else if (isVideoNote) targetChat.LastMessage = "📹 Видеосообщение";
+        else if (isVidSingle) targetChat.LastMessage = $"🎥 {fileName}";
+        else targetChat.LastMessage = $"📎 {fileName}";
         targetChat.LastMessageTime = singleMsg.FormattedTime;
 
         try
         {
             byte[] payload = (type == PacketType.Photo)
                 ? PrimePacket.BuildPhotoPayload(singleMsg.Id, fileBytes, "")
-                : PrimePacket.BuildFilePayload(singleMsg.Id, fileName, fileBytes, "00:00", false, isVidSingle ? $"VIDEO_NOTE:{Settings.VideoNoteRadiusPercent}" : string.Empty);
+                : PrimePacket.BuildFilePayload(singleMsg.Id, fileName, fileBytes, "00:00", false, isVideoNote ? $"VIDEO_NOTE:{Settings.VideoNoteRadiusPercent}" : string.Empty);
 
             await _bluetoothService.SendPacketAsync(targetAddr, type, payload);
             singleMsg.IsDelivered = true;
@@ -3528,7 +3585,15 @@ public async Task SendTextMessageAsync()
                     bool isVoiceMsg = fIsVoice || lowerName.Contains("voice_") || lowerName.StartsWith("rec_voice_") || lowerName.EndsWith(".opus");
                     bool isAudioMsg = !isVoiceMsg && (lowerName.EndsWith(".mp3") || lowerName.EndsWith(".m4a") || lowerName.EndsWith(".aac") || lowerName.EndsWith(".wav") || lowerName.EndsWith(".ogg") || lowerName.EndsWith(".flac"));
                     bool isPhotoMsg = !isVoiceMsg && !isAudioMsg && (lowerName.EndsWith(".jpg") || lowerName.EndsWith(".jpeg") || lowerName.EndsWith(".png") || lowerName.EndsWith(".webp") || lowerName.EndsWith(".gif"));
-                    bool isVideoMsg = !isVoiceMsg && !isAudioMsg && !isPhotoMsg && (lowerName.EndsWith(".mp4") || lowerName.EndsWith(".mkv") || lowerName.EndsWith(".mov") || lowerName.EndsWith(".avi") || lowerName.EndsWith(".webm"));
+                    bool isVideoFile = !isVoiceMsg && !isAudioMsg && !isPhotoMsg && (lowerName.EndsWith(".mp4") || lowerName.EndsWith(".mkv") || lowerName.EndsWith(".mov") || lowerName.EndsWith(".avi") || lowerName.EndsWith(".webm"));
+
+                    // A Video Note (кружочек) is strictly a video specifically tagged with VIDEO_NOTE or with vn_/rec_circle_/rec_videonote_ prefix
+                    bool isVideoNote = isVideoFile && (
+                        (!string.IsNullOrEmpty(fCaption) && fCaption.StartsWith("VIDEO_NOTE:", StringComparison.OrdinalIgnoreCase)) ||
+                        lowerName.StartsWith("vn_") ||
+                        lowerName.StartsWith("rec_circle_") ||
+                        lowerName.StartsWith("rec_videonote_")
+                    );
 
                     int parsedRadius = 50;
                     string shapeTag = "";
@@ -3567,7 +3632,7 @@ public async Task SendTextMessageAsync()
                         FileSizeBytes = fBytes.Length,
                         Duration = !string.IsNullOrWhiteSpace(fDuration) && fDuration != "00:00" ? fDuration : (isVoiceMsg ? "0:00" : ""),
                         Type = isPhotoMsg ? PacketType.Photo : (isVoiceMsg ? PacketType.Voice : PacketType.File),
-                        IsVideoNote = isVideoMsg,
+                        IsVideoNote = isVideoNote,
                         VideoNoteRadiusPercent = parsedRadius,
                         IsFromMe = false,
                         FormattedTime = DateTime.Now.ToString("HH:mm")
@@ -3575,9 +3640,10 @@ public async Task SendTextMessageAsync()
 
                     chat.Messages.Add(incomingFileMsg);
                     if (isVoiceMsg) chat.LastMessage = "🎤 Голосовое сообщение";
-                    else if (isAudioMsg) chat.LastMessage = $"🎵 {fName}";
+                    else if (isVideoNote) chat.LastMessage = "📹 Видеосообщение";
+                    else if (isVideoFile) chat.LastMessage = $"🎥 {fName}";
                     else if (isPhotoMsg) chat.LastMessage = $"📷 {fName}";
-                    else if (isVideoMsg) chat.LastMessage = $"📹 {fName}";
+                    else if (isAudioMsg) chat.LastMessage = $"🎵 {fName}";
                     else chat.LastMessage = $"📎 {fName}";
                     chat.LastMessageTime = incomingFileMsg.FormattedTime;
                     if (SelectedChat != chat) chat.UnreadCount++;

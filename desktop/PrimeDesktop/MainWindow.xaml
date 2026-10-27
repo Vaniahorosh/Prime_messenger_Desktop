@@ -701,9 +701,7 @@
                                                     </Grid.ColumnDefinitions>
 
                                                     <Border Grid.Column="0" Width="34" Height="34" CornerRadius="6" Background="#25FFFFFF" Margin="0,0,10,0">
-
-                                                        <TextBlock Text="📄" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-
+                                                        <TextBlock Text="{Binding FileIcon}" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                     </Border>
 
                                                     <StackPanel Grid.Column="1" VerticalAlignment="Center">

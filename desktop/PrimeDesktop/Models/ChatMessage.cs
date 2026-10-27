@@ -300,6 +300,17 @@ public class ChatMessage : INotifyPropertyChanged
                             FileName.EndsWith(".wma", StringComparison.OrdinalIgnoreCase));
 
     [JsonIgnore]
+    public bool IsVideo => !IsVideoNote && HasAttachment && !string.IsNullOrEmpty(FileName) &&
+                           (FileName.EndsWith(".mp4", StringComparison.OrdinalIgnoreCase) ||
+                            FileName.EndsWith(".mkv", StringComparison.OrdinalIgnoreCase) ||
+                            FileName.EndsWith(".mov", StringComparison.OrdinalIgnoreCase) ||
+                            FileName.EndsWith(".avi", StringComparison.OrdinalIgnoreCase) ||
+                            FileName.EndsWith(".webm", StringComparison.OrdinalIgnoreCase));
+
+    [JsonIgnore]
+    public string FileIcon => IsVideo ? "🎥" : "📎";
+
+    [JsonIgnore]
     public bool IsFile => !IsPhoto && !IsVoice && !IsVideoNote && (Type == PacketType.File || HasAttachment);
 
     public event PropertyChangedEventHandler? PropertyChanged;

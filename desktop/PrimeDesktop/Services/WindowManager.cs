@@ -30,10 +30,11 @@ public static class WindowManager
                 DataContext = vm
             };
 
-            _settingsWindow.Closed += (s, e) =>
+            _settingsWindow.Closed += async (s, e) =>
             {
                 _settingsWindow = null;
                 vm.IsSettingsOpen = false;
+                await vm.ApplyAndSaveSettingsAsync();
             };
 
             vm.CaptureSettingsSnapshot();
