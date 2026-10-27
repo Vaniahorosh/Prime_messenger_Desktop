@@ -55,6 +55,8 @@
         <conv:NotNullToVisibilityConverter x:Key="NotNullToVis"/>
 
         <conv:EqualityToVisibilityConverter x:Key="EqualityToVis"/>
+        <conv:NonLockingImageConverter x:Key="NonLockingImgConverter"/>
+        <conv:InitialsConverter x:Key="InitialsConverter"/>
 
     </Window.Resources>
 
@@ -195,18 +197,27 @@
 
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
 
-                            <Border Width="36" Height="36" CornerRadius="18" Background="{StaticResource CardBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
+                            <Border Width="38" Height="38" CornerRadius="{Binding AvatarCornerRadius}" Background="{DynamicResource AccentBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" Cursor="Hand" ToolTip="Нажмите, чтобы открыть настройки">
+                                <Border.InputBindings>
+                                    <MouseBinding Gesture="LeftClick" Command="{Binding ToggleSettingsCommand}"/>
+                                </Border.InputBindings>
+                                <Grid>
+                                    <TextBlock Text="{Binding Settings.MyDisplayName, Converter={StaticResource InitialsConverter}}"
+                                               Foreground="White" FontWeight="Bold" FontSize="14" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                               Visibility="{Binding Settings.MyAvatarPath, Converter={StaticResource NullToVis}}"/>
 
-                                <Image Source="Assets/prime_logo_app.png" Width="26" Height="26" RenderOptions.BitmapScalingMode="HighQuality"/>
-
+                                    <Border CornerRadius="{Binding AvatarCornerRadius}"
+                                            Visibility="{Binding Settings.MyAvatarPath, Converter={StaticResource NotNullToVis}}">
+                                        <Border.Background>
+                                            <ImageBrush ImageSource="{Binding Settings.MyAvatarPath, Converter={StaticResource NonLockingImgConverter}}" Stretch="UniformToFill"/>
+                                        </Border.Background>
+                                    </Border>
+                                </Grid>
                             </Border>
 
                             <StackPanel Margin="10,0,0,0" VerticalAlignment="Center">
-
                                 <TextBlock Text="{Binding Settings.MyDisplayName}" Foreground="{StaticResource TextPrimaryBrush}" FontWeight="SemiBold" FontSize="13"/>
-
-                                <TextBlock Text="ПК клиент" Foreground="{DynamicResource AccentBrush}" FontSize="10"/>
-
+                                <TextBlock Text="ПК клиент • Онлайн" Foreground="{DynamicResource AccentBrush}" FontSize="10"/>
                             </StackPanel>
 
                         </StackPanel>
@@ -278,7 +289,7 @@
 
                                                         <Border.Background>
 
-                                                            <ImageBrush ImageSource="{Binding AvatarPath}" Stretch="UniformToFill"/>
+                                                            <ImageBrush ImageSource="{Binding AvatarPath, Converter={StaticResource NonLockingImgConverter}}" Stretch="UniformToFill"/>
 
                                                         </Border.Background>
 
@@ -409,7 +420,7 @@
 
                                         <Border.Background>
 
-                                            <ImageBrush ImageSource="{Binding SelectedChat.AvatarPath}" Stretch="UniformToFill"/>
+                                            <ImageBrush ImageSource="{Binding SelectedChat.AvatarPath, Converter={StaticResource NonLockingImgConverter}}" Stretch="UniformToFill"/>
 
                                         </Border.Background>
 
@@ -515,7 +526,7 @@
 
                                         <Border Background="{Binding IsFromMe, Converter={StaticResource MsgBubbleConverter}}"
 
-                                            CornerRadius="14" Padding="12,8" MaxWidth="520"
+                                            CornerRadius="{Binding DataContext.BubbleCornerRadius, RelativeSource={RelativeSource AncestorType=Window}}" Padding="12,8" MaxWidth="520"
 
                                             Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=Window}}"
 
@@ -1208,7 +1219,7 @@
 
                                     <!-- Actual Avatar Photo -->
 
-                                    <Image Source="{Binding SelectedChat.AvatarPath}" Stretch="UniformToFill"
+                                    <Image Source="{Binding SelectedChat.AvatarPath, Converter={StaticResource NonLockingImgConverter}}" Stretch="UniformToFill"
 
                                            RenderOptions.BitmapScalingMode="HighQuality"
 
@@ -1787,290 +1798,213 @@
                                 <Grid>
 
                                     <!-- TAB 0: Профиль -->
-
                                     <StackPanel Visibility="{Binding SelectedSettingsTab, Converter={StaticResource EqualityToVis}, ConverterParameter=0}">
-
                                         <TextBlock Text="МОЙ ПРОФИЛЬ" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,12"/>
 
-                                        
-
                                         <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
-
-                                            <Border Width="64" Height="64" CornerRadius="32" Background="{DynamicResource AccentBrush}" Margin="0,0,14,0">
-
+                                            <Border Width="68" Height="68" CornerRadius="{Binding AvatarCornerRadius}" Background="{DynamicResource AccentBrush}" Margin="0,0,14,0">
                                                 <Grid>
-
-                                                    <TextBlock Text="Я" Foreground="White" FontSize="22" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"
-
+                                                    <TextBlock Text="{Binding Settings.MyDisplayName, Converter={StaticResource InitialsConverter}}"
+                                                               Foreground="White" FontSize="22" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"
                                                                Visibility="{Binding Settings.MyAvatarPath, Converter={StaticResource NullToVis}}"/>
 
-                                                    <Border CornerRadius="32" Visibility="{Binding Settings.MyAvatarPath, Converter={StaticResource NotNullToVis}}">
-
+                                                    <Border CornerRadius="{Binding AvatarCornerRadius}" Visibility="{Binding Settings.MyAvatarPath, Converter={StaticResource NotNullToVis}}">
                                                         <Border.Background>
-
-                                                            <ImageBrush ImageSource="{Binding Settings.MyAvatarPath}" Stretch="UniformToFill"/>
-
+                                                            <ImageBrush ImageSource="{Binding Settings.MyAvatarPath, Converter={StaticResource NonLockingImgConverter}}" Stretch="UniformToFill"/>
                                                         </Border.Background>
-
                                                     </Border>
-
                                                 </Grid>
-
                                             </Border>
 
                                             <StackPanel VerticalAlignment="Center">
-
                                                 <Button Content="📷 Сменить мой аватар" Command="{Binding ChangeMyAvatarCommand}"
-
-                                                        Style="{StaticResource ModernButton}" Padding="10,6" Margin="0,0,0,4"/>
-
-                                                <TextBlock Text="Аватар синхронизируется с собеседниками" Foreground="{StaticResource TextMutedBrush}" FontSize="10"/>
-
+                                                        Style="{StaticResource ModernButton}" Padding="12,6" Margin="0,0,0,4"/>
+                                                <Button Content="🗑️ Сбросить аватар" Command="{Binding ResetMyAvatarCommand}"
+                                                        Style="{StaticResource ModernButton}" Padding="12,4" Margin="0,0,0,4"
+                                                        Visibility="{Binding Settings.MyAvatarPath, Converter={StaticResource NotNullToVis}}"/>
+                                                <Button Content="📡 Разослать профиль в сеть" Command="{Binding BroadcastProfileCommand}"
+                                                        Style="{StaticResource ModernButton}" Padding="12,4" Margin="0,0,0,4"/>
+                                                <TextBlock Text="Аватар и имя автоматически передаются собеседникам" Foreground="{StaticResource TextMutedBrush}" FontSize="10"/>
                                             </StackPanel>
-
                                         </StackPanel>
-
-
 
                                         <TextBlock Text="Отображаемое имя" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,4"/>
-
                                         <TextBox Text="{Binding Settings.MyDisplayName, UpdateSourceTrigger=PropertyChanged}"
-
                                                  Style="{StaticResource ModernTextBox}" Margin="0,0,0,12"/>
-
-
 
                                         <TextBlock Text="Имя пользователя (@username)" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,4"/>
-
                                         <TextBox Text="{Binding Settings.MyUsername, UpdateSourceTrigger=PropertyChanged}"
-
                                                  Style="{StaticResource ModernTextBox}" Margin="0,0,0,12"/>
 
-
-
                                         <TextBlock Text="Физический MAC-адрес устройства надежно изолирован и никогда не передается."
-
                                                    Foreground="{StaticResource TextMutedBrush}" FontSize="11" TextWrapping="Wrap"/>
-
                                     </StackPanel>
-
-
 
                                     <!-- TAB 1: Оформление и акценты -->
-
                                     <StackPanel Visibility="{Binding SelectedSettingsTab, Converter={StaticResource EqualityToVis}, ConverterParameter=1}">
+                                        <TextBlock Text="ТЕМА ОФОРМЛЕНИЯ" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,8"/>
+                                        <CheckBox Content="Тёмная тема (Dark Mode)" IsChecked="{Binding Settings.DarkTheme, Mode=TwoWay}"
+                                                  Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,14"/>
 
                                         <TextBlock Text="ЦВЕТОВОЙ АКЦЕНТ ПРАЙМ" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,8"/>
-
-                                        <TextBlock Text="Мгновенно применяется ко всем кнопкам, бейджам и индикаторам:" Foreground="{StaticResource TextSecondaryBrush}" FontSize="11" Margin="0,0,0,8"/>
-
-                                        <WrapPanel Margin="0,0,0,16">
-
-                                            <Button Background="#4D9FFF" ToolTip="Синий" Command="{Binding ChangeAccentColorCommand}" CommandParameter="#4D9FFF" Width="28" Height="28" Margin="4" Style="{StaticResource ModernButton}"/>
-
-                                            <Button Background="#26A69A" ToolTip="Изумруд" Command="{Binding ChangeAccentColorCommand}" CommandParameter="#26A69A" Width="28" Height="28" Margin="4" Style="{StaticResource ModernButton}"/>
-
-                                            <Button Background="#B388FF" ToolTip="Пурпур" Command="{Binding ChangeAccentColorCommand}" CommandParameter="#B388FF" Width="28" Height="28" Margin="4" Style="{StaticResource ModernButton}"/>
-
-                                            <Button Background="#FFB74D" ToolTip="Янтарь" Command="{Binding ChangeAccentColorCommand}" CommandParameter="#FFB74D" Width="28" Height="28" Margin="4" Style="{StaticResource ModernButton}"/>
-
-                                            <Button Background="#FF5252" ToolTip="Рубин" Command="{Binding ChangeAccentColorCommand}" CommandParameter="#FF5252" Width="28" Height="28" Margin="4" Style="{StaticResource ModernButton}"/>
-
-                                            <Button Background="#4DD0E1" ToolTip="Циан" Command="{Binding ChangeAccentColorCommand}" CommandParameter="#4DD0E1" Width="28" Height="28" Margin="4" Style="{StaticResource ModernButton}"/>
-
-                                            <Button Background="#FF4081" ToolTip="Розовый" Command="{Binding ChangeAccentColorCommand}" CommandParameter="#FF4081" Width="28" Height="28" Margin="4" Style="{StaticResource ModernButton}"/>
-
+                                        <TextBlock Text="Мгновенно применяется ко всем элементам интерфейса:" Foreground="{StaticResource TextSecondaryBrush}" FontSize="11" Margin="0,0,0,8"/>
+                                        <WrapPanel Margin="0,0,0,14">
+                                            <Button Background="#4D9FFF" ToolTip="Синий" Command="{Binding ChangeAccentColorCommand}" CommandParameter="#4D9FFF" Width="30" Height="30" Margin="4" Style="{StaticResource ModernButton}"/>
+                                            <Button Background="#26A69A" ToolTip="Изумруд" Command="{Binding ChangeAccentColorCommand}" CommandParameter="#26A69A" Width="30" Height="30" Margin="4" Style="{StaticResource ModernButton}"/>
+                                            <Button Background="#B388FF" ToolTip="Пурпур" Command="{Binding ChangeAccentColorCommand}" CommandParameter="#B388FF" Width="30" Height="30" Margin="4" Style="{StaticResource ModernButton}"/>
+                                            <Button Background="#FFB74D" ToolTip="Янтарь" Command="{Binding ChangeAccentColorCommand}" CommandParameter="#FFB74D" Width="30" Height="30" Margin="4" Style="{StaticResource ModernButton}"/>
+                                            <Button Background="#FF5252" ToolTip="Рубин" Command="{Binding ChangeAccentColorCommand}" CommandParameter="#FF5252" Width="30" Height="30" Margin="4" Style="{StaticResource ModernButton}"/>
+                                            <Button Background="#4DD0E1" ToolTip="Циан" Command="{Binding ChangeAccentColorCommand}" CommandParameter="#4DD0E1" Width="30" Height="30" Margin="4" Style="{StaticResource ModernButton}"/>
+                                            <Button Background="#FF4081" ToolTip="Розовый" Command="{Binding ChangeAccentColorCommand}" CommandParameter="#FF4081" Width="30" Height="30" Margin="4" Style="{StaticResource ModernButton}"/>
                                         </WrapPanel>
 
-
-
                                         <TextBlock Text="ФОРМА АВАТАРОК" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,6"/>
-
                                         <DockPanel Margin="0,0,0,6">
-
                                             <TextBlock Text="Скругление углов" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}"/>
-
                                             <TextBlock Text="{Binding AvatarCornerRadiusPercent, StringFormat='{}{0}%'}" DockPanel.Dock="Right" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"/>
-
                                         </DockPanel>
-
-                                        <Grid Margin="0,0,0,16">
-
+                                        <Grid Margin="0,0,0,14">
                                             <Grid.ColumnDefinitions>
-
                                                 <ColumnDefinition Width="*"/>
-
                                                 <ColumnDefinition Width="Auto"/>
-
                                             </Grid.ColumnDefinitions>
-
                                             <Slider Grid.Column="0" Minimum="0" Maximum="50" Value="{Binding AvatarCornerRadiusPercent, Mode=TwoWay}"
-
                                                     VerticalAlignment="Center" Margin="0,0,16,0"/>
-
                                             <Border Grid.Column="1" Width="44" Height="44" CornerRadius="{Binding PreviewAvatarCornerRadius}" Background="{DynamicResource AccentBrush}">
-
                                                 <TextBlock Text="P" Foreground="White" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-
                                             </Border>
-
                                         </Grid>
 
-                                    </StackPanel>
-
-
-
-                                    <!-- TAB 2: Чат и обои -->
-
-                                    <StackPanel Visibility="{Binding SelectedSettingsTab, Converter={StaticResource EqualityToVis}, ConverterParameter=2}">
-
-                                        <TextBlock Text="ФОНОВЫЕ ОБОИ ЧАТА" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,8"/>
-
-                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
-
-                                            <Button Content="🖼️ Выбрать изображение..." Command="{Binding ChangeWallpaperCommand}"
-
-                                                    Style="{StaticResource ModernButton}" Padding="10,6" Margin="0,0,8,0"/>
-
-                                            <Button Content="✕ Сбросить обои" Command="{Binding ResetWallpaperCommand}"
-
-                                                    Style="{StaticResource ModernButton}" Padding="10,6"/>
-
-                                        </StackPanel>
-
-
-
+                                        <TextBlock Text="ФОРМА СООБЩЕНИЙ" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,6"/>
                                         <DockPanel Margin="0,0,0,6">
-
-                                            <TextBlock Text="Прозрачность обоев" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}"/>
-
-                                            <TextBlock Text="{Binding Settings.WallpaperOpacity, StringFormat='{}{0:P0}'}" DockPanel.Dock="Right" FontSize="11" Foreground="{DynamicResource AccentBrush}"/>
-
+                                            <TextBlock Text="Скругление блоков сообщений" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}"/>
+                                            <TextBlock Text="{Binding BubbleRadius, StringFormat='{}{0} px'}" DockPanel.Dock="Right" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"/>
                                         </DockPanel>
-
-                                        <Slider Minimum="0.1" Maximum="1.0" Value="{Binding Settings.WallpaperOpacity, Mode=TwoWay}"
-
-                                                TickFrequency="0.05" Margin="0,0,0,16"/>
-
-
-
-                                        <TextBlock Text="СИСТЕМНЫЕ ОПЦИИ" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,8"/>
+                                        <Grid Margin="0,0,0,14">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Slider Grid.Column="0" Minimum="4" Maximum="24" Value="{Binding BubbleRadius, Mode=TwoWay}"
+                                                    VerticalAlignment="Center" Margin="0,0,16,0"/>
+                                            <Border Grid.Column="1" Width="80" Height="32" CornerRadius="{Binding BubbleCornerRadius}" Background="{DynamicResource AccentBrush}">
+                                                <TextBlock Text="Привет!" Foreground="White" FontSize="12" FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            </Border>
+                                        </Grid>
 
                                         <CheckBox Content="Плавные анимации интерфейса" IsChecked="{Binding Settings.EnableAnimations, Mode=TwoWay}"
-
                                                   Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,8"/>
-
-                                        <CheckBox Content="Сворачивать в трей при закрытии окна" IsChecked="{Binding Settings.MinimizeToTray, Mode=TwoWay}"
-
-                                                  Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,8"/>
-
-                                        <CheckBox Content="Звуковые сигналы уведомлений" IsChecked="{Binding Settings.PlayNotificationSounds, Mode=TwoWay}"
-
-                                                  Foreground="{StaticResource TextPrimaryBrush}"/>
-
                                     </StackPanel>
 
-
-
-                                    <!-- TAB 3: Безопасность и приватность -->
-
-                                    <StackPanel Visibility="{Binding SelectedSettingsTab, Converter={StaticResource EqualityToVis}, ConverterParameter=3}">
-
-                                        <TextBlock Text="БЕЗОПАСНОСТЬ И КОНФИДЕНЦИАЛЬНОСТЬ" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,10"/>
-
-
-
-                                        <CheckBox Content="Защита окна от скриншотов и записи (FLAG_SECURE)"
-
-                                                  IsChecked="{Binding Settings.EnableScreenshotProtection, Mode=TwoWay}"
-
-                                                  Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,6"/>
-
-                                        <TextBlock Text="Блокирует перехват окна через Discord, OBS, Snipping Tool и снимки экрана."
-
-                                                   FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" Margin="24,0,0,14" TextWrapping="Wrap"/>
-
-
-
-
-
-
-                                        <Border Background="{StaticResource CardBrush}" CornerRadius="10" Padding="12" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
-
-                                            <StackPanel>
-
-                                                <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-
-                                                    <Path Data="{StaticResource IconLock}" Fill="{DynamicResource AccentBrush}" Width="14" Height="14" Stretch="Uniform" Margin="0,0,6,0" VerticalAlignment="Center"/>
-
-                                                    <TextBlock Text="Локальное шифрование AES-256-GCM" Foreground="{StaticResource TextPrimaryBrush}" FontSize="12" FontWeight="SemiBold"/>
-
-                                                </StackPanel>
-
-                                                <TextBlock Text="Все диалоги и вложения сохраняются в зашифрованном локальном контейнере без облачных серверов."
-
-                                                           FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap"/>
-
-                                            </StackPanel>
-
-                                        </Border>
-
-                                    </StackPanel>
-
-
-
-                                    <!-- TAB 4: О программе (v0.1) -->
-
-                                    <StackPanel Visibility="{Binding SelectedSettingsTab, Converter={StaticResource EqualityToVis}, ConverterParameter=4}">
-
-                                        <StackPanel HorizontalAlignment="Center" Margin="0,10,0,16">
-
-                                            <Border Width="56" Height="56" CornerRadius="28" Background="{StaticResource CardBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" Margin="0,0,0,8" HorizontalAlignment="Center">
-
-                                                <Image Source="Assets/prime_logo_app.png" Width="38" Height="38" RenderOptions.BitmapScalingMode="HighQuality"/>
-
-                                            </Border>
-
-                                            <TextBlock Text="Prime Desktop" FontSize="16" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}" HorizontalAlignment="Center"/>
-
-                                            <TextBlock Text="Версия 0.1 Desk (Pre-release)" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" HorizontalAlignment="Center" Margin="0,2,0,0"/>
-
+                                    <!-- TAB 2: Чат и обои -->
+                                    <StackPanel Visibility="{Binding SelectedSettingsTab, Converter={StaticResource EqualityToVis}, ConverterParameter=2}">
+                                        <TextBlock Text="ФОНОВЫЕ ОБОИ ЧАТА" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,8"/>
+                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                                            <Button Content="🖼️ Выбрать изображение..." Command="{Binding ChangeWallpaperCommand}"
+                                                    Style="{StaticResource ModernButton}" Padding="12,6" Margin="0,0,8,0"/>
+                                            <Button Content="✕ Сбросить обои" Command="{Binding ResetWallpaperCommand}"
+                                                    Style="{StaticResource ModernButton}" Padding="12,6"/>
                                         </StackPanel>
 
+                                        <DockPanel Margin="0,0,0,6">
+                                            <TextBlock Text="Прозрачность обоев" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}"/>
+                                            <TextBlock Text="{Binding Settings.WallpaperOpacity, StringFormat='{}{0:P0}'}" DockPanel.Dock="Right" FontSize="11" Foreground="{DynamicResource AccentBrush}"/>
+                                        </DockPanel>
+                                        <Slider Minimum="0.1" Maximum="1.0" Value="{Binding Settings.WallpaperOpacity, Mode=TwoWay}"
+                                                TickFrequency="0.05" Margin="0,0,0,16"/>
 
-
-                                        <Border Background="{StaticResource CardBrush}" CornerRadius="10" Padding="12" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" Margin="0,0,0,10">
-
-                                            <StackPanel>
-
-                                                <TextBlock Text="О ПРОЕКТЕ" FontSize="10" FontWeight="Bold" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,4"/>
-
-                                                <TextBlock Text="Кроссплатформенный защищенный мессенджер с прямой связью по Bluetooth RFCOMM."
-
-                                                           FontSize="11" Foreground="{StaticResource TextPrimaryBrush}" TextWrapping="Wrap"/>
-
-                                            </StackPanel>
-
-                                        </Border>
-
-
-
-                                        <Border Background="{StaticResource CardBrush}" CornerRadius="10" Padding="12" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
-
-                                            <StackPanel>
-
-                                                <TextBlock Text="ПРОТОКОЛ И СОВМЕСТИМОСТЬ" FontSize="10" FontWeight="Bold" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,4"/>
-
-                                                <TextBlock Text="UUID: fa87c0d0-afac-11de-8a39-0800200c9a66&#x0a;Клиент полностью совместим с Android-версией Prime Messenger."
-
-                                                           FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap"/>
-
-                                            </StackPanel>
-
-                                        </Border>
-
+                                        <TextBlock Text="СИСТЕМНЫЕ ОПЦИИ" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,8"/>
+                                        <CheckBox Content="Сворачивать в трей при закрытии окна" IsChecked="{Binding Settings.MinimizeToTray, Mode=TwoWay}"
+                                                  Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,8"/>
+                                        <CheckBox Content="Звуковые сигналы уведомлений" IsChecked="{Binding Settings.PlayNotificationSounds, Mode=TwoWay}"
+                                                  Foreground="{StaticResource TextPrimaryBrush}"/>
                                     </StackPanel>
 
+                                    <!-- TAB 3: Память и данные -->
+                                    <StackPanel Visibility="{Binding SelectedSettingsTab, Converter={StaticResource EqualityToVis}, ConverterParameter=3}">
+                                        <TextBlock Text="ПАМЯТЬ И ХРАНИЛИЩЕ" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,10"/>
+
+                                        <Border Background="{StaticResource CardBrush}" CornerRadius="10" Padding="12" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" Margin="0,0,0,14">
+                                            <StackPanel>
+                                                <DockPanel Margin="0,0,0,6">
+                                                    <TextBlock Text="Занятое место (Медиа, вложения, кэш):" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}"/>
+                                                    <TextBlock Text="{Binding MediaCacheSizeText}" DockPanel.Dock="Right" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"/>
+                                                </DockPanel>
+                                                <TextBlock Text="Все фото, аудио и файлы хранятся в защищенной локальной папке устройства."
+                                                           FontSize="11" Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap"/>
+                                            </StackPanel>
+                                        </Border>
+
+                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,18">
+                                            <Button Content="🧹 Очистить кэш медиа" Command="{Binding ClearMediaCacheCommand}"
+                                                    Style="{StaticResource ModernButton}" Padding="12,7" Margin="0,0,8,0"/>
+                                            <Button Content="📂 Открыть папку данных" Command="{Binding OpenStorageFolderCommand}"
+                                                    Style="{StaticResource ModernButton}" Padding="12,7"/>
+                                        </StackPanel>
+
+                                        <TextBlock Text="УПРАВЛЕНИЕ ИСТОРИЕЙ" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,8"/>
+                                        <Button Content="🗑️ Удалить все чаты и историю сообщений" Command="{Binding ClearAllChatsCommand}"
+                                                Style="{StaticResource ModernButton}" Foreground="#FF6B6B" Padding="12,7" Margin="0,0,0,6" HorizontalAlignment="Left"/>
+                                        <TextBlock Text="Безвозвратно удаляет локальную базу сообщений и кэш контактов."
+                                                   FontSize="11" Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap"/>
+                                    </StackPanel>
+
+                                    <!-- TAB 4: Безопасность и сеть -->
+                                    <StackPanel Visibility="{Binding SelectedSettingsTab, Converter={StaticResource EqualityToVis}, ConverterParameter=4}">
+                                        <TextBlock Text="БЕЗОПАСНОСТЬ И СЕТЬ" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,10"/>
+
+                                        <CheckBox Content="Защита окна от скриншотов и записи (FLAG_SECURE)"
+                                                  IsChecked="{Binding Settings.EnableScreenshotProtection, Mode=TwoWay}"
+                                                  Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,6"/>
+                                        <TextBlock Text="Блокирует захват окна через Discord, OBS, Snipping Tool и снимки экрана."
+                                                   FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" Margin="24,0,0,14" TextWrapping="Wrap"/>
+
+                                        <CheckBox Content="Автоподключение к сопряженным Bluetooth устройствам"
+                                                  IsChecked="{Binding Settings.AutoConnectBluetooth, Mode=TwoWay}"
+                                                  Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,6"/>
+
+                                        <CheckBox Content="Анонимизация физических MAC-адресов"
+                                                  IsChecked="{Binding Settings.MaskDeviceIdentifiers, Mode=TwoWay}"
+                                                  Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,14"/>
+
+                                        <Border Background="{StaticResource CardBrush}" CornerRadius="10" Padding="12" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
+                                            <StackPanel>
+                                                <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                                    <Path Data="{StaticResource IconLock}" Fill="{DynamicResource AccentBrush}" Width="14" Height="14" Stretch="Uniform" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                                    <TextBlock Text="Локальное шифрование AES-256-GCM" Foreground="{StaticResource TextPrimaryBrush}" FontSize="12" FontWeight="SemiBold"/>
+                                                </StackPanel>
+                                                <TextBlock Text="Все диалоги и вложения сохраняются в зашифрованном локальном контейнере без облачных серверов."
+                                                           FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap"/>
+                                            </StackPanel>
+                                        </Border>
+                                    </StackPanel>
+
+                                    <!-- TAB 5: О программе (v0.1) -->
+                                    <StackPanel Visibility="{Binding SelectedSettingsTab, Converter={StaticResource EqualityToVis}, ConverterParameter=5}">
+                                        <StackPanel HorizontalAlignment="Center" Margin="0,10,0,16">
+                                            <Border Width="56" Height="56" CornerRadius="28" Background="{StaticResource CardBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" Margin="0,0,0,8" HorizontalAlignment="Center">
+                                                <Image Source="Assets/prime_logo_app.png" Width="38" Height="38" RenderOptions.BitmapScalingMode="HighQuality"/>
+                                            </Border>
+                                            <TextBlock Text="Prime Desktop" FontSize="16" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}" HorizontalAlignment="Center"/>
+                                            <TextBlock Text="Версия 0.1 Desk (Windows x64)" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" HorizontalAlignment="Center" Margin="0,2,0,0"/>
+                                        </StackPanel>
+
+                                        <Border Background="{StaticResource CardBrush}" CornerRadius="10" Padding="12" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" Margin="0,0,0,10">
+                                            <StackPanel>
+                                                <TextBlock Text="О ПРОЕКТЕ" FontSize="10" FontWeight="Bold" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,4"/>
+                                                <TextBlock Text="Кроссплатформенный защищенный мессенджер с прямой связью по Bluetooth RFCOMM без централизованных серверов."
+                                                           FontSize="11" Foreground="{StaticResource TextPrimaryBrush}" TextWrapping="Wrap"/>
+                                            </StackPanel>
+                                        </Border>
+
+                                        <Border Background="{StaticResource CardBrush}" CornerRadius="10" Padding="12" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
+                                            <StackPanel>
+                                                <TextBlock Text="ПРОТОКОЛ И СОВМЕСТИМОСТЬ" FontSize="10" FontWeight="Bold" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,4"/>
+                                                <TextBlock Text="UUID: fa87c0d0-afac-11de-8a39-0800200c9a66&#x0a;Клиент полностью совместим с Android-версией Prime Messenger."
+                                                           FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap"/>
+                                            </StackPanel>
+                                        </Border>
+                                    </StackPanel>
                                 </Grid>
 
                             </ScrollViewer>

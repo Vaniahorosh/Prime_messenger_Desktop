@@ -9,7 +9,7 @@ namespace PrimeDesktop.Services;
 
 public class StorageService
 {
-    private static readonly string BaseDirectory = Path.Combine(
+    public static readonly string BaseDirectory = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
         "PrimeDesktop");
 

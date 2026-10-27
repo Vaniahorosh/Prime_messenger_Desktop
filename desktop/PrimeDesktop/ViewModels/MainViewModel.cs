@@ -232,6 +232,35 @@ public class MainViewModel : ViewModelBase
     public ICommand ChangeContactAvatarCommand { get; }
 
     public ICommand ChangeMyAvatarCommand { get; }
+    public ICommand ResetMyAvatarCommand { get; }
+    public ICommand BroadcastProfileCommand { get; }
+    public ICommand ClearMediaCacheCommand { get; }
+    public ICommand ClearAllChatsCommand { get; }
+    public ICommand OpenStorageFolderCommand { get; }
+    public ICommand ToggleThemeCommand { get; }
+
+    private string _mediaCacheSizeText = "0 КБ";
+    public string MediaCacheSizeText
+    {
+        get => _mediaCacheSizeText;
+        set => SetProperty(ref _mediaCacheSizeText, value);
+    }
+
+    public CornerRadius BubbleCornerRadius => new(Settings.BubbleRadius);
+    public int BubbleRadius
+    {
+        get => Settings.BubbleRadius;
+        set
+        {
+            if (Settings.BubbleRadius != value)
+            {
+                Settings.BubbleRadius = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(BubbleCornerRadius));
+                _ = _storageService.SaveSettingsAsync(Settings);
+            }
+        }
+    }
 
     public CornerRadius AvatarCornerRadius => new(42.0 * Settings.AvatarCornerRadiusPercent / 100.0);
 
@@ -513,7 +542,86 @@ public class MainViewModel : ViewModelBase
 
         DisconnectChatCommand = new RelayCommand(async () => await DisconnectSelectedChatAsync(), () => HasSelectedChat);
 
-        ToggleSettingsCommand = new RelayCommand(() => IsSettingsOpen = !IsSettingsOpen);
+        ToggleSettingsCommand = new RelayCommand(() =>
+        {
+            IsSettingsOpen = !IsSettingsOpen;
+            if (IsSettingsOpen) UpdateMediaCacheSize();
+        });
+
+        ResetMyAvatarCommand = new RelayCommand(() =>
+        {
+            AvatarManager.DeleteAvatar("my_profile");
+            Settings.MyAvatarPath = null;
+            OnPropertyChanged(nameof(Settings));
+            _ = _storageService.SaveSettingsAsync(Settings);
+            _ = BroadcastMyProfileAndAvatarAsync();
+            StatusMessage = "Аватар профиля удален";
+        });
+
+        BroadcastProfileCommand = new RelayCommand(async () =>
+        {
+            await BroadcastMyProfileAndAvatarAsync();
+            StatusMessage = "Данные профиля обновлены в сети";
+        });
+
+        ClearMediaCacheCommand = new RelayCommand(() =>
+        {
+            try
+            {
+                string mediaDir = StorageService.MediaDirectory;
+                if (Directory.Exists(mediaDir))
+                {
+                    foreach (var f in Directory.GetFiles(mediaDir))
+                    {
+                        try { File.Delete(f); } catch { }
+                    }
+                }
+                UpdateMediaCacheSize();
+                StatusMessage = "Кэш медиа успешно очищен";
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = $"Ошибка очистки кэша: {ex.Message}";
+            }
+        });
+
+        ClearAllChatsCommand = new RelayCommand(async () =>
+        {
+            var res = MessageBox.Show(
+                "Вы уверены, что хотите удалить все чаты и историю сообщений?",
+                "Очистка всех чатов",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning);
+
+            if (res == MessageBoxResult.Yes)
+            {
+                _allChats.Clear();
+                ApplySearchFilter();
+                SelectedChat = null;
+                await _storageService.SaveChatsAsync(_allChats);
+                StatusMessage = "Все чаты удалены";
+            }
+        });
+
+        OpenStorageFolderCommand = new RelayCommand(() =>
+        {
+            try
+            {
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = StorageService.BaseDirectory,
+                    UseShellExecute = true
+                });
+            }
+            catch { }
+        });
+
+        ToggleThemeCommand = new RelayCommand(() =>
+        {
+            Settings.DarkTheme = !Settings.DarkTheme;
+            _ = _storageService.SaveSettingsAsync(Settings);
+            StatusMessage = Settings.DarkTheme ? "Включена тёмная тема" : "Включена светлая тема";
+        });
 
         ToggleMediaDrawerCommand = new RelayCommand(() => IsMediaDrawerOpen = !IsMediaDrawerOpen);
 
@@ -552,35 +660,26 @@ public class MainViewModel : ViewModelBase
         }, () => HasSelectedChat);
 
         ChangeMyAvatarCommand = new RelayCommand(() =>
-
         {
             var dlg = new Microsoft.Win32.OpenFileDialog
-
             {
                 Title = "Выберите свой аватар",
-
                 Filter = "Изображения (*.png;*.jpg;*.jpeg;*.webp)|*.png;*.jpg;*.jpeg;*.webp|Все файлы (*.*)|*.*"
-
             };
 
             if (dlg.ShowDialog() == true)
-
             {
                 string? saved = AvatarManager.SaveAvatar("my_profile", dlg.FileName);
-
                 if (saved != null)
-
                 {
+                    Settings.MyAvatarPath = null;
                     Settings.MyAvatarPath = saved;
-
                     OnPropertyChanged(nameof(Settings));
-
                     _ = _storageService.SaveSettingsAsync(Settings);
-
+                    _ = BroadcastMyProfileAndAvatarAsync();
+                    StatusMessage = "Аватар профиля успешно обновлен";
                 }
-
             }
-
         });
 
         ToggleVoiceRecordCommand = new RelayCommand(async () =>
@@ -1124,15 +1223,28 @@ public class MainViewModel : ViewModelBase
             {
                 foreach (var c in chats)
                 {
+                    // Filter out corrupt / error-named chats
+                    if (IsStatusKeyword(c.DisplayName) || c.DisplayName == "Ошибка подключения" || c.DisplayName == "Установка связи...")
+                    {
+                        App.Log($"[Init] Skipping corrupt saved chat '{c.DisplayName}' ({c.PeerId})");
+                        continue;
+                    }
+
                     if (string.IsNullOrEmpty(c.AvatarPath))
                     {
-                        c.AvatarPath = AvatarManager.GetAvatarPath(c.DeviceAddress);
+                        c.AvatarPath = AvatarManager.GetAvatarPath(c.DeviceAddress) ?? AvatarManager.GetAvatarPath(c.PeerId);
                     }
                     if (!string.IsNullOrWhiteSpace(c.DeviceAddress) && !string.IsNullOrWhiteSpace(c.PeerId))
                     {
                         _bluetoothService.RegisterPeerAddress(c.PeerId, c.DeviceAddress);
                     }
                     _allChats.Add(c);
+                }
+
+                // If any corrupt chats were filtered, persist cleaned list
+                if (_allChats.Count != chats.Count)
+                {
+                    _ = _storageService.SaveChatsAsync(_allChats);
                 }
 
                 if (_allChats.Count == 0 && !_storageService.HasChatsFile)
@@ -1779,65 +1891,133 @@ public async Task SendTextMessageAsync()
 
     }
 
-    private void OnConnectionStateChanged(string address, DeviceConnectionState state, string name)
+    public static bool IsStatusKeyword(string? s)
+    {
+        if (string.IsNullOrWhiteSpace(s)) return true;
+        var lower = s.Trim().ToLowerInvariant();
+        return lower.Contains("ошибка") ||
+               lower.Contains("установка") ||
+               lower.Contains("подключ") ||
+               lower.Contains("отключ") ||
+               lower.Contains("не в сети") ||
+               lower.Contains("в сети") ||
+               lower.Contains("ожидание") ||
+               lower.Contains("не найдено");
+    }
 
+    public void UpdateMediaCacheSize()
+    {
+        try
+        {
+            long totalBytes = 0;
+            string baseDir = StorageService.BaseDirectory;
+            if (Directory.Exists(baseDir))
+            {
+                var di = new DirectoryInfo(baseDir);
+                foreach (var fi in di.EnumerateFiles("*", SearchOption.AllDirectories))
+                {
+                    totalBytes += fi.Length;
+                }
+            }
+            if (totalBytes < 1024 * 1024)
+                MediaCacheSizeText = $"{totalBytes / 1024.0:F1} КБ";
+            else
+                MediaCacheSizeText = $"{totalBytes / (1024.0 * 1024.0):F1} МБ";
+        }
+        catch
+        {
+            MediaCacheSizeText = "—";
+        }
+    }
+
+    public async Task BroadcastMyProfileAndAvatarAsync()
+    {
+        try
+        {
+            var onlineChats = _allChats.Where(c => c.IsOnline).ToList();
+            if (onlineChats.Count == 0) return;
+
+            byte[] profilePayload = PrimePacket.BuildProfileUpdatePayload(Settings.MyDisplayName, Settings.MyUsername);
+            foreach (var chat in onlineChats)
+            {
+                string addr = !string.IsNullOrWhiteSpace(chat.DeviceAddress) ? chat.DeviceAddress : chat.PeerId;
+                await _bluetoothService.SendPacketAsync(addr, PacketType.ProfileUpdate, profilePayload);
+            }
+
+            if (!string.IsNullOrWhiteSpace(Settings.MyAvatarPath) && File.Exists(Settings.MyAvatarPath))
+            {
+                byte[] avatarBytes = await File.ReadAllBytesAsync(Settings.MyAvatarPath);
+                if (avatarBytes.Length > 0)
+                {
+                    foreach (var chat in onlineChats)
+                    {
+                        string addr = !string.IsNullOrWhiteSpace(chat.DeviceAddress) ? chat.DeviceAddress : chat.PeerId;
+                        await _bluetoothService.SendPacketAsync(addr, PacketType.Avatar, avatarBytes);
+                        App.Log($"[Avatar] Sent my avatar ({avatarBytes.Length} bytes) to '{chat.DisplayName}' ({addr})");
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            App.Log($"[Broadcast Profile ERROR] {ex.Message}");
+        }
+    }
+
+    private void OnConnectionStateChanged(string address, DeviceConnectionState state, string name)
     {
         Application.Current.Dispatcher.Invoke(() =>
-
         {
             var chat = _allChats.FirstOrDefault(c => 
-
                 c.DeviceAddress.Equals(address, StringComparison.OrdinalIgnoreCase) ||
-
                 c.PeerId.Equals(address, StringComparison.OrdinalIgnoreCase));
 
             if (chat == null)
-
             {
-                // CRITICAL FIX: Never recreate a chat item if the state is Disconnected!
-
-                // When a chat is deleted or device forgotten, disconnect event must NOT bring it back!
-
-                if (state != DeviceConnectionState.Connected && state != DeviceConnectionState.Connecting)
-
+                // Only create chat when real connection is established!
+                if (state != DeviceConnectionState.Connected)
                 {
                     return;
-
                 }
 
-                chat = new ChatItem
+                string initialName = !IsStatusKeyword(name)
+                    ? DeviceAnonymizer.SanitizeDisplayName(name, address)
+                    : DeviceAnonymizer.SanitizeDisplayName(null, address);
 
+                chat = new ChatItem
                 {
                     DeviceAddress = address,
-
                     PeerId = address,
-
-                    DisplayName = DeviceAnonymizer.SanitizeDisplayName(name, address),
-
+                    DisplayName = initialName,
                     Username = DeviceAnonymizer.SanitizeUsername(null, address),
-
                     AvatarPath = AvatarManager.GetAvatarPath(address),
-
                     IsBluetoothDevice = true
-
                 };
 
                 _allChats.Add(chat);
-
                 ApplySearchFilter();
-
             }
 
             chat.ConnectionState = state;
-
             chat.IsOnline = (state == DeviceConnectionState.Connected);
 
-            if (!string.IsNullOrEmpty(name)) chat.DisplayName = DeviceAnonymizer.SanitizeDisplayName(name, address);
+            // NEVER overwrite DisplayName with status messages like 'Ошибка подключения'
+            if (!string.IsNullOrWhiteSpace(name) && !IsStatusKeyword(name))
+            {
+                chat.DisplayName = DeviceAnonymizer.SanitizeDisplayName(name, address);
+            }
 
-            StatusMessage = $"{chat.DisplayName}: {state}";
+            StatusMessage = $"{chat.DisplayName}: {name}";
 
+            if (state == DeviceConnectionState.Connected)
+            {
+                _ = Task.Run(async () =>
+                {
+                    await Task.Delay(600);
+                    await BroadcastMyProfileAndAvatarAsync();
+                });
+            }
         });
-
     }
 
     private void OnPacketReceived(string fromAddress, PacketType type, byte[] payload)
@@ -2217,8 +2397,13 @@ public async Task SendTextMessageAsync()
                         Directory.CreateDirectory(aDir);
                         string safeKey = AvatarManager.GetSafePeerKey(chat.PeerId);
                         string aPath = Path.Combine(aDir, $"avatar_{safeKey}.png");
-                        File.WriteAllBytes(aPath, payload);
+                        using (var fs = new FileStream(aPath, FileMode.Create, FileAccess.Write, FileShare.ReadWrite))
+                        {
+                            fs.Write(payload, 0, payload.Length);
+                        }
+                        chat.AvatarPath = null;
                         chat.AvatarPath = aPath;
+                        App.Log($"[Avatar] Saved and updated avatar for '{chat.DisplayName}' ({payload.Length} bytes)");
                     }
                     catch (Exception avEx)
                     {
