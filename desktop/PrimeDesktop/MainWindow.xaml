@@ -398,10 +398,6 @@
 
                         <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
 
-                            <Button Content="Подключить" Style="{StaticResource ModernButton}" Command="{Binding ConnectChatCommand}" Margin="0,0,6,0" FontSize="12"/>
-
-                            <Button Content="Отключить" Style="{StaticResource ModernButton}" Command="{Binding DisconnectChatCommand}" Margin="0,0,6,0" FontSize="12"/>
-
                             <Button Content="ℹ" Style="{StaticResource ModernButton}" Command="{Binding ToggleMediaDrawerCommand}" ToolTip="Профиль и медиа" Width="36" Height="34" Padding="0"/>
 
                         </StackPanel>
@@ -971,29 +967,99 @@
 
 
 
-                            <!-- Attachment Buttons -->
+                            <!-- Unified Attachment Button & Custom Designer Tray -->
+                            <Grid Grid.Column="0" Margin="0,0,8,0" VerticalAlignment="Center">
+                                <ToggleButton x:Name="AttachTrayToggle"
+                                              IsChecked="{Binding IsAttachmentTrayOpen, Mode=TwoWay}"
+                                              Style="{StaticResource RoundIconToggleButton}"
+                                              ToolTip="Прикрепить (Медиа, Файл, GIF)"
+                                              Width="36" Height="36">
+                                    <Path Data="{StaticResource IconAttach}"
+                                          Fill="{DynamicResource TextSecondaryBrush}"
+                                          Width="16" Height="16" Stretch="Uniform"
+                                          RenderTransformOrigin="0.5,0.5">
+                                        <Path.Style>
+                                            <Style TargetType="Path">
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsAttachmentTrayOpen}" Value="True">
+                                                        <Setter Property="Fill" Value="{DynamicResource AccentBrush}"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Path.Style>
+                                    </Path>
+                                </ToggleButton>
 
-                            <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="0,0,8,0">
+                                <Popup IsOpen="{Binding IsAttachmentTrayOpen, Mode=TwoWay}"
+                                       StaysOpen="False"
+                                       PlacementTarget="{Binding ElementName=AttachTrayToggle}"
+                                       Placement="Top"
+                                       VerticalOffset="-10"
+                                       HorizontalOffset="-4"
+                                       AllowsTransparency="True">
+                                    <Border Background="{DynamicResource CardBrush}"
+                                            BorderBrush="{DynamicResource BorderBrush}"
+                                            BorderThickness="1"
+                                            CornerRadius="14"
+                                            Padding="6,6">
+                                        <Border.Effect>
+                                            <DropShadowEffect BlurRadius="20" ShadowDepth="4" Direction="270" Opacity="0.35" Color="#000000"/>
+                                        </Border.Effect>
+                                        <StackPanel Orientation="Horizontal">
+                                            <!-- 1. Медиа (фото и видео) -->
+                                            <Button Style="{StaticResource ModernTrayItemButton}"
+                                                    Command="{Binding AttachPhotoCommand}"
+                                                    ToolTip="Отправить фото или видео (коллаж)">
+                                                <StackPanel Orientation="Horizontal" Margin="8,5">
+                                                    <Border Background="{DynamicResource AccentSoftBrush}" CornerRadius="8" Width="26" Height="26" Margin="0,0,8,0">
+                                                        <Path Data="{StaticResource IconPhoto}" Fill="{DynamicResource AccentBrush}" Width="14" Height="14" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                    </Border>
+                                                    <TextBlock Text="Медиа" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                                </StackPanel>
+                                            </Button>
 
-                                <Button Style="{StaticResource ModernButton}" ToolTip="Отправить фото" Command="{Binding AttachPhotoCommand}" Width="34" Height="36" Padding="0" Margin="0,0,3,0">
+                                            <!-- 2. Файл -->
+                                            <Button Style="{StaticResource ModernTrayItemButton}"
+                                                    Command="{Binding AttachFileCommand}"
+                                                    ToolTip="Отправить документ или файл">
+                                                <StackPanel Orientation="Horizontal" Margin="8,5">
+                                                    <Border Background="#1E26A69A" CornerRadius="8" Width="26" Height="26" Margin="0,0,8,0">
+                                                        <Path Data="{StaticResource IconFile}" Fill="#26A69A" Width="14" Height="14" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                    </Border>
+                                                    <TextBlock Text="Файл" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                                </StackPanel>
+                                            </Button>
 
-                                    <Path Data="{StaticResource IconPhoto}" Fill="{DynamicResource TextSecondaryBrush}" Width="15" Height="15" Stretch="Uniform"/>
+                                            <!-- 3. GIF-анимация -->
+                                            <Button Style="{StaticResource ModernTrayItemButton}"
+                                                    Command="{Binding AttachGifCommand}"
+                                                    ToolTip="Отправить GIF-анимацию">
+                                                <StackPanel Orientation="Horizontal" Margin="8,5">
+                                                    <Border Background="#1EB388FF" CornerRadius="8" Width="26" Height="26" Margin="0,0,8,0">
+                                                        <TextBlock Text="GIF" Foreground="#B388FF" FontSize="10" FontWeight="ExtraBold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                    </Border>
+                                                    <TextBlock Text="GIF" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                                </StackPanel>
+                                            </Button>
 
-                                </Button>
+                                            <!-- Разделитель -->
+                                            <Rectangle Width="1" Height="20" Fill="{DynamicResource BorderBrush}" Margin="4,0"/>
 
-                                <Button Style="{StaticResource ModernButton}" ToolTip="Фоторедактор" Command="{Binding OpenPhotoEditorCommand}" Width="34" Height="36" Padding="0" Margin="0,0,3,0">
-
-                                    <Path Data="{StaticResource IconBrush}" Fill="{DynamicResource AccentBrush}" Width="15" Height="15" Stretch="Uniform"/>
-
-                                </Button>
-
-                                <Button Style="{StaticResource ModernButton}" ToolTip="Отправить файл" Command="{Binding AttachFileCommand}" Width="34" Height="36" Padding="0">
-
-                                    <Path Data="{StaticResource IconFile}" Fill="{DynamicResource TextSecondaryBrush}" Width="15" Height="15" Stretch="Uniform"/>
-
-                                </Button>
-
-                            </StackPanel>
+                                            <!-- 4. Фоторедактор -->
+                                            <Button Style="{StaticResource ModernTrayItemButton}"
+                                                    Command="{Binding OpenPhotoEditorCommand}"
+                                                    ToolTip="Открыть фоторедактор и холст">
+                                                <StackPanel Orientation="Horizontal" Margin="8,5">
+                                                    <Border Background="#1EFFB74D" CornerRadius="8" Width="26" Height="26" Margin="0,0,8,0">
+                                                        <Path Data="{StaticResource IconBrush}" Fill="#FFB74D" Width="13" Height="13" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                    </Border>
+                                                    <TextBlock Text="Редактор" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                                </StackPanel>
+                                            </Button>
+                                        </StackPanel>
+                                    </Border>
+                                </Popup>
+                            </Grid>
 
 
 
@@ -1780,7 +1846,7 @@
                                         <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
                                             <Border Width="68" Height="68" CornerRadius="{Binding AvatarCornerRadius}" Background="{DynamicResource AccentBrush}" Margin="0,0,14,0">
                                                 <Grid>
-                                                    <TextBlock Text="{Binding Settings.MyDisplayName, Converter={StaticResource InitialsConverter}}"
+                                                    <TextBlock Text="{Binding MyDisplayName, Converter={StaticResource InitialsConverter}}"
                                                                Foreground="White" FontSize="22" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"
                                                                Visibility="{Binding Settings.MyAvatarPath, Converter={StaticResource NullToVis}}"/>
 
@@ -1798,18 +1864,16 @@
                                                 <Button Content="🗑️ Сбросить аватар" Command="{Binding ResetMyAvatarCommand}"
                                                         Style="{StaticResource ModernButton}" Padding="12,4" Margin="0,0,0,4"
                                                         Visibility="{Binding Settings.MyAvatarPath, Converter={StaticResource NotNullToVis}}"/>
-                                                <Button Content="📡 Разослать профиль в сеть" Command="{Binding BroadcastProfileCommand}"
-                                                        Style="{StaticResource ModernButton}" Padding="12,4" Margin="0,0,0,4"/>
                                                 <TextBlock Text="Аватар и имя автоматически передаются собеседникам" Foreground="{StaticResource TextMutedBrush}" FontSize="10"/>
                                             </StackPanel>
                                         </StackPanel>
 
                                         <TextBlock Text="Отображаемое имя" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,4"/>
-                                        <TextBox Text="{Binding Settings.MyDisplayName, UpdateSourceTrigger=PropertyChanged}"
+                                        <TextBox Text="{Binding MyDisplayName, UpdateSourceTrigger=PropertyChanged}"
                                                  Style="{StaticResource ModernTextBox}" Margin="0,0,0,12"/>
 
                                         <TextBlock Text="Имя пользователя (@username)" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,4"/>
-                                        <TextBox Text="{Binding Settings.MyUsername, UpdateSourceTrigger=PropertyChanged}"
+                                        <TextBox Text="{Binding MyUsername, UpdateSourceTrigger=PropertyChanged}"
                                                  Style="{StaticResource ModernTextBox}" Margin="0,0,0,12"/>
 
                                         <Border Background="{DynamicResource CardBrush}" CornerRadius="10" Padding="12" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">

@@ -206,6 +206,14 @@ public class MainViewModel : ViewModelBase
     public ICommand AttachFileCommand { get; }
 
     public ICommand AttachPhotoCommand { get; }
+    public ICommand AttachGifCommand { get; }
+
+    private bool _isAttachmentTrayOpen;
+    public bool IsAttachmentTrayOpen
+    {
+        get => _isAttachmentTrayOpen;
+        set => SetProperty(ref _isAttachmentTrayOpen, value);
+    }
 
     public ICommand CancelReplyCommand { get; }
 
@@ -302,6 +310,58 @@ public class MainViewModel : ViewModelBase
     }
 
     // --- Android Parity: Settings Properties & Commands ---
+    private System.Threading.CancellationTokenSource? _profileBroadcastCts;
+
+    public string MyDisplayName
+    {
+        get => Settings.MyDisplayName;
+        set
+        {
+            if (Settings.MyDisplayName != value)
+            {
+                Settings.MyDisplayName = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(Settings));
+                DebounceSaveAndBroadcastProfile();
+            }
+        }
+    }
+
+    public string MyUsername
+    {
+        get => Settings.MyUsername;
+        set
+        {
+            if (Settings.MyUsername != value)
+            {
+                Settings.MyUsername = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(Settings));
+                DebounceSaveAndBroadcastProfile();
+            }
+        }
+    }
+
+    private void DebounceSaveAndBroadcastProfile()
+    {
+        _profileBroadcastCts?.Cancel();
+        _profileBroadcastCts = new System.Threading.CancellationTokenSource();
+        var token = _profileBroadcastCts.Token;
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await Task.Delay(1000, token);
+                if (!token.IsCancellationRequested)
+                {
+                    await _storageService.SaveSettingsAsync(Settings);
+                    await BroadcastMyProfileAndAvatarAsync();
+                }
+            }
+            catch { }
+        }, token);
+    }
+
     public string[] SearchEngines => new[] { "Google", "Яндекс", "DuckDuckGo", "Bing" };
     public string SelectedSearchEngine
     {
@@ -634,7 +694,23 @@ public class MainViewModel : ViewModelBase
     {
         SendMessageCommand = new RelayCommand(async () => await SendTextMessageAsync(), () => HasSelectedChat && !string.IsNullOrWhiteSpace(InputMessageText));
 
-        AttachFileCommand = new RelayCommand(async () => await SendAttachmentAsync(PacketType.File), () => HasSelectedChat);
+        AttachFileCommand = new RelayCommand(async () =>
+        {
+            IsAttachmentTrayOpen = false;
+            await SendAttachmentAsync(PacketType.File);
+        }, () => HasSelectedChat);
+
+        AttachPhotoCommand = new RelayCommand(async () =>
+        {
+            IsAttachmentTrayOpen = false;
+            await SendAttachmentAsync(PacketType.Photo);
+        }, () => HasSelectedChat);
+
+        AttachGifCommand = new RelayCommand(async () =>
+        {
+            IsAttachmentTrayOpen = false;
+            await SendGifAttachmentAsync();
+        }, () => HasSelectedChat);
 
         AttachPhotoCommand = new RelayCommand(async () => await SendAttachmentAsync(PacketType.Photo), () => HasSelectedChat);
 
@@ -1289,6 +1365,7 @@ public class MainViewModel : ViewModelBase
         OpenPhotoEditorCommand = new RelayCommand(async param =>
 
         {
+            IsAttachmentTrayOpen = false;
             string? p = param as string;
 
             if (string.IsNullOrEmpty(p))
@@ -1401,6 +1478,7 @@ public class MainViewModel : ViewModelBase
             }
 
             IsSettingsOpen = false;
+            await BroadcastMyProfileAndAvatarAsync();
 
             StatusMessage = "Настройки успешно сохранены";
 
@@ -1966,6 +2044,63 @@ public async Task SendTextMessageAsync()
         }
 
         await _storageService.SaveChatsAsync(_allChats);
+    }
+
+    public async Task SendGifAttachmentAsync()
+    {
+        var targetChat = SelectedChat;
+        if (targetChat == null) return;
+
+        var dialog = new Microsoft.Win32.OpenFileDialog
+        {
+            Title = "Выберите GIF-анимацию",
+            Filter = "GIF-анимация (*.gif)|*.gif|Все файлы (*.*)|*.*",
+            Multiselect = false
+        };
+
+        if (dialog.ShowDialog() != true) return;
+
+        string targetAddr = !string.IsNullOrWhiteSpace(targetChat.DeviceAddress) ? targetChat.DeviceAddress : targetChat.PeerId;
+        if (targetChat.IsBluetoothDevice && !targetChat.IsOnline && !targetChat.PeerId.StartsWith("peer_prime"))
+        {
+            StatusMessage = $"Подключение к {targetChat.DisplayName}...";
+            await _bluetoothService.ConnectAsync(targetAddr);
+        }
+
+        string filePath = dialog.FileName;
+        string fileName = System.IO.Path.GetFileName(filePath);
+        byte[] fileBytes = await System.IO.File.ReadAllBytesAsync(filePath);
+
+        var singleMsg = new ChatMessage
+        {
+            Sender = Settings.MyDisplayName,
+            Text = fileName,
+            FilePath = filePath,
+            FileName = fileName,
+            FileSizeBytes = fileBytes.Length,
+            Type = PacketType.Photo,
+            IsFromMe = true,
+            FormattedTime = DateTime.Now.ToString("HH:mm")
+        };
+
+        targetChat.Messages.Add(singleMsg);
+        targetChat.LastMessage = "👾 GIF-анимация";
+        targetChat.LastMessageTime = singleMsg.FormattedTime;
+
+        try
+        {
+            byte[] payload = PrimePacket.BuildPhotoPayload(singleMsg.Id, fileBytes, "");
+            await _bluetoothService.SendPacketAsync(targetAddr, PacketType.Photo, payload);
+            singleMsg.IsDelivered = true;
+        }
+        catch (Exception ex)
+        {
+            App.Log($"[Attachment] Failed to send GIF: {ex.Message}");
+            singleMsg.IsDelivered = false;
+            StatusMessage = "Ошибка отправки GIF-анимации";
+        }
+
+        _ = _storageService.SaveChatsAsync(_allChats);
     }
 
     private DateTime _lastTypingSentTime = DateTime.MinValue;
