@@ -112,40 +112,58 @@ public partial class MainWindow : Window
 
     public void AnimateSearch(bool isOpening)
     {
-        if (ProfileHeaderGroup == null || SearchExpandedGroup == null || BtnSearchClose == null || ProfileTransform == null || SearchTransform == null || CloseBtnScale == null)
+        if (LeftSlidingGroup == null || SearchMorphContainer == null || BtnSearchTrigger == null || 
+            SearchActiveControls == null || BtnSearchClose == null || LeftGroupTransform == null || CloseBtnScale == null)
             return;
 
         var ease = new System.Windows.Media.Animation.CubicEase
         {
             EasingMode = isOpening ? System.Windows.Media.Animation.EasingMode.EaseOut : System.Windows.Media.Animation.EasingMode.EaseInOut
         };
-        var duration = TimeSpan.FromMilliseconds(260);
+        var duration = TimeSpan.FromMilliseconds(250);
 
-        // 1. ProfileHeaderGroup slides left and fades out
-        var profileTranslate = new System.Windows.Media.Animation.DoubleAnimation(isOpening ? -320 : 0, duration) { EasingFunction = ease };
-        var profileOpacity = new System.Windows.Media.Animation.DoubleAnimation(isOpening ? 0.0 : 1.0, duration) { EasingFunction = ease };
+        // 1. Left items (Avatar, Name, Device Discovery) slide left and fade out
+        var leftTranslate = new System.Windows.Media.Animation.DoubleAnimation(isOpening ? -300 : 0, duration) { EasingFunction = ease };
+        var leftOpacity = new System.Windows.Media.Animation.DoubleAnimation(isOpening ? 0.0 : 1.0, duration) { EasingFunction = ease };
 
-        ProfileTransform.BeginAnimation(System.Windows.Media.TranslateTransform.XProperty, profileTranslate);
-        ProfileHeaderGroup.BeginAnimation(UIElement.OpacityProperty, profileOpacity);
-        ProfileHeaderGroup.IsHitTestVisible = !isOpening;
+        LeftGroupTransform.BeginAnimation(System.Windows.Media.TranslateTransform.XProperty, leftTranslate);
+        LeftSlidingGroup.BeginAnimation(UIElement.OpacityProperty, leftOpacity);
+        LeftSlidingGroup.IsHitTestVisible = !isOpening;
 
-        // 2. SearchExpandedGroup slides into place from right and expands/fades in
-        var searchTranslate = new System.Windows.Media.Animation.DoubleAnimation(isOpening ? 0 : 60, duration) { EasingFunction = ease };
-        var searchOpacity = new System.Windows.Media.Animation.DoubleAnimation(isOpening ? 1.0 : 0.0, duration) { EasingFunction = ease };
+        // 2. SearchMorphContainer width animation:
+        // Anchored at Right, expands from 34px to the full width of Row 0
+        double fullWidth = 292;
+        if (SearchMorphContainer.Parent is FrameworkElement parent && parent.ActualWidth > 50)
+        {
+            fullWidth = parent.ActualWidth;
+        }
 
-        SearchTransform.BeginAnimation(System.Windows.Media.TranslateTransform.XProperty, searchTranslate);
-        SearchExpandedGroup.BeginAnimation(UIElement.OpacityProperty, searchOpacity);
-        SearchExpandedGroup.IsHitTestVisible = isOpening;
+        var widthAnim = new System.Windows.Media.Animation.DoubleAnimation(isOpening ? fullWidth : 34, duration) { EasingFunction = ease };
+        SearchMorphContainer.BeginAnimation(FrameworkElement.WidthProperty, widthAnim);
 
-        // 3. Close button (✕) fades in on the right with scale
-        var closeOpacity = new System.Windows.Media.Animation.DoubleAnimation(isOpening ? 1.0 : 0.0, TimeSpan.FromMilliseconds(200))
+        // 3. Trigger button fades out when opening, fades in when closing
+        var triggerOpacity = new System.Windows.Media.Animation.DoubleAnimation(isOpening ? 0.0 : 1.0, TimeSpan.FromMilliseconds(160)) { EasingFunction = ease };
+        BtnSearchTrigger.BeginAnimation(UIElement.OpacityProperty, triggerOpacity);
+        BtnSearchTrigger.IsHitTestVisible = !isOpening;
+
+        // 4. Search input controls fade in when opening, fade out when closing
+        var controlsOpacity = new System.Windows.Media.Animation.DoubleAnimation(isOpening ? 1.0 : 0.0, TimeSpan.FromMilliseconds(200))
         {
             BeginTime = isOpening ? TimeSpan.FromMilliseconds(70) : TimeSpan.Zero,
             EasingFunction = ease
         };
-        var closeScale = new System.Windows.Media.Animation.DoubleAnimation(isOpening ? 1.0 : 0.4, TimeSpan.FromMilliseconds(200))
+        SearchActiveControls.BeginAnimation(UIElement.OpacityProperty, controlsOpacity);
+        SearchActiveControls.IsHitTestVisible = isOpening;
+
+        // 5. Close button (✕) fades in on the right with subtle pop scale
+        var closeOpacity = new System.Windows.Media.Animation.DoubleAnimation(isOpening ? 1.0 : 0.0, TimeSpan.FromMilliseconds(180))
         {
-            BeginTime = isOpening ? TimeSpan.FromMilliseconds(70) : TimeSpan.Zero,
+            BeginTime = isOpening ? TimeSpan.FromMilliseconds(100) : TimeSpan.Zero,
+            EasingFunction = ease
+        };
+        var closeScale = new System.Windows.Media.Animation.DoubleAnimation(isOpening ? 1.0 : 0.4, TimeSpan.FromMilliseconds(180))
+        {
+            BeginTime = isOpening ? TimeSpan.FromMilliseconds(100) : TimeSpan.Zero,
             EasingFunction = ease
         };
 

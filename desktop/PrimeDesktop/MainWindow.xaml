@@ -176,26 +176,18 @@
 
                     <!-- Header with Morphing Search Bar -->
                     <Grid Grid.Row="0" Margin="14,14,14,10" Height="40" ClipToBounds="True">
-                        <!-- Profile Header Group (Avatar, Name, Discovery Button, Search Button) -->
-                        <DockPanel x:Name="ProfileHeaderGroup" LastChildFill="True" VerticalAlignment="Center">
+                        <!-- Left Items Group: Avatar + Name + Discovery Button (slides left and fades out) -->
+                        <DockPanel x:Name="LeftSlidingGroup" Margin="0,0,42,0" VerticalAlignment="Center">
                             <DockPanel.RenderTransform>
-                                <TranslateTransform x:Name="ProfileTransform" X="0"/>
+                                <TranslateTransform x:Name="LeftGroupTransform" X="0"/>
                             </DockPanel.RenderTransform>
 
-                            <!-- Right actions: Device Discovery & Search Trigger -->
-                            <StackPanel Orientation="Horizontal" DockPanel.Dock="Right" VerticalAlignment="Center">
-                                <Button x:Name="BtnDeviceDiscovery" Style="{StaticResource ModernButton}" 
-                                        ToolTip="Поиск устройств Prime" Command="{Binding OpenDeviceDiscoveryCommand}" 
-                                        Margin="0,0,4,0" Width="34" Height="34" Padding="0">
-                                    <Path Data="{StaticResource IconRefresh}" Fill="{DynamicResource TextSecondaryBrush}" Width="15" Height="15" Stretch="Uniform"/>
-                                </Button>
-
-                                <Button x:Name="BtnSearchOpen" Style="{StaticResource ModernButton}" 
-                                        ToolTip="Поиск" Command="{Binding OpenSearchCommand}" 
-                                        Width="34" Height="34" Padding="0">
-                                    <Path Data="{StaticResource IconSearch}" Fill="{DynamicResource TextSecondaryBrush}" Width="15" Height="15" Stretch="Uniform"/>
-                                </Button>
-                            </StackPanel>
+                            <!-- Discovery Button ("Поиск устройств Prime") -->
+                            <Button x:Name="BtnDeviceDiscovery" Style="{StaticResource ModernButton}" 
+                                    ToolTip="Поиск устройств Prime" Command="{Binding OpenDeviceDiscoveryCommand}" 
+                                    DockPanel.Dock="Right" Width="34" Height="34" Padding="0">
+                                <Path Data="{StaticResource IconRefresh}" Fill="{DynamicResource TextSecondaryBrush}" Width="15" Height="15" Stretch="Uniform"/>
+                            </Button>
 
                             <!-- Left: Profile Avatar & Name (Click to open settings) -->
                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Cursor="Hand" ToolTip="Настройки профиля">
@@ -227,49 +219,61 @@
                             </StackPanel>
                         </DockPanel>
 
-                        <!-- Expanded Search Bar (Animates into place from right when search is active) -->
-                        <Grid x:Name="SearchExpandedGroup" HorizontalAlignment="Stretch" VerticalAlignment="Center" 
-                              Opacity="0" IsHitTestVisible="False">
-                            <Grid.RenderTransform>
-                                <TranslateTransform x:Name="SearchTransform" X="60"/>
-                            </Grid.RenderTransform>
+                        <!-- Search Morph Bar (Anchored at Right, expands from 34px to full width) -->
+                        <Border x:Name="SearchMorphContainer" HorizontalAlignment="Right" VerticalAlignment="Center" 
+                                Height="36" Width="34" CornerRadius="18"
+                                Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                                ClipToBounds="True">
+                            <Grid>
+                                <!-- Collapsed Button State: Click to expand -->
+                                <Button x:Name="BtnSearchTrigger" Style="{StaticResource ModernButton}" 
+                                        Command="{Binding OpenSearchCommand}" ToolTip="Поиск" 
+                                        Background="Transparent" BorderThickness="0"
+                                        Width="34" Height="34" Padding="0"
+                                        HorizontalAlignment="Right" VerticalAlignment="Center">
+                                    <Path Data="{StaticResource IconSearch}" Fill="{DynamicResource TextSecondaryBrush}" Width="15" Height="15" Stretch="Uniform"/>
+                                </Button>
 
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
+                                <!-- Expanded Bar State: Search Icon, TextBox, Close Button (✕) -->
+                                <Grid x:Name="SearchActiveControls" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" 
+                                      Opacity="0" IsHitTestVisible="False">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="32"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="32"/>
+                                    </Grid.ColumnDefinitions>
 
-                            <!-- Modern Search Input Box -->
-                            <Border Grid.Column="0" Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" 
-                                    BorderThickness="1" CornerRadius="18" Height="36">
-                                <Grid>
-                                    <Path Data="{StaticResource IconSearch}" Fill="{DynamicResource TextSecondaryBrush}" 
-                                          Width="14" Height="14" Stretch="Uniform" HorizontalAlignment="Left" VerticalAlignment="Center" 
-                                          Margin="12,0,0,0" IsHitTestVisible="False"/>
+                                    <!-- Search Icon at left of input -->
+                                    <Path Grid.Column="0" Data="{StaticResource IconSearch}" Fill="{DynamicResource TextSecondaryBrush}" 
+                                          Width="14" Height="14" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False"/>
 
-                                    <TextBox x:Name="SearchTextBox" Style="{StaticResource ModernTextBox}" 
+                                    <!-- Clean Search Input: standard caret, no invisible padding/margins! -->
+                                    <TextBox Grid.Column="1" x:Name="SearchTextBox" 
                                              Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}" 
                                              Background="Transparent" BorderThickness="0"
-                                             Padding="34,6,12,6" FontSize="13" VerticalContentAlignment="Center"
+                                             Foreground="{DynamicResource TextPrimaryBrush}"
+                                             CaretBrush="{DynamicResource TextPrimaryBrush}"
+                                             FontSize="13" VerticalContentAlignment="Center"
+                                             Padding="0"
                                              FocusVisualStyle="{x:Null}">
                                         <TextBox.InputBindings>
                                             <KeyBinding Key="Esc" Command="{Binding CloseSearchCommand}"/>
                                         </TextBox.InputBindings>
                                     </TextBox>
-                                </Grid>
-                            </Border>
 
-                            <!-- Smooth Fade-In Close Button (✕) -->
-                            <Button x:Name="BtnSearchClose" Grid.Column="1" Style="{StaticResource ModernButton}" 
-                                    Command="{Binding CloseSearchCommand}" ToolTip="Закрыть поиск (Esc)" 
-                                    Width="32" Height="32" Margin="6,0,0,0" Padding="0"
-                                    Content="✕" FontSize="13" Foreground="{DynamicResource TextSecondaryBrush}"
-                                    Opacity="0" RenderTransformOrigin="0.5,0.5">
-                                <Button.RenderTransform>
-                                    <ScaleTransform x:Name="CloseBtnScale" ScaleX="0.4" ScaleY="0.4"/>
-                                </Button.RenderTransform>
-                            </Button>
-                        </Grid>
+                                    <!-- Close Button (✕) at right of input -->
+                                    <Button Grid.Column="2" x:Name="BtnSearchClose" Style="{StaticResource ModernButton}" 
+                                            Command="{Binding CloseSearchCommand}" ToolTip="Закрыть поиск (Esc)" 
+                                            Width="28" Height="28" Padding="0"
+                                            Content="✕" FontSize="13" Foreground="{DynamicResource TextSecondaryBrush}"
+                                            Opacity="0" RenderTransformOrigin="0.5,0.5">
+                                        <Button.RenderTransform>
+                                            <ScaleTransform x:Name="CloseBtnScale" ScaleX="0.4" ScaleY="0.4"/>
+                                        </Button.RenderTransform>
+                                    </Button>
+                                </Grid>
+                            </Grid>
+                        </Border>
                     </Grid>
 
                     <!-- Chats List -->
