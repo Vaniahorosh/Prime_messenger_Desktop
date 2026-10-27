@@ -427,6 +427,7 @@ public class MainViewModel : ViewModelBase
     public ICommand ConnectChatCommand { get; }
 
     public ICommand DisconnectChatCommand { get; }
+    public ICommand SyncChatsCommand { get; }
 
     private bool _isReadingMode;
     public bool IsReadingMode
@@ -1116,6 +1117,7 @@ public class MainViewModel : ViewModelBase
         ConnectChatCommand = new RelayCommand(async () => await ConnectSelectedChatAsync(), () => HasSelectedChat);
 
         DisconnectChatCommand = new RelayCommand(async () => await DisconnectSelectedChatAsync(), () => HasSelectedChat);
+        SyncChatsCommand = new RelayCommand(async () => await RequestChatsSyncAsync());
         ToggleReadingModeCommand = new RelayCommand(async () =>
         {
             if (SelectedChat == null) return;
@@ -2777,6 +2779,31 @@ public async Task SendTextMessageAsync()
         }
     }
 
+    public async Task RequestChatsSyncAsync()
+    {
+        try
+        {
+            StatusMessage = "Синхронизация чатов...";
+            var targetChats = _allChats.Where(c => _bluetoothService.IsConnected(c.DeviceAddress) || _companionService.IsConnected(c.DeviceAddress) || c.IsOnline).ToList();
+            if (targetChats.Count == 0)
+            {
+                StatusMessage = "Нет активных подключений для синхронизации";
+                return;
+            }
+            foreach (var c in targetChats)
+            {
+                string addr = !string.IsNullOrWhiteSpace(c.DeviceAddress) ? c.DeviceAddress : c.PeerId;
+                await SendNetworkPacketAsync(addr, PacketType.SyncChats, System.Text.Encoding.UTF8.GetBytes("REQUEST_SYNC"));
+                await SendNetworkPacketAsync(addr, PacketType.Presence, System.Text.Encoding.UTF8.GetBytes("ONLINE"));
+            }
+            StatusMessage = "Запрос синхронизации отправлен";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Ошибка синхронизации: {ex.Message}";
+        }
+    }
+
     private async Task ConfirmAndDeleteChatAsync(ChatItem chat)
     {
         var result = MessageBox.Show(
@@ -3068,18 +3095,30 @@ public async Task SendTextMessageAsync()
         }
     }
 
+    public async Task SendNetworkPacketAsync(string targetAddressOrPeer, PacketType type, byte[] payload)
+    {
+        if (_companionService.IsConnected(targetAddressOrPeer))
+        {
+            await _companionService.SendPacketAsync(targetAddressOrPeer, type, payload);
+        }
+        else
+        {
+            await _bluetoothService.SendPacketAsync(targetAddressOrPeer, type, payload);
+        }
+    }
+
     public async Task BroadcastMyProfileAndAvatarAsync()
     {
         try
         {
-            var onlineChats = _allChats.Where(c => c.IsOnline).ToList();
-            if (onlineChats.Count == 0) return;
+            var targetChats = _allChats.Where(c => c.IsOnline || _bluetoothService.IsConnected(c.DeviceAddress) || _companionService.IsConnected(c.DeviceAddress)).ToList();
+            if (targetChats.Count == 0) return;
 
             byte[] profilePayload = PrimePacket.BuildProfileUpdatePayload(Settings.MyDisplayName, Settings.MyUsername);
-            foreach (var chat in onlineChats)
+            foreach (var chat in targetChats)
             {
                 string addr = !string.IsNullOrWhiteSpace(chat.DeviceAddress) ? chat.DeviceAddress : chat.PeerId;
-                await _bluetoothService.SendPacketAsync(addr, PacketType.ProfileUpdate, profilePayload);
+                await SendNetworkPacketAsync(addr, PacketType.ProfileUpdate, profilePayload);
             }
 
             if (!string.IsNullOrWhiteSpace(Settings.MyAvatarPath) && File.Exists(Settings.MyAvatarPath))
@@ -3087,10 +3126,10 @@ public async Task SendTextMessageAsync()
                 byte[] avatarBytes = await File.ReadAllBytesAsync(Settings.MyAvatarPath);
                 if (avatarBytes.Length > 0)
                 {
-                    foreach (var chat in onlineChats)
+                    foreach (var chat in targetChats)
                     {
                         string addr = !string.IsNullOrWhiteSpace(chat.DeviceAddress) ? chat.DeviceAddress : chat.PeerId;
-                        await _bluetoothService.SendPacketAsync(addr, PacketType.Avatar, avatarBytes);
+                        await SendNetworkPacketAsync(addr, PacketType.Avatar, avatarBytes);
                         App.Log($"[Avatar] Sent my avatar ({avatarBytes.Length} bytes) to '{chat.DisplayName}' ({addr})");
                     }
                 }
@@ -3116,8 +3155,14 @@ public async Task SendTextMessageAsync()
                     return;
                 }
 
-                string peerId = _bluetoothService.ResolvePeerId(address);
                 string rawHw = _bluetoothService.ResolveHardwareAddress(address);
+                if (IsDeviceForgotten(address) || IsDeviceForgotten(rawHw) || IsDeviceForgotten(name))
+                {
+                    App.Log($"[Connection] Ignoring connection from forgotten device '{name}' ({address})");
+                    return;
+                }
+
+                string peerId = _bluetoothService.ResolvePeerId(address);
                 string initialName = !IsStatusKeyword(name)
                     ? DeviceAnonymizer.SanitizeDisplayName(name, rawHw)
                     : DeviceAnonymizer.SanitizeDisplayName(null, rawHw);
@@ -3160,8 +3205,19 @@ public async Task SendTextMessageAsync()
             {
                 _ = Task.Run(async () =>
                 {
-                    await Task.Delay(600);
+                    await Task.Delay(400);
+                    string target = !string.IsNullOrWhiteSpace(chat.DeviceAddress) ? chat.DeviceAddress : chat.PeerId;
+
+                    // 1. Send Presence ONLINE
+                    try { await SendNetworkPacketAsync(target, PacketType.Presence, System.Text.Encoding.UTF8.GetBytes("ONLINE")); } catch { }
+                    await Task.Delay(150);
+
+                    // 2. Broadcast Profile & Avatar
                     await BroadcastMyProfileAndAvatarAsync();
+                    await Task.Delay(150);
+
+                    // 3. Request full chat sync from peer
+                    try { await SendNetworkPacketAsync(target, PacketType.SyncChats, System.Text.Encoding.UTF8.GetBytes("REQUEST_SYNC")); } catch { }
                 });
             }
         });
@@ -3183,8 +3239,13 @@ public async Task SendTextMessageAsync()
                     return;
                 }
 
-                string peerId = _bluetoothService.ResolvePeerId(fromAddress);
                 string rawHw = _bluetoothService.ResolveHardwareAddress(fromAddress);
+                if (IsDeviceForgotten(fromAddress) || IsDeviceForgotten(rawHw))
+                {
+                    return;
+                }
+
+                string peerId = _bluetoothService.ResolvePeerId(fromAddress);
 
                 chat = new ChatItem
                 {
@@ -3598,17 +3659,33 @@ public async Task SendTextMessageAsync()
                 case PacketType.SyncChats:
                     try
                     {
-                        string syncJson = System.Text.Encoding.UTF8.GetString(payload);
+                        string syncJson = System.Text.Encoding.UTF8.GetString(payload).Trim();
                         if (!string.IsNullOrWhiteSpace(syncJson))
                         {
+                            if (syncJson == "REQUEST_SYNC")
+                            {
+                                _ = Task.Run(async () =>
+                                {
+                                    try
+                                    {
+                                        string json = System.Text.Json.JsonSerializer.Serialize(_allChats.ToList());
+                                        string addr = !string.IsNullOrWhiteSpace(chat.DeviceAddress) ? chat.DeviceAddress : chat.PeerId;
+                                        await SendNetworkPacketAsync(addr, PacketType.SyncChats, System.Text.Encoding.UTF8.GetBytes(json));
+                                    }
+                                    catch { }
+                                });
+                                break;
+                            }
+
                             var syncedList = System.Text.Json.JsonSerializer.Deserialize<System.Collections.Generic.List<ChatItem>>(syncJson);
                             if (syncedList != null && syncedList.Count > 0)
                             {
                                 foreach (var syncChat in syncedList)
                                 {
-                                    var existing = _allChats.FirstOrDefault(c =>
-                                        (!string.IsNullOrEmpty(c.DeviceAddress) && c.DeviceAddress.Equals(syncChat.DeviceAddress, StringComparison.OrdinalIgnoreCase)) ||
-                                        (!string.IsNullOrEmpty(c.PeerId) && c.PeerId.Equals(syncChat.PeerId, StringComparison.OrdinalIgnoreCase)));
+                                    if (IsDeviceForgotten(syncChat.DeviceAddress) || IsDeviceForgotten(syncChat.PeerId)) continue;
+                                    var existing = FindChatByAddressOrPeer(syncChat.PeerId) ?? 
+                                                   FindChatByAddressOrPeer(syncChat.DeviceAddress) ?? 
+                                                   FindChatByAddressOrPeer(null, syncChat.DisplayName);
                                     if (existing != null)
                                     {
                                         foreach (var m in syncChat.Messages)
@@ -3627,6 +3704,7 @@ public async Task SendTextMessageAsync()
                                                 existing.LastMessageTime = last.FormattedTime;
                                             }
                                         }
+                                        if (syncChat.IsOnline) existing.IsOnline = true;
                                     }
                                     else
                                     {
