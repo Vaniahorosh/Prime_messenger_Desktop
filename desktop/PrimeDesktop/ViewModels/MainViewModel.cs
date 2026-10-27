@@ -197,12 +197,50 @@ public class MainViewModel : ViewModelBase
     }
 
     public AppSettings Settings
-
     {
         get => _settings;
+        set
+        {
+            if (SetProperty(ref _settings, value))
+            {
+                if (_settings != null)
+                {
+                    _settings.PropertyChanged += (s, e) => CheckForPendingSettingsChanges();
+                }
+            }
+        }
+    }
 
-        set => SetProperty(ref _settings, value);
+    private string _initialSettingsSnapshot = "";
+    private bool _hasPendingSettingsChanges;
+    public bool HasPendingSettingsChanges
+    {
+        get => _hasPendingSettingsChanges;
+        set => SetProperty(ref _hasPendingSettingsChanges, value);
+    }
 
+    public void CaptureSettingsSnapshot()
+    {
+        _initialSettingsSnapshot = GetSettingsSnapshot();
+        HasPendingSettingsChanges = false;
+    }
+
+    public void CheckForPendingSettingsChanges()
+    {
+        string current = GetSettingsSnapshot();
+        HasPendingSettingsChanges = !string.Equals(_initialSettingsSnapshot, current, StringComparison.Ordinal);
+    }
+
+    private string GetSettingsSnapshot()
+    {
+        try
+        {
+            return System.Text.Json.JsonSerializer.Serialize(_settings);
+        }
+        catch
+        {
+            return "";
+        }
     }
 
     // Commands
@@ -714,6 +752,7 @@ public class MainViewModel : ViewModelBase
     public MainViewModel()
 
     {
+        _settings.PropertyChanged += (s, e) => CheckForPendingSettingsChanges();
         SendMessageCommand = new RelayCommand(async () => await SendTextMessageAsync(), () => HasSelectedChat && !string.IsNullOrWhiteSpace(InputMessageText));
 
         AttachFileCommand = new RelayCommand(async () =>
@@ -1526,8 +1565,7 @@ public class MainViewModel : ViewModelBase
 
             }
 
-            IsSettingsOpen = false;
-            Services.WindowManager.CloseSettings();
+            CaptureSettingsSnapshot();
             await BroadcastMyProfileAndAvatarAsync();
 
             StatusMessage = "Настройки успешно сохранены";

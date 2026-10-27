@@ -22,6 +22,35 @@
         <conv:EqualityToVisibilityConverter x:Key="EqualityToVis"/>
         <conv:NonLockingImageConverter x:Key="NonLockingImgConverter"/>
         <conv:InitialsConverter x:Key="InitialsConverter"/>
+        <Style x:Key="SettingsNavTabButton" TargetType="Button">
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+            <Setter Property="Padding" Value="14,9"/>
+            <Setter Property="Margin" Value="0,2"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" Background="{TemplateBinding Background}"
+                                CornerRadius="8"
+                                Padding="{TemplateBinding Padding}"
+                                SnapsToDevicePixels="True">
+                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                              VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource CardBrush}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </Window.Resources>
 
     <Grid>
@@ -88,29 +117,89 @@
             <!-- Left Navigation Strip (Exact 6 Android Tabs) -->
             <Border Grid.Column="0" Background="{DynamicResource BackgroundBrush}" CornerRadius="12" Padding="6" Margin="0,0,12,0" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
                 <StackPanel>
-                    <Button Content="👤 Профиль" Style="{StaticResource ModernButton}" HorizontalContentAlignment="Left"
-                            Padding="12,9" Margin="0,2" BorderThickness="0"
-                            Command="{Binding SelectSettingsTabCommand}" CommandParameter="0"/>
+                    <Button Content="👤 Профиль" Command="{Binding SelectSettingsTabCommand}" CommandParameter="0">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource SettingsNavTabButton}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding SelectedSettingsTab}" Value="0">
+                                        <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
+                                        <Setter Property="Foreground" Value="White"/>
+                                        <Setter Property="FontWeight" Value="SemiBold"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
 
-                    <Button Content="🎨 Оформление" Style="{StaticResource ModernButton}" HorizontalContentAlignment="Left"
-                            Padding="12,9" Margin="0,2" BorderThickness="0"
-                            Command="{Binding SelectSettingsTabCommand}" CommandParameter="1"/>
+                    <Button Content="🎨 Оформление" Command="{Binding SelectSettingsTabCommand}" CommandParameter="1">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource SettingsNavTabButton}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding SelectedSettingsTab}" Value="1">
+                                        <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
+                                        <Setter Property="Foreground" Value="White"/>
+                                        <Setter Property="FontWeight" Value="SemiBold"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
 
-                    <Button Content="💬 В чате" Style="{StaticResource ModernButton}" HorizontalContentAlignment="Left"
-                            Padding="12,9" Margin="0,2" BorderThickness="0"
-                            Command="{Binding SelectSettingsTabCommand}" CommandParameter="2"/>
+                    <Button Content="💬 В чате" Command="{Binding SelectSettingsTabCommand}" CommandParameter="2">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource SettingsNavTabButton}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding SelectedSettingsTab}" Value="2">
+                                        <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
+                                        <Setter Property="Foreground" Value="White"/>
+                                        <Setter Property="FontWeight" Value="SemiBold"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
 
-                    <Button Content="🌐 Браузер" Style="{StaticResource ModernButton}" HorizontalContentAlignment="Left"
-                            Padding="12,9" Margin="0,2" BorderThickness="0"
-                            Command="{Binding SelectSettingsTabCommand}" CommandParameter="3"/>
+                    <Button Content="🌐 Браузер" Command="{Binding SelectSettingsTabCommand}" CommandParameter="3">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource SettingsNavTabButton}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding SelectedSettingsTab}" Value="3">
+                                        <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
+                                        <Setter Property="Foreground" Value="White"/>
+                                        <Setter Property="FontWeight" Value="SemiBold"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
 
-                    <Button Content="💾 Данные и память" Style="{StaticResource ModernButton}" HorizontalContentAlignment="Left"
-                            Padding="12,9" Margin="0,2" BorderThickness="0"
-                            Command="{Binding SelectSettingsTabCommand}" CommandParameter="4"/>
+                    <Button Content="💾 Данные и память" Command="{Binding SelectSettingsTabCommand}" CommandParameter="4">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource SettingsNavTabButton}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding SelectedSettingsTab}" Value="4">
+                                        <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
+                                        <Setter Property="Foreground" Value="White"/>
+                                        <Setter Property="FontWeight" Value="SemiBold"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
 
-                    <Button Content="ℹ️ Информация" Style="{StaticResource ModernButton}" HorizontalContentAlignment="Left"
-                            Padding="12,9" Margin="0,2" BorderThickness="0"
-                            Command="{Binding SelectSettingsTabCommand}" CommandParameter="5"/>
+                    <Button Content="ℹ️ Информация" Command="{Binding SelectSettingsTabCommand}" CommandParameter="5">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource SettingsNavTabButton}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding SelectedSettingsTab}" Value="5">
+                                        <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
+                                        <Setter Property="Foreground" Value="White"/>
+                                        <Setter Property="FontWeight" Value="SemiBold"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
                 </StackPanel>
             </Border>
 
@@ -455,7 +544,7 @@
         <Border Grid.Row="2" Background="{DynamicResource HeaderBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0" Padding="16,10">
             <DockPanel>
                 <Button Content="Закрыть" Style="{StaticResource ModernButton}" Click="BtnClose_Click" Padding="18,7"/>
-                <Button Content="✓ Сохранить настройки" Style="{StaticResource AccentButton}" Command="{Binding SaveSettingsCommand}" DockPanel.Dock="Right" Padding="20,7"/>
+                <Button Content="Применить" Style="{StaticResource AccentButton}" Command="{Binding SaveSettingsCommand}" DockPanel.Dock="Right" Padding="20,7" Visibility="{Binding HasPendingSettingsChanges, Converter={StaticResource BoolToVis}}"/>
             </DockPanel>
         </Border>
     </Grid>

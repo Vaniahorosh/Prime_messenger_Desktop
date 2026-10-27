@@ -35,6 +35,7 @@ public static class WindowManager
                 vm.IsSettingsOpen = false;
             };
 
+            vm.CaptureSettingsSnapshot();
             vm.IsSettingsOpen = true;
             _settingsWindow.Show();
             _settingsWindow.Activate();
