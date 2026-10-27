@@ -866,6 +866,8 @@ public class MainViewModel : ViewModelBase
     public ICommand ToggleVoiceSpeedCommand { get; }
     public ICommand TestNotificationSoundCommand { get; }
     public ICommand ToggleMuteChatCommand { get; }
+    public ICommand ClearChatMessagesCommand { get; }
+    public ICommand CopyChatInfoCommand { get; }
 
     private bool _isPhotoViewerOpen;
 
@@ -1584,6 +1586,36 @@ public class MainViewModel : ViewModelBase
             {
                 SelectedChat.IsMuted = !SelectedChat.IsMuted;
                 _ = _storageService.SaveChatsAsync(_allChats);
+            }
+        });
+
+        ClearChatMessagesCommand = new RelayCommand(async param =>
+        {
+            var chat = param as ChatItem ?? SelectedChat;
+            if (chat != null)
+            {
+                chat.Messages.Clear();
+                chat.LastMessage = "История сообщений очищена";
+                await _storageService.SaveChatsAsync(_allChats);
+                StatusMessage = $"История чата '{chat.DisplayName}' очищена";
+            }
+        });
+
+        CopyChatInfoCommand = new RelayCommand(param =>
+        {
+            var chat = param as ChatItem ?? SelectedChat;
+            if (chat != null)
+            {
+                string info = !string.IsNullOrEmpty(chat.Username) ? $"@{chat.Username}" : (!string.IsNullOrEmpty(chat.DeviceAddress) ? chat.DeviceAddress : chat.PeerId);
+                if (!string.IsNullOrEmpty(info))
+                {
+                    try
+                    {
+                        Clipboard.SetText(info);
+                        StatusMessage = $"Скопировано в буфер: {info}";
+                    }
+                    catch { }
+                }
             }
         });
 

@@ -400,6 +400,16 @@ public partial class MainWindow : Window
         }
     }
 
+    private void BtnChatHeaderMore_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement fe && fe.ContextMenu != null)
+        {
+            fe.ContextMenu.PlacementTarget = fe;
+            fe.ContextMenu.Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom;
+            fe.ContextMenu.IsOpen = true;
+        }
+    }
+
     private void ProfileDrawer_SizeChanged(object sender, SizeChangedEventArgs e)
     {
         if (DataContext is MainViewModel vm && e.NewSize.Width > 0)

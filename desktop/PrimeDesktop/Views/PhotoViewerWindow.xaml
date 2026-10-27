@@ -1,6 +1,7 @@
 <Window x:Class="PrimeDesktop.Views.PhotoViewerWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:PrimeDesktop.Controls"
         Title="Просмотр медиа — Прайм"
         Icon="../Assets/prime.ico"
         Height="760" Width="1060"
@@ -199,7 +200,7 @@
                         CornerRadius="10" Padding="12,8" Panel.ZIndex="10">
                     <StackPanel HorizontalAlignment="Right">
                         <TextBlock x:Name="TxtInfoSender" Text="Отправитель" Foreground="White" FontWeight="SemiBold" FontSize="12.5" HorizontalAlignment="Right"/>
-                        <TextBlock x:Name="TxtInfoCounter" Text="Фото 1 из 1" Foreground="#AAFFFFFF" FontSize="11" Margin="0,2,0,0" HorizontalAlignment="Right"/>
+                        <controls:AnimatedTextTransitionControl x:Name="TxtInfoCounter" Text="Фото 1 из 1" Foreground="#AAFFFFFF" FontSize="11" Margin="0,2,0,0" HorizontalAlignment="Right"/>
                     </StackPanel>
                 </Border>
             </Grid>

@@ -52,6 +52,9 @@ public class SystemTrayService : IDisposable
     [DllImport("shell32.dll", CharSet = CharSet.Auto)]
     private static extern IntPtr ExtractIcon(IntPtr hInst, string lpszExeFileName, int nIconIndex);
 
+    [DllImport("user32.dll")]
+    private static extern bool SetForegroundWindow(IntPtr hWnd);
+
     private readonly Window _window;
     private IntPtr _hwnd;
     private bool _isAdded;
@@ -142,7 +145,11 @@ public class SystemTrayService : IDisposable
 
     private void ShowContextMenu()
     {
-        var menu = new ContextMenu();
+        if (_hwnd != IntPtr.Zero) SetForegroundWindow(_hwnd);
+        var menu = new ContextMenu
+        {
+            Placement = System.Windows.Controls.Primitives.PlacementMode.MousePoint
+        };
         if (Application.Current.TryFindResource("ModernContextMenu") is Style cmStyle)
         {
             menu.Style = cmStyle;
