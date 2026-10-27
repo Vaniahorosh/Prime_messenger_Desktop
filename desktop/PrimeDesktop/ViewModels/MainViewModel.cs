@@ -1739,10 +1739,14 @@ public class MainViewModel : ViewModelBase
                 var cleanChats = new List<ChatItem>();
                 foreach (var c in chats)
                 {
-                    // Filter out corrupt / error-named chats
-                    if (IsStatusKeyword(c.DisplayName) || c.DisplayName == "Ошибка подключения" || c.DisplayName == "Установка связи...")
+                    // Filter out corrupt / error-named chats and obsolete system chat
+                    if (IsStatusKeyword(c.DisplayName) || 
+                        c.DisplayName == "Ошибка подключения" || 
+                        c.DisplayName == "Установка связи..." ||
+                        c.PeerId.Equals("peer_prime_support", StringComparison.OrdinalIgnoreCase) ||
+                        c.DisplayName.Equals("Команда Прайм", StringComparison.OrdinalIgnoreCase))
                     {
-                        App.Log($"[Init] Skipping corrupt saved chat '{c.DisplayName}' ({c.PeerId})");
+                        App.Log($"[Init] Skipping corrupt or removed chat '{c.DisplayName}' ({c.PeerId})");
                         continue;
                     }
 
@@ -1794,33 +1798,6 @@ public class MainViewModel : ViewModelBase
                 if (_allChats.Count != chats.Count)
                 {
                     _ = _storageService.SaveChatsAsync(_allChats);
-                }
-
-                if (_allChats.Count == 0 && !_storageService.HasChatsFile)
-                {
-                    var welcomeChat = new ChatItem
-                    {
-                        DisplayName = "Команда Прайм",
-                        Username = "prime_support",
-                        PeerId = "peer_prime_support",
-                        LastMessage = "Всё нужное без лишнего!",
-                        LastMessageTime = DateTime.Now.ToString("HH:mm"),
-                        IsOnline = true
-                    };
-
-                    welcomeChat.Messages.Add(new ChatMessage
-                    {
-                        Sender = "Команда Прайм",
-                        Text = @"Добро пожаловать в компьютерную версию мессенджера «Прайм»!
-
-Всё нужное без лишнего!
-
-Поддерживается прямое защищенное общение по Bluetooth без серверов.",
-                        IsFromMe = false,
-                        FormattedTime = DateTime.Now.ToString("HH:mm")
-                    });
-
-                    _allChats.Add(welcomeChat);
                 }
 
                 ApplySearchFilter();
