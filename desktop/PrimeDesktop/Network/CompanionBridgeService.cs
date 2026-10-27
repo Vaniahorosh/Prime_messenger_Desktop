@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 
 using System.Collections.Concurrent;
 
@@ -213,7 +213,28 @@ public class CompanionBridgeService : IPrimeNetworkService
 
     }
 
-    public void RegisterPeerAddress(string peerId, string rawHardwareAddress) { }
+    public void RegisterPeerAddress(string peerId, string rawHardwareAddress)
+    {
+        if (!string.IsNullOrWhiteSpace(peerId) && !string.IsNullOrWhiteSpace(rawHardwareAddress))
+        {
+            _peerToIp[peerId] = rawHardwareAddress.Trim();
+            _ipToPeer[rawHardwareAddress.Trim()] = peerId;
+        }
+    }
+
+    public string ResolveHardwareAddress(string peerIdOrAddress)
+    {
+        if (string.IsNullOrWhiteSpace(peerIdOrAddress)) return string.Empty;
+        return _peerToIp.TryGetValue(peerIdOrAddress, out var ip) ? ip : peerIdOrAddress;
+    }
+
+    public string ResolvePeerId(string hardwareAddressOrPeerId)
+    {
+        if (string.IsNullOrWhiteSpace(hardwareAddressOrPeerId)) return string.Empty;
+        if (hardwareAddressOrPeerId.StartsWith("peer_", StringComparison.OrdinalIgnoreCase))
+            return hardwareAddressOrPeerId;
+        return _ipToPeer.TryGetValue(hardwareAddressOrPeerId, out var peer) ? peer : GetOrCreatePeerId(hardwareAddressOrPeerId);
+    }
 
     public async Task<bool> ConnectAsync(string peerIdOrIp)
 

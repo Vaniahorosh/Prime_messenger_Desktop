@@ -18,6 +18,8 @@ public interface IPrimeNetworkService
     Task DisconnectAsync(string deviceAddressOrIp);
     void ForgetDevice(string deviceAddressOrIp);
     void RegisterPeerAddress(string peerId, string rawHardwareAddress);
+    string ResolveHardwareAddress(string peerIdOrAddress);
+    string ResolvePeerId(string hardwareAddressOrPeerId);
 
     Task SendPacketAsync(string targetAddress, PacketType type, byte[] payload);
     Task<List<ChatItem>> DiscoverDevicesAsync();

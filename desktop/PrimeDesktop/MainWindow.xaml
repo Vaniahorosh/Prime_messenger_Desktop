@@ -1172,19 +1172,7 @@
 
                                    FontSize="16" FontWeight="SemiBold"
 
-                                   HorizontalAlignment="Center" Margin="0,0,0,8"/>
-
-                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-
-                            <Path Data="{StaticResource IconLock}" Fill="{DynamicResource AccentBrush}"
-
-                                  Width="12" Height="12" Stretch="Uniform" Margin="0,0,6,0" VerticalAlignment="Center"/>
-
-                            <TextBlock Text="Сквозное локальное шифрование сообщений"
-
-                                       Foreground="{StaticResource TextMutedBrush}" FontSize="12"/>
-
-                        </StackPanel>
+                                   HorizontalAlignment="Center" Margin="0"/>
 
                     </StackPanel>
 

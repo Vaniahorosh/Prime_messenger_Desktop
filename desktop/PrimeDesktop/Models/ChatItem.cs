@@ -25,6 +25,7 @@ public class ChatItem : INotifyPropertyChanged
     private string? _avatarPath;
     private DeviceConnectionState _connectionState = DeviceConnectionState.Disconnected;
     private string _peerId = string.Empty;
+    private string _deviceAddress = string.Empty;
 
     public string Id { get; set; } = Guid.NewGuid().ToString();
 
@@ -38,12 +39,12 @@ public class ChatItem : INotifyPropertyChanged
     }
 
     /// <summary>
-    /// Backward-compatibility alias. Always returns opaque PeerId.
+    /// Hardware device address or network IP used for physical connection.
     /// </summary>
     public string DeviceAddress
     {
-        get => _peerId;
-        set => _peerId = value;
+        get => !string.IsNullOrEmpty(_deviceAddress) ? _deviceAddress : _peerId;
+        set => SetField(ref _deviceAddress, value);
     }
 
     public bool IsBluetoothDevice { get; set; } = true;

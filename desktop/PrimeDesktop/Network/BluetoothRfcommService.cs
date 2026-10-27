@@ -90,6 +90,24 @@ public class BluetoothRfcommService : IPrimeNetworkService
         }
     }
 
+    public string ResolvePeerId(string hardwareAddressOrPeerId)
+    {
+        if (string.IsNullOrWhiteSpace(hardwareAddressOrPeerId)) return string.Empty;
+        if (hardwareAddressOrPeerId.StartsWith("peer_", StringComparison.OrdinalIgnoreCase))
+            return hardwareAddressOrPeerId;
+
+        string norm = NormalizeMacAddress(hardwareAddressOrPeerId);
+        if (_hardwareAddressToPeer.TryGetValue(norm, out var peerId))
+        {
+            return peerId;
+        }
+        if (_hardwareAddressToPeer.TryGetValue(hardwareAddressOrPeerId, out var peerId2))
+        {
+            return peerId2;
+        }
+        return GetOrCreatePeerId(norm);
+    }
+
     private string GetOrCreatePeerId(string rawHardwareAddress)
     {
         string norm = NormalizeMacAddress(rawHardwareAddress);

@@ -188,12 +188,138 @@ public class MainViewModel : ViewModelBase
     }
 
     public string StatusMessage
-
     {
         get => _statusMessage;
+        set => SetProperty(ref _statusMessage, SanitizeStatusText(value));
+    }
 
-        set => SetProperty(ref _statusMessage, value);
+    public string SanitizeStatusText(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return string.Empty;
+        return DeviceAnonymizer.MaskMacAddresses(text, id =>
+        {
+            var chat = FindChatByAddressOrPeer(id);
+            if (chat != null && !DeviceAnonymizer.IsHardwareIdentifier(chat.DisplayName))
+            {
+                return chat.DisplayName;
+            }
+            return null;
+        });
+    }
 
+    public ChatItem? FindChatByAddressOrPeer(string? addressOrPeer, string? displayName = null)
+    {
+        if (string.IsNullOrWhiteSpace(addressOrPeer) && string.IsNullOrWhiteSpace(displayName))
+            return null;
+
+        string norm = !string.IsNullOrWhiteSpace(addressOrPeer)
+            ? BluetoothRfcommService.NormalizeMacAddress(addressOrPeer)
+            : string.Empty;
+
+        string resolvedHw = !string.IsNullOrWhiteSpace(addressOrPeer)
+            ? _bluetoothService.ResolveHardwareAddress(addressOrPeer)
+            : string.Empty;
+        string normResolvedHw = !string.IsNullOrWhiteSpace(resolvedHw)
+            ? BluetoothRfcommService.NormalizeMacAddress(resolvedHw)
+            : string.Empty;
+
+        string resolvedPeer = !string.IsNullOrWhiteSpace(addressOrPeer)
+            ? _bluetoothService.ResolvePeerId(addressOrPeer)
+            : string.Empty;
+
+        foreach (var chat in _allChats)
+        {
+            // 1. Exact PeerId match
+            if (!string.IsNullOrWhiteSpace(addressOrPeer) &&
+                chat.PeerId.Equals(addressOrPeer, StringComparison.OrdinalIgnoreCase))
+                return chat;
+
+            // 2. Exact DeviceAddress match
+            if (!string.IsNullOrWhiteSpace(addressOrPeer) &&
+                !string.IsNullOrWhiteSpace(chat.DeviceAddress) &&
+                chat.DeviceAddress.Equals(addressOrPeer, StringComparison.OrdinalIgnoreCase))
+                return chat;
+
+            // 3. Resolved PeerId match
+            if (!string.IsNullOrWhiteSpace(resolvedPeer) &&
+                chat.PeerId.Equals(resolvedPeer, StringComparison.OrdinalIgnoreCase))
+                return chat;
+
+            // 4. Normalized MAC match with chat.DeviceAddress or chat.PeerId
+            if (!string.IsNullOrWhiteSpace(norm))
+            {
+                if (!string.IsNullOrWhiteSpace(chat.DeviceAddress) &&
+                    BluetoothRfcommService.NormalizeMacAddress(chat.DeviceAddress).Equals(norm, StringComparison.OrdinalIgnoreCase))
+                    return chat;
+
+                if (BluetoothRfcommService.NormalizeMacAddress(chat.PeerId).Equals(norm, StringComparison.OrdinalIgnoreCase))
+                    return chat;
+            }
+
+            // 5. Resolved hardware address match
+            if (!string.IsNullOrWhiteSpace(normResolvedHw))
+            {
+                if (!string.IsNullOrWhiteSpace(chat.DeviceAddress) &&
+                    BluetoothRfcommService.NormalizeMacAddress(chat.DeviceAddress).Equals(normResolvedHw, StringComparison.OrdinalIgnoreCase))
+                    return chat;
+
+                string chatResolvedHw = BluetoothRfcommService.NormalizeMacAddress(_bluetoothService.ResolveHardwareAddress(chat.PeerId));
+                if (!string.IsNullOrWhiteSpace(chatResolvedHw) && chatResolvedHw.Equals(normResolvedHw, StringComparison.OrdinalIgnoreCase))
+                    return chat;
+            }
+
+            // 6. Non-generic display name match
+            if (!string.IsNullOrWhiteSpace(displayName) &&
+                !IsStatusKeyword(displayName) &&
+                !displayName.StartsWith("Собеседник") &&
+                chat.DisplayName.Equals(displayName, StringComparison.OrdinalIgnoreCase))
+            {
+                return chat;
+            }
+        }
+
+        return null;
+    }
+
+    private void MergeChats(ChatItem target, ChatItem source)
+    {
+        if (target == null || source == null || ReferenceEquals(target, source)) return;
+
+        foreach (var msg in source.Messages)
+        {
+            if (!target.Messages.Any(m => m.Id == msg.Id || 
+                (!string.IsNullOrEmpty(m.Text) && m.Text == msg.Text && m.FormattedTime == msg.FormattedTime && m.IsFromMe == msg.IsFromMe)))
+            {
+                target.Messages.Add(msg);
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(source.DeviceAddress) && (string.IsNullOrWhiteSpace(target.DeviceAddress) || target.DeviceAddress == target.PeerId))
+        {
+            target.DeviceAddress = source.DeviceAddress;
+        }
+
+        if (!string.IsNullOrWhiteSpace(target.DeviceAddress) && !string.IsNullOrWhiteSpace(target.PeerId))
+        {
+            _bluetoothService.RegisterPeerAddress(target.PeerId, target.DeviceAddress);
+        }
+
+        if (!target.HasAvatar && source.HasAvatar)
+        {
+            target.AvatarPath = source.AvatarPath;
+        }
+
+        if ((DeviceAnonymizer.IsHardwareIdentifier(target.DisplayName) || target.DisplayName.StartsWith("Собеседник")) &&
+            !string.IsNullOrWhiteSpace(source.DisplayName) && !DeviceAnonymizer.IsHardwareIdentifier(source.DisplayName) && !source.DisplayName.StartsWith("Собеседник"))
+        {
+            target.DisplayName = source.DisplayName;
+        }
+
+        if (string.IsNullOrWhiteSpace(target.LastMessage) && !string.IsNullOrWhiteSpace(source.LastMessage))
+        {
+            target.LastMessage = source.LastMessage;
+            target.LastMessageTime = source.LastMessageTime;
+        }
     }
 
     public AppSettings Settings
@@ -1361,30 +1487,23 @@ public class MainViewModel : ViewModelBase
         });
 
         StartChatWithDiscoveredCommand = new RelayCommand(param =>
-
         {
             if (param is ChatItem item)
-
             {
-                var existing = _allChats.FirstOrDefault(c => c.PeerId.Equals(item.PeerId, StringComparison.OrdinalIgnoreCase));
+                var existing = FindChatByAddressOrPeer(item.PeerId) ?? 
+                               FindChatByAddressOrPeer(item.DeviceAddress) ?? 
+                               FindChatByAddressOrPeer(null, item.DisplayName);
 
                 if (existing == null)
-
                 {
                     _allChats.Add(item);
-
                     existing = item;
-
                 }
 
                 SelectedChat = existing;
-
                 IsDiscoveryOpen = false;
-
                 ApplySearchFilter();
-
             }
-
         });
 
         SelectProfileTabCommand = new RelayCommand(param =>
@@ -1617,6 +1736,7 @@ public class MainViewModel : ViewModelBase
 
             Application.Current?.Dispatcher?.Invoke(() =>
             {
+                var cleanChats = new List<ChatItem>();
                 foreach (var c in chats)
                 {
                     // Filter out corrupt / error-named chats
@@ -1626,6 +1746,19 @@ public class MainViewModel : ViewModelBase
                         continue;
                     }
 
+                    // Anonymize PeerId if it was stored as raw MAC
+                    if (DeviceAnonymizer.IsHardwareIdentifier(c.PeerId))
+                    {
+                        if (string.IsNullOrWhiteSpace(c.DeviceAddress) || c.DeviceAddress == c.PeerId)
+                        {
+                            c.DeviceAddress = c.PeerId;
+                        }
+                        c.PeerId = DeviceAnonymizer.GetOpaquePeerId(c.DeviceAddress);
+                    }
+
+                    c.DisplayName = DeviceAnonymizer.SanitizeDisplayName(c.DisplayName, c.DeviceAddress);
+                    c.Username = DeviceAnonymizer.SanitizeUsername(c.Username, c.DeviceAddress);
+
                     if (string.IsNullOrEmpty(c.AvatarPath))
                     {
                         c.AvatarPath = AvatarManager.GetAvatarPath(c.DeviceAddress) ?? AvatarManager.GetAvatarPath(c.PeerId);
@@ -1634,10 +1767,30 @@ public class MainViewModel : ViewModelBase
                     {
                         _bluetoothService.RegisterPeerAddress(c.PeerId, c.DeviceAddress);
                     }
+
+                    // Deduplicate against already processed chats in cleanChats
+                    var dup = cleanChats.FirstOrDefault(existing =>
+                        existing.PeerId.Equals(c.PeerId, StringComparison.OrdinalIgnoreCase) ||
+                        (!string.IsNullOrWhiteSpace(c.DeviceAddress) && !string.IsNullOrWhiteSpace(existing.DeviceAddress) &&
+                         BluetoothRfcommService.NormalizeMacAddress(c.DeviceAddress).Equals(BluetoothRfcommService.NormalizeMacAddress(existing.DeviceAddress), StringComparison.OrdinalIgnoreCase)));
+
+                    if (dup != null)
+                    {
+                        App.Log($"[Init] Merging duplicate saved chat '{c.DisplayName}' into '{dup.DisplayName}'");
+                        MergeChats(dup, c);
+                    }
+                    else
+                    {
+                        cleanChats.Add(c);
+                    }
+                }
+
+                foreach (var c in cleanChats)
+                {
                     _allChats.Add(c);
                 }
 
-                // If any corrupt chats were filtered, persist cleaned list
+                // If any corrupt or duplicate chats were filtered/merged, persist cleaned list
                 if (_allChats.Count != chats.Count)
                 {
                     _ = _storageService.SaveChatsAsync(_allChats);
@@ -1671,7 +1824,8 @@ public class MainViewModel : ViewModelBase
                 }
 
                 ApplySearchFilter();
-                SelectedChat = _filteredChats.FirstOrDefault();
+                // Always start with empty placeholder view as requested
+                SelectedChat = null;
             });
 
             // Start background servers
@@ -1690,16 +1844,29 @@ public class MainViewModel : ViewModelBase
                     if (!string.IsNullOrWhiteSpace(dev.DeviceAddress) && !string.IsNullOrWhiteSpace(dev.PeerId))
                     {
                         _bluetoothService.RegisterPeerAddress(dev.PeerId, dev.DeviceAddress);
+                    }
 
-                        var existing = _allChats.FirstOrDefault(c => c.PeerId.Equals(dev.PeerId, StringComparison.OrdinalIgnoreCase));
-                        if (existing != null && string.IsNullOrWhiteSpace(existing.DeviceAddress))
+                    var existing = FindChatByAddressOrPeer(dev.PeerId) ?? 
+                                   FindChatByAddressOrPeer(dev.DeviceAddress) ?? 
+                                   FindChatByAddressOrPeer(null, dev.DisplayName);
+
+                    if (existing != null)
+                    {
+                        if (string.IsNullOrWhiteSpace(existing.DeviceAddress) || existing.DeviceAddress == existing.PeerId)
                         {
                             existing.DeviceAddress = dev.DeviceAddress;
                         }
+                        if (!string.IsNullOrWhiteSpace(existing.DeviceAddress) && !string.IsNullOrWhiteSpace(existing.PeerId))
+                        {
+                            _bluetoothService.RegisterPeerAddress(existing.PeerId, existing.DeviceAddress);
+                        }
+                        if ((DeviceAnonymizer.IsHardwareIdentifier(existing.DisplayName) || existing.DisplayName.StartsWith("Собеседник")) &&
+                            !string.IsNullOrWhiteSpace(dev.DisplayName) && !DeviceAnonymizer.IsHardwareIdentifier(dev.DisplayName))
+                        {
+                            existing.DisplayName = dev.DisplayName;
+                        }
                     }
-
-                    if (!_allChats.Any(c => c.PeerId.Equals(dev.PeerId, StringComparison.OrdinalIgnoreCase) ||
-                                            (!string.IsNullOrEmpty(dev.DeviceAddress) && c.DeviceAddress.Equals(dev.DeviceAddress, StringComparison.OrdinalIgnoreCase))))
+                    else
                     {
                         _allChats.Add(dev);
                         App.Log($"[Init] Added paired device '{dev.DisplayName}' ({dev.PeerId}) to chat list.");
@@ -1707,16 +1874,10 @@ public class MainViewModel : ViewModelBase
                 }
                 ApplySearchFilter();
 
-                // If AutoConnectBluetooth is on, connect to paired devices
+                // If AutoConnectBluetooth is on, connect to paired devices in background without selecting
                 if (Settings.AutoConnectBluetooth)
                 {
                     var candidates = _allChats.Where(c => c.IsBluetoothDevice && !c.PeerId.StartsWith("peer_prime")).ToList();
-                    var target = candidates.FirstOrDefault();
-                    if (target != null)
-                    {
-                        SelectedChat = target;
-                    }
-
                     foreach (var chat in candidates)
                     {
                         string addr = !string.IsNullOrWhiteSpace(chat.DeviceAddress) ? chat.DeviceAddress : chat.PeerId;
@@ -2588,9 +2749,7 @@ public async Task SendTextMessageAsync()
     {
         Application.Current.Dispatcher.Invoke(() =>
         {
-            var chat = _allChats.FirstOrDefault(c => 
-                c.DeviceAddress.Equals(address, StringComparison.OrdinalIgnoreCase) ||
-                c.PeerId.Equals(address, StringComparison.OrdinalIgnoreCase));
+            var chat = FindChatByAddressOrPeer(address, name);
 
             if (chat == null)
             {
@@ -2600,14 +2759,16 @@ public async Task SendTextMessageAsync()
                     return;
                 }
 
+                string peerId = _bluetoothService.ResolvePeerId(address);
+                string rawHw = _bluetoothService.ResolveHardwareAddress(address);
                 string initialName = !IsStatusKeyword(name)
-                    ? DeviceAnonymizer.SanitizeDisplayName(name, address)
-                    : DeviceAnonymizer.SanitizeDisplayName(null, address);
+                    ? DeviceAnonymizer.SanitizeDisplayName(name, rawHw)
+                    : DeviceAnonymizer.SanitizeDisplayName(null, rawHw);
 
                 chat = new ChatItem
                 {
-                    DeviceAddress = address,
-                    PeerId = address,
+                    DeviceAddress = !string.IsNullOrWhiteSpace(rawHw) ? rawHw : address,
+                    PeerId = !string.IsNullOrWhiteSpace(peerId) ? peerId : DeviceAnonymizer.GetOpaquePeerId(address),
                     DisplayName = initialName,
                     Username = DeviceAnonymizer.SanitizeUsername(null, address),
                     AvatarPath = AvatarManager.GetAvatarPath(address),
@@ -2624,10 +2785,19 @@ public async Task SendTextMessageAsync()
             // NEVER overwrite DisplayName with status messages like 'Ошибка подключения'
             if (!string.IsNullOrWhiteSpace(name) && !IsStatusKeyword(name))
             {
-                chat.DisplayName = DeviceAnonymizer.SanitizeDisplayName(name, address);
+                chat.DisplayName = DeviceAnonymizer.SanitizeDisplayName(name, chat.DeviceAddress);
             }
 
-            StatusMessage = $"{chat.DisplayName}: {name}";
+            string statusDesc = state switch
+            {
+                DeviceConnectionState.Connected => "подключено",
+                DeviceConnectionState.Connecting => "подключение...",
+                _ => "отключено"
+            };
+            string friendlyName = !string.IsNullOrWhiteSpace(chat.DisplayName) && !DeviceAnonymizer.IsHardwareIdentifier(chat.DisplayName)
+                ? chat.DisplayName
+                : "Устройство";
+            StatusMessage = $"{friendlyName}: {statusDesc}";
 
             if (state == DeviceConnectionState.Connected)
             {
@@ -2646,45 +2816,31 @@ public async Task SendTextMessageAsync()
         Application.Current.Dispatcher.Invoke(() =>
 
         {
-            var chat = _allChats.FirstOrDefault(c => 
-
-                c.DeviceAddress.Equals(fromAddress, StringComparison.OrdinalIgnoreCase) ||
-
-                c.PeerId.Equals(fromAddress, StringComparison.OrdinalIgnoreCase));
+            var chat = FindChatByAddressOrPeer(fromAddress);
 
             if (chat == null)
-
             {
                 // Ignore disconnect/delete packets for non-existent chats
-
                 if (type == PacketType.ChatDeleted || type == PacketType.Disconnect)
-
                 {
                     return;
-
                 }
 
+                string peerId = _bluetoothService.ResolvePeerId(fromAddress);
+                string rawHw = _bluetoothService.ResolveHardwareAddress(fromAddress);
+
                 chat = new ChatItem
-
                 {
-                    DeviceAddress = fromAddress,
-
-                    PeerId = fromAddress,
-
+                    DeviceAddress = !string.IsNullOrWhiteSpace(rawHw) ? rawHw : fromAddress,
+                    PeerId = !string.IsNullOrWhiteSpace(peerId) ? peerId : DeviceAnonymizer.GetOpaquePeerId(fromAddress),
                     DisplayName = DeviceAnonymizer.SanitizeDisplayName(null, fromAddress),
-
                     Username = DeviceAnonymizer.SanitizeUsername(null, fromAddress),
-
                     IsBluetoothDevice = true,
-
                     IsOnline = true
-
                 };
 
                 _allChats.Add(chat);
-
                 ApplySearchFilter();
-
             }
 
             switch (type)
@@ -3183,15 +3339,16 @@ public async Task SendTextMessageAsync()
     }
 
     private void OnNetworkError(string source, string message)
-
     {
-        Application.Current.Dispatcher.Invoke(() =>
-
+        Application.Current?.Dispatcher?.Invoke(() =>
         {
-            StatusMessage = $"{source}: {message}";
-
+            var chat = FindChatByAddressOrPeer(source);
+            string sender = chat != null && !DeviceAnonymizer.IsHardwareIdentifier(chat.DisplayName)
+                ? chat.DisplayName
+                : "Связь";
+            string cleanMsg = SanitizeStatusText(message);
+            StatusMessage = $"{sender}: {cleanMsg}";
         });
-
     }
 }
 

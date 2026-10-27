@@ -15,11 +15,34 @@ namespace PrimeDesktop.Services
             @"^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}(:\d+)?$",
             RegexOptions.Compiled);
 
+        private static readonly Regex EmbeddedMacOrPeerRegex = new(
+            @"\b([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})\b|\b([0-9A-Fa-f]{12})\b|\bpeer_[0-9a-fA-F]+\b|\bBluetooth#[^\s,\)\]]+",
+            RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
         public static bool IsHardwareIdentifier(string? value)
         {
             if (string.IsNullOrWhiteSpace(value)) return false;
             string clean = value.Trim();
-            return MacRegex.IsMatch(clean) || IpRegex.IsMatch(clean) || clean.StartsWith("Bluetooth#", StringComparison.OrdinalIgnoreCase);
+            return MacRegex.IsMatch(clean) || 
+                   IpRegex.IsMatch(clean) || 
+                   clean.StartsWith("Bluetooth#", StringComparison.OrdinalIgnoreCase) ||
+                   clean.StartsWith("peer_", StringComparison.OrdinalIgnoreCase);
+        }
+
+        public static string MaskMacAddresses(string? input, Func<string, string?>? resolver = null)
+        {
+            if (string.IsNullOrWhiteSpace(input)) return string.Empty;
+            return EmbeddedMacOrPeerRegex.Replace(input, match =>
+            {
+                string val = match.Value;
+                if (resolver != null)
+                {
+                    var resolved = resolver(val);
+                    if (!string.IsNullOrWhiteSpace(resolved) && !IsHardwareIdentifier(resolved))
+                        return resolved;
+                }
+                return AnonymizeIdentifier(val);
+            });
         }
 
         public static string GetOpaquePeerId(string? rawHardwareIdentifier)
