@@ -12,6 +12,13 @@ public class ChatMessage : INotifyPropertyChanged
     private bool _isRead;
     private bool _isEdited;
     private bool _isPlaying;
+    private double _playbackProgress;
+    private string _currentPlayTime = "0:00";
+    private double _playbackSpeed = 1.0;
+    private double[]? _waveform;
+    private bool _isVideoPlaying = true;
+    private bool _isVideoMuted;
+    private double _videoSpeed = 1.0;
     private string? _reaction;
     private string? _reactionAuthor;
     private bool _isVideoNote;
@@ -114,8 +121,116 @@ public class ChatMessage : INotifyPropertyChanged
     public bool IsPlaying
     {
         get => _isPlaying;
-        set => SetField(ref _isPlaying, value);
+        set
+        {
+            if (SetField(ref _isPlaying, value))
+            {
+                OnPropertyChanged(nameof(DisplayPlayTime));
+            }
+        }
     }
+
+    [JsonIgnore]
+    public double PlaybackProgress
+    {
+        get => _playbackProgress;
+        set => SetField(ref _playbackProgress, value);
+    }
+
+    [JsonIgnore]
+    public string CurrentPlayTime
+    {
+        get => _currentPlayTime;
+        set
+        {
+            if (SetField(ref _currentPlayTime, value))
+            {
+                OnPropertyChanged(nameof(DisplayPlayTime));
+            }
+        }
+    }
+
+    [JsonIgnore]
+    public string DisplayPlayTime => IsPlaying ? CurrentPlayTime : (string.IsNullOrWhiteSpace(Duration) ? "0:00" : Duration);
+
+    [JsonIgnore]
+    public double PlaybackSpeed
+    {
+        get => _playbackSpeed;
+        set
+        {
+            if (SetField(ref _playbackSpeed, value))
+            {
+                OnPropertyChanged(nameof(SpeedText));
+            }
+        }
+    }
+
+    [JsonIgnore]
+    public string SpeedText => PlaybackSpeed switch
+    {
+        >= 1.95 => "2x",
+        >= 1.45 => "1.5x",
+        _ => "1x"
+    };
+
+    [JsonIgnore]
+    public double[] Waveform
+    {
+        get => _waveform ??= GenerateWaveform(Id);
+        set => SetField(ref _waveform, value);
+    }
+
+    public static double[] GenerateWaveform(string? seed)
+    {
+        int hash = string.IsNullOrEmpty(seed) ? 42 : Math.Abs(seed.GetHashCode());
+        var rng = new Random(hash);
+        var bars = new double[30];
+        double prev = 0.35;
+        for (int i = 0; i < bars.Length; i++)
+        {
+            double envelope = Math.Sin(Math.PI * (i + 1) / (bars.Length + 1));
+            double target = 0.15 + (rng.NextDouble() * 0.70 + 0.15) * Math.Pow(envelope, 0.45);
+            prev = (prev * 0.35) + (target * 0.65);
+            bars[i] = Math.Clamp(prev, 0.15, 1.0);
+        }
+        return bars;
+    }
+
+    [JsonIgnore]
+    public bool IsVideoPlaying
+    {
+        get => _isVideoPlaying;
+        set => SetField(ref _isVideoPlaying, value);
+    }
+
+    [JsonIgnore]
+    public bool IsVideoMuted
+    {
+        get => _isVideoMuted;
+        set => SetField(ref _isVideoMuted, value);
+    }
+
+    [JsonIgnore]
+    public double VideoSpeed
+    {
+        get => _videoSpeed;
+        set
+        {
+            if (SetField(ref _videoSpeed, value))
+            {
+                OnPropertyChanged(nameof(VideoSpeedText));
+            }
+        }
+    }
+
+    [JsonIgnore]
+    public string VideoSpeedText => VideoSpeed switch
+    {
+        >= 1.95 => "2x",
+        >= 1.45 => "1.5x",
+        _ => "1x"
+    };
 
     // Reply context
     public string? ReplyToId { get; set; }

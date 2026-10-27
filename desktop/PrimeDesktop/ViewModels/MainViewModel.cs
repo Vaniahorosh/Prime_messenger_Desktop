@@ -73,6 +73,7 @@ public class MainViewModel : ViewModelBase
         {
             if (SetProperty(ref _selectedChat, value))
             {
+                _audioService.Stop();
                 if (_selectedChat != null)
                 {
                     IsReadingMode = false;
@@ -589,11 +590,13 @@ public class MainViewModel : ViewModelBase
                 Settings.VideoNoteRadiusPercent = value;
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(VideoNoteCornerRadius));
+                OnPropertyChanged(nameof(VideoNoteChatCornerRadius));
                 _ = _storageService.SaveSettingsAsync(Settings);
             }
         }
     }
     public CornerRadius VideoNoteCornerRadius => new(50.0 * Settings.VideoNoteRadiusPercent / 100.0);
+    public CornerRadius VideoNoteChatCornerRadius => new(95.0 * Settings.VideoNoteRadiusPercent / 50.0);
 
     private bool _cbStoragePhotos = true;
     public bool CbStoragePhotos { get => _cbStoragePhotos; set { SetProperty(ref _cbStoragePhotos, value); UpdateClearButtonText(); } }
@@ -737,6 +740,8 @@ public class MainViewModel : ViewModelBase
     public ICommand ToggleVoiceRecordCommand { get; }
 
     public ICommand PlayVoiceMessageCommand { get; }
+    public ICommand SeekVoiceMessageCommand { get; }
+    public ICommand ToggleVoiceSpeedCommand { get; }
 
     private bool _isPhotoViewerOpen;
 
@@ -1256,43 +1261,37 @@ public class MainViewModel : ViewModelBase
         }, () => HasSelectedChat);
 
         PlayVoiceMessageCommand = new RelayCommand(param =>
-
         {
-            if (param is ChatMessage msg && !string.IsNullOrEmpty(msg.FilePath))
-
+            if (param is ChatMessage msg)
             {
-                if (msg.IsPlaying)
-
-                {
-                    _audioService.Stop();
-
-                    msg.IsPlaying = false;
-
-                }
-
-                else
-
-                {
-                    if (SelectedChat != null)
-
-                    {
-                        foreach (var m in SelectedChat.Messages) m.IsPlaying = false;
-
-                    }
-
-                    msg.IsPlaying = true;
-
-                    _audioService.Play(msg.FilePath, () =>
-
-                    {
-                        Application.Current.Dispatcher.Invoke(() => msg.IsPlaying = false);
-
-                    });
-
-                }
-
+                _audioService.TogglePlay(msg);
             }
+        });
 
+        SeekVoiceMessageCommand = new RelayCommand(param =>
+        {
+            if (param is ValueTuple<object, double> (var ctx, var ratio) && ctx is ChatMessage msg)
+            {
+                _audioService.Seek(msg, ratio);
+            }
+            else if (param is (ChatMessage m, double r))
+            {
+                _audioService.Seek(m, r);
+            }
+        });
+
+        ToggleVoiceSpeedCommand = new RelayCommand(param =>
+        {
+            if (param is ChatMessage msg)
+            {
+                double nextSpeed = msg.PlaybackSpeed switch
+                {
+                    >= 1.95 => 1.0,
+                    >= 1.45 => 2.0,
+                    _ => 1.5
+                };
+                _audioService.SetSpeed(msg, nextSpeed);
+            }
         });
 
         OpenPhotoViewerCommand = new RelayCommand(param =>
