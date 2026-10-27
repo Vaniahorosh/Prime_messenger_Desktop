@@ -83,6 +83,7 @@ namespace PrimeDesktop.Controls
             {
                 CaptureMouse();
                 HandleSeek(e.GetPosition(this).X);
+                e.Handled = true;
             }
         }
 
@@ -92,6 +93,7 @@ namespace PrimeDesktop.Controls
             if (IsMouseCaptured && e.LeftButton == MouseButtonState.Pressed)
             {
                 HandleSeek(e.GetPosition(this).X);
+                e.Handled = true;
             }
         }
 
@@ -101,6 +103,7 @@ namespace PrimeDesktop.Controls
             if (IsMouseCaptured)
             {
                 ReleaseMouseCapture();
+                e.Handled = true;
             }
         }
 

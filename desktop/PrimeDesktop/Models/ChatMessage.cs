@@ -80,8 +80,17 @@ public class ChatMessage : INotifyPropertyChanged
     public bool IsVideoNote
     {
         get => _isVideoNote;
-        set => SetField(ref _isVideoNote, value);
+        set
+        {
+            if (SetField(ref _isVideoNote, value))
+            {
+                OnPropertyChanged(nameof(VideoNotePath));
+            }
+        }
     }
+
+    [JsonIgnore]
+    public string? VideoNotePath => IsVideoNote ? FilePath : null;
 
     [JsonIgnore]
     public string StatusTick

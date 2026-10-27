@@ -55,6 +55,19 @@ namespace PrimeDesktop.Controls
             Loaded += VideoNotePlayer_Loaded;
             Unloaded += VideoNotePlayer_Unloaded;
             SizeChanged += VideoNotePlayer_SizeChanged;
+            IsVisibleChanged += VideoNotePlayer_IsVisibleChanged;
+        }
+
+        private static bool IsVideoFile(string? path)
+        {
+            if (string.IsNullOrWhiteSpace(path)) return false;
+            string ext = Path.GetExtension(path);
+            return ext.Equals(".mp4", StringComparison.OrdinalIgnoreCase) ||
+                   ext.Equals(".webm", StringComparison.OrdinalIgnoreCase) ||
+                   ext.Equals(".mov", StringComparison.OrdinalIgnoreCase) ||
+                   ext.Equals(".avi", StringComparison.OrdinalIgnoreCase) ||
+                   ext.Equals(".mkv", StringComparison.OrdinalIgnoreCase) ||
+                   ext.Equals(".3gp", StringComparison.OrdinalIgnoreCase);
         }
 
         private static void OnSourceChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
@@ -89,8 +102,19 @@ namespace PrimeDesktop.Controls
 
         private void VideoNotePlayer_Unloaded(object sender, RoutedEventArgs e)
         {
-            _timer.Stop();
-            try { PART_Media.Stop(); } catch { }
+            StopAndClear();
+        }
+
+        private void VideoNotePlayer_IsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
+        {
+            if (!IsVisible)
+            {
+                StopAndClear();
+            }
+            else
+            {
+                LoadSource();
+            }
         }
 
         private void VideoNotePlayer_SizeChanged(object sender, SizeChangedEventArgs e)
@@ -111,11 +135,25 @@ namespace PrimeDesktop.Controls
             PART_Media.Clip = new RectangleGeometry(new Rect(0, 0, w, h), cr.TopLeft, cr.TopLeft);
         }
 
+        private void StopAndClear()
+        {
+            _timer.Stop();
+            _isPlaying = false;
+            try
+            {
+                PART_Media.Stop();
+                PART_Media.Close();
+                PART_Media.Source = null;
+            }
+            catch { }
+            PART_PauseOverlay.Visibility = Visibility.Visible;
+        }
+
         private void LoadSource()
         {
-            if (string.IsNullOrWhiteSpace(Source) || !File.Exists(Source))
+            if (!IsVisible || string.IsNullOrWhiteSpace(Source) || !IsVideoFile(Source) || !File.Exists(Source))
             {
-                _timer.Stop();
+                StopAndClear();
                 TxtTime.Text = Duration ?? "0:00";
                 return;
             }
@@ -132,12 +170,19 @@ namespace PrimeDesktop.Controls
             }
             catch
             {
+                StopAndClear();
                 TxtTime.Text = Duration ?? "0:00";
             }
         }
 
         private void Media_MediaOpened(object sender, RoutedEventArgs e)
         {
+            if (!IsVisible || string.IsNullOrWhiteSpace(Source) || !IsVideoFile(Source))
+            {
+                StopAndClear();
+                return;
+            }
+
             PART_Media.SpeedRatio = _speed;
             PART_Media.IsMuted = _isMuted;
             if (_isPlaying)
@@ -150,6 +195,12 @@ namespace PrimeDesktop.Controls
 
         private void Media_MediaEnded(object sender, RoutedEventArgs e)
         {
+            if (!IsVisible || string.IsNullOrWhiteSpace(Source) || !IsVideoFile(Source))
+            {
+                StopAndClear();
+                return;
+            }
+
             try
             {
                 PART_Media.Position = TimeSpan.Zero;
@@ -163,9 +214,7 @@ namespace PrimeDesktop.Controls
 
         private void Media_MediaFailed(object? sender, ExceptionRoutedEventArgs e)
         {
-            _timer.Stop();
-            _isPlaying = false;
-            PART_PauseOverlay.Visibility = Visibility.Visible;
+            StopAndClear();
         }
 
         private void Timer_Tick(object? sender, EventArgs e)
@@ -203,6 +252,8 @@ namespace PrimeDesktop.Controls
 
         private void TogglePlay()
         {
+            if (!IsVideoFile(Source)) return;
+
             try
             {
                 if (_isPlaying)

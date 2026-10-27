@@ -850,7 +850,7 @@
 
 
                                             <!-- Video Note Circle Playback (Param 11) -->
-                                            <controls:VideoNotePlayer Source="{Binding FilePath}"
+                                            <controls:VideoNotePlayer Source="{Binding VideoNotePath}"
                                                                       Duration="{Binding Duration}"
                                                                       CornerRadius="{Binding DataContext.VideoNoteChatCornerRadius, RelativeSource={RelativeSource AncestorType=Window}}"
                                                                       Margin="0,0,0,6"

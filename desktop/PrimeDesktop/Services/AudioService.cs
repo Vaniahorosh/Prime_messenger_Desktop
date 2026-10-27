@@ -21,6 +21,7 @@ namespace PrimeDesktop.Services
         private ChatMessage? _activeMessage;
         private double? _pendingSeekRatio;
         private Action? _legacyCompletedCallback;
+        private bool _isStopping;
 
         public bool IsRecording { get; private set; }
         public TimeSpan RecordingDuration => _recordTimer.Elapsed;
@@ -32,7 +33,11 @@ namespace PrimeDesktop.Services
             {
                 Application.Current.Dispatcher.Invoke(() =>
                 {
-                    InitMediaPlayer();
+                    _playbackTimer = new DispatcherTimer
+                    {
+                        Interval = TimeSpan.FromMilliseconds(35)
+                    };
+                    _playbackTimer.Tick += PlaybackTimer_Tick;
                 });
             }
         }
@@ -44,29 +49,44 @@ namespace PrimeDesktop.Services
             _mediaPlayer.MediaOpened += MediaPlayer_MediaOpened;
             _mediaPlayer.MediaEnded += MediaPlayer_MediaEnded;
             _mediaPlayer.MediaFailed += MediaPlayer_MediaFailed;
+        }
 
-            _playbackTimer = new DispatcherTimer
+        private void CleanupMediaPlayer()
+        {
+            if (_mediaPlayer != null)
             {
-                Interval = TimeSpan.FromMilliseconds(35)
-            };
-            _playbackTimer.Tick += PlaybackTimer_Tick;
+                try
+                {
+                    _mediaPlayer.MediaOpened -= MediaPlayer_MediaOpened;
+                    _mediaPlayer.MediaEnded -= MediaPlayer_MediaEnded;
+                    _mediaPlayer.MediaFailed -= MediaPlayer_MediaFailed;
+                    _mediaPlayer.Stop();
+                    _mediaPlayer.Close();
+                }
+                catch { }
+                _mediaPlayer = null;
+            }
         }
 
         private void MediaPlayer_MediaOpened(object? sender, EventArgs e)
         {
             if (_activeMessage != null && _mediaPlayer != null)
             {
-                if (_pendingSeekRatio.HasValue && _mediaPlayer.NaturalDuration.HasTimeSpan)
+                try
                 {
-                    var total = _mediaPlayer.NaturalDuration.TimeSpan;
-                    var target = TimeSpan.FromMilliseconds(total.TotalMilliseconds * Math.Clamp(_pendingSeekRatio.Value, 0.0, 1.0));
-                    _mediaPlayer.Position = target;
-                    _activeMessage.PlaybackProgress = _pendingSeekRatio.Value;
-                    _activeMessage.CurrentPlayTime = $"{(int)target.TotalMinutes}:{target.Seconds:D2}";
-                    _pendingSeekRatio = null;
+                    if (_pendingSeekRatio.HasValue && _mediaPlayer.NaturalDuration.HasTimeSpan)
+                    {
+                        var total = _mediaPlayer.NaturalDuration.TimeSpan;
+                        var target = TimeSpan.FromMilliseconds(total.TotalMilliseconds * Math.Clamp(_pendingSeekRatio.Value, 0.0, 1.0));
+                        _mediaPlayer.Position = target;
+                        _activeMessage.PlaybackProgress = _pendingSeekRatio.Value;
+                        _activeMessage.CurrentPlayTime = $"{(int)target.TotalMinutes}:{target.Seconds:D2}";
+                        _pendingSeekRatio = null;
+                    }
+                    _mediaPlayer.SpeedRatio = _activeMessage.PlaybackSpeed;
+                    _playbackTimer?.Start();
                 }
-                _mediaPlayer.SpeedRatio = _activeMessage.PlaybackSpeed;
-                _playbackTimer?.Start();
+                catch { }
             }
         }
 
@@ -94,16 +114,25 @@ namespace PrimeDesktop.Services
                 return;
             }
 
-            if (_mediaPlayer.NaturalDuration.HasTimeSpan)
+            try
             {
-                var total = _mediaPlayer.NaturalDuration.TimeSpan;
-                if (total.TotalMilliseconds > 0)
+                if (_mediaPlayer.NaturalDuration.HasTimeSpan)
                 {
-                    var pos = _mediaPlayer.Position;
-                    _activeMessage.PlaybackProgress = Math.Clamp(pos.TotalMilliseconds / total.TotalMilliseconds, 0.0, 1.0);
-                    _activeMessage.CurrentPlayTime = $"{(int)pos.TotalMinutes}:{pos.Seconds:D2}";
+                    var total = _mediaPlayer.NaturalDuration.TimeSpan;
+                    if (total.TotalMilliseconds > 0)
+                    {
+                        var pos = _mediaPlayer.Position;
+                        if (pos >= total)
+                        {
+                            Stop();
+                            return;
+                        }
+                        _activeMessage.PlaybackProgress = Math.Clamp(pos.TotalMilliseconds / total.TotalMilliseconds, 0.0, 1.0);
+                        _activeMessage.CurrentPlayTime = $"{(int)pos.TotalMinutes}:{pos.Seconds:D2}";
+                    }
                 }
             }
+            catch { }
         }
 
         public bool StartRecording()
@@ -157,26 +186,36 @@ namespace PrimeDesktop.Services
             if (message == null || string.IsNullOrEmpty(message.FilePath) || !File.Exists(message.FilePath))
                 return;
 
-            InitMediaPlayer();
-
             if (_activeMessage == message)
             {
                 if (message.IsPlaying)
                 {
-                    _mediaPlayer?.Pause();
+                    try { _mediaPlayer?.Pause(); } catch { }
                     message.IsPlaying = false;
                     _playbackTimer?.Stop();
                 }
                 else
                 {
-                    _mediaPlayer?.Play();
-                    message.IsPlaying = true;
-                    _playbackTimer?.Start();
+                    try
+                    {
+                        if (_mediaPlayer != null && _mediaPlayer.NaturalDuration.HasTimeSpan &&
+                            _mediaPlayer.Position >= _mediaPlayer.NaturalDuration.TimeSpan)
+                        {
+                            _mediaPlayer.Position = TimeSpan.Zero;
+                        }
+                        _mediaPlayer?.Play();
+                        message.IsPlaying = true;
+                        _playbackTimer?.Start();
+                    }
+                    catch
+                    {
+                        Stop();
+                    }
                 }
                 return;
             }
 
-            // Switching to a different message
+            // Switching message or start from beginning
             Stop();
 
             _activeMessage = message;
@@ -186,6 +225,7 @@ namespace PrimeDesktop.Services
 
             try
             {
+                InitMediaPlayer();
                 _mediaPlayer?.Open(new Uri(Path.GetFullPath(message.FilePath), UriKind.Absolute));
                 _mediaPlayer?.Play();
                 _playbackTimer?.Start();
@@ -200,9 +240,6 @@ namespace PrimeDesktop.Services
         {
             if (message == null) return;
             ratio = Math.Clamp(ratio, 0.0, 1.0);
-            message.PlaybackProgress = ratio;
-
-            InitMediaPlayer();
 
             if (_activeMessage != message)
             {
@@ -213,16 +250,21 @@ namespace PrimeDesktop.Services
 
             if (_mediaPlayer != null && _mediaPlayer.NaturalDuration.HasTimeSpan)
             {
-                var total = _mediaPlayer.NaturalDuration.TimeSpan;
-                var target = TimeSpan.FromMilliseconds(total.TotalMilliseconds * ratio);
-                _mediaPlayer.Position = target;
-                message.CurrentPlayTime = $"{(int)target.TotalMinutes}:{target.Seconds:D2}";
-                if (!message.IsPlaying)
+                try
                 {
-                    _mediaPlayer.Play();
-                    message.IsPlaying = true;
-                    _playbackTimer?.Start();
+                    var total = _mediaPlayer.NaturalDuration.TimeSpan;
+                    var target = TimeSpan.FromMilliseconds(total.TotalMilliseconds * ratio);
+                    _mediaPlayer.Position = target;
+                    message.PlaybackProgress = ratio;
+                    message.CurrentPlayTime = $"{(int)target.TotalMinutes}:{target.Seconds:D2}";
+                    if (!message.IsPlaying)
+                    {
+                        _mediaPlayer.Play();
+                        message.IsPlaying = true;
+                        _playbackTimer?.Start();
+                    }
                 }
+                catch { }
             }
             else
             {
@@ -236,30 +278,37 @@ namespace PrimeDesktop.Services
             message.PlaybackSpeed = speed;
             if (_activeMessage == message && _mediaPlayer != null)
             {
-                _mediaPlayer.SpeedRatio = speed;
+                try { _mediaPlayer.SpeedRatio = speed; } catch { }
             }
         }
 
         public void Stop()
         {
+            if (_isStopping) return;
+            _isStopping = true;
+
             try
             {
                 _playbackTimer?.Stop();
-                if (_mediaPlayer != null)
-                {
-                    _mediaPlayer.Stop();
-                    _mediaPlayer.Close();
-                }
-                if (_activeMessage != null)
-                {
-                    _activeMessage.IsPlaying = false;
-                    _activeMessage.PlaybackProgress = 0.0;
-                    _activeMessage.CurrentPlayTime = "0:00";
-                    _activeMessage = null;
-                }
+
+                var currentMsg = _activeMessage;
+                _activeMessage = null;
                 _pendingSeekRatio = null;
+
+                CleanupMediaPlayer();
+
+                if (currentMsg != null)
+                {
+                    currentMsg.IsPlaying = false;
+                    currentMsg.PlaybackProgress = 0.0;
+                    currentMsg.CurrentPlayTime = "0:00";
+                }
             }
             catch { }
+            finally
+            {
+                _isStopping = false;
+            }
         }
 
         public void Play(string filePath, Action onCompleted)
