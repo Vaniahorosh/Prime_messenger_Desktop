@@ -42,9 +42,31 @@ public partial class MainWindow : Window
         {
             App.Log("MainWindow Loaded");
             ThemeManager.ApplyWindowDwm(this);
-            if (DataContext is MainViewModel vm && vm.Settings.EnableScreenshotProtection)
+            if (DataContext is MainViewModel vm)
             {
-                SecurityManager.SetScreenshotProtection(this, true);
+                if (vm.Settings.EnableScreenshotProtection)
+                {
+                    SecurityManager.SetScreenshotProtection(this, true);
+                }
+                vm.PropertyChanged += (sender, args) =>
+                {
+                    if (args.PropertyName == nameof(MainViewModel.IsMediaDrawerOpen))
+                    {
+                        if (!vm.IsMediaDrawerOpen)
+                        {
+                            ColDrawer.MinWidth = 0;
+                            ColDrawer.Width = new GridLength(0);
+                        }
+                        else
+                        {
+                            ColDrawer.MinWidth = 280;
+                            if (ColDrawer.Width.Value < 280)
+                            {
+                                ColDrawer.Width = new GridLength(330);
+                            }
+                        }
+                    }
+                };
             }
         };
 

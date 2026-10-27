@@ -88,7 +88,10 @@ public class MainViewModel : ViewModelBase
                         _ = ConnectSelectedChatAsync();
                     }
                 }
-
+                else
+                {
+                    IsMediaDrawerOpen = false;
+                }
                 OnPropertyChanged(nameof(HasSelectedChat));
                 CommandManager.InvalidateRequerySuggested();
             }
@@ -869,6 +872,7 @@ public class MainViewModel : ViewModelBase
 
             if (res == MessageBoxResult.Yes)
             {
+                IsMediaDrawerOpen = false;
                 _allChats.Clear();
                 ApplySearchFilter();
                 SelectedChat = null;
@@ -2290,15 +2294,12 @@ public async Task SendTextMessageAsync()
 
         ApplySearchFilter();
 
-        if (SelectedChat == chat)
-
+        bool isCurrent = SelectedChat == null || SelectedChat == chat || (!string.IsNullOrEmpty(chat.PeerId) && SelectedChat.PeerId == chat.PeerId) || (!string.IsNullOrEmpty(chat.DeviceAddress) && SelectedChat.DeviceAddress == chat.DeviceAddress);
+        if (isCurrent)
         {
-            SelectedChat = null;
-
             IsMediaDrawerOpen = false;
-
+            SelectedChat = null;
         }
-
         await _storageService.SaveChatsAsync(_allChats);
 
         StatusMessage = $"Чат «{chat.DisplayName}» удален, контакт забыт";
@@ -3121,15 +3122,12 @@ public async Task SendTextMessageAsync()
 
                     ApplySearchFilter();
 
-                    if (SelectedChat == chat)
-
+                    bool isCurrent = SelectedChat == null || SelectedChat == chat || (!string.IsNullOrEmpty(chat.PeerId) && SelectedChat.PeerId == chat.PeerId) || (!string.IsNullOrEmpty(chat.DeviceAddress) && SelectedChat.DeviceAddress == chat.DeviceAddress);
+                    if (isCurrent)
                     {
-                        SelectedChat = null;
-
                         IsMediaDrawerOpen = false;
-
+                        SelectedChat = null;
                     }
-
                     _ = _storageService.SaveChatsAsync(_allChats);
 
                     MainWindow.TrayService?.ShowNotification("Прайм Мессенджер", $"Собеседник {chat.DisplayName} удалил чат.");
