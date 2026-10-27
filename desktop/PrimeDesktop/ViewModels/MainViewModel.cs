@@ -83,8 +83,8 @@ public class MainViewModel : ViewModelBase
                 {
                     IsReadingMode = false;
 
-                    // Ensure avatar history is populated
-                    if (_selectedChat.AvatarHistory.Count == 0 && !string.IsNullOrEmpty(_selectedChat.AvatarPath))
+                    // Ensure avatar history is populated and deduplicated
+                    if (_selectedChat.AvatarHistory.Count == 0 && !string.IsNullOrEmpty(_selectedChat.AvatarPath) && File.Exists(_selectedChat.AvatarPath))
                     {
                         _selectedChat.AvatarHistory.Add(_selectedChat.AvatarPath);
                     }
@@ -97,6 +97,7 @@ public class MainViewModel : ViewModelBase
                             _selectedChat.AvatarHistory.Add(a);
                         }
                     }
+                    _selectedChat.DeduplicateAvatarHistory();
                     _selectedChat.CurrentAvatarIndex = 0;
 
                     OnPropertyChanged(nameof(SharedMedia));
@@ -2064,6 +2065,7 @@ public class MainViewModel : ViewModelBase
                 var cleanChats = new List<ChatItem>();
                 foreach (var c in chats)
                 {
+                    c.DeduplicateAvatarHistory();
                     foreach (var m in c.Messages)
                     {
                         if (m.IsVideoNote)
@@ -3831,10 +3833,35 @@ public async Task SendTextMessageAsync()
                 case PacketType.Avatar:
                     try
                     {
+                        if (payload == null || payload.Length == 0)
+                        {
+                            chat.AvatarPath = null;
+                            chat.AvatarHistory.Clear();
+                            AvatarManager.DeleteAvatar(chat.PeerId);
+                            if (!string.IsNullOrEmpty(chat.DeviceAddress))
+                                AvatarManager.DeleteAvatar(chat.DeviceAddress);
+                            _ = _storageService.SaveChatsAsync(_allChats);
+                            break;
+                        }
+
+                        // Fast check: if payload is identical to current avatar, ignore duplicate update
+                        string? currentPath = chat.CurrentAvatarDisplayPath ?? chat.AvatarPath;
+                        if (!string.IsNullOrEmpty(currentPath) && File.Exists(currentPath))
+                        {
+                            string? currentHash = AvatarManager.ComputeFileSha256(currentPath);
+                            string incomingHash = AvatarManager.ComputeSha256(payload);
+                            if (!string.IsNullOrEmpty(currentHash) && string.Equals(currentHash, incomingHash, StringComparison.OrdinalIgnoreCase))
+                            {
+                                // Byte-for-byte identical, no change!
+                                break;
+                            }
+                        }
+
                         string? newAvatarPath = AvatarManager.SaveAvatarBytesToHistory(chat.PeerId, payload);
                         if (!string.IsNullOrEmpty(newAvatarPath))
                         {
                             chat.AddAvatarToHistory(newAvatarPath);
+                            chat.DeduplicateAvatarHistory();
                             App.Log($"[Avatar] Saved to history and updated avatar for '{chat.DisplayName}' ({payload.Length} bytes)");
                             _ = _storageService.SaveChatsAsync(_allChats);
                         }

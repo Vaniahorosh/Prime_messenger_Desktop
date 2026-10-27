@@ -61,9 +61,9 @@ public class ChatItem : INotifyPropertyChanged
         {
             if (SetField(ref _avatarPath, value))
             {
-                if (!string.IsNullOrEmpty(value) && !_avatarHistory.Contains(value))
+                if (!string.IsNullOrEmpty(value) && File.Exists(value))
                 {
-                    _avatarHistory.Insert(0, value);
+                    AddAvatarToHistory(value);
                 }
                 OnPropertyChanged(nameof(HasAvatar));
                 OnPropertyChanged(nameof(CurrentAvatarDisplayPath));
@@ -146,14 +146,71 @@ public class ChatItem : INotifyPropertyChanged
 
     public void AddAvatarToHistory(string path)
     {
-        if (string.IsNullOrWhiteSpace(path)) return;
-        if (_avatarHistory.Contains(path))
+        if (string.IsNullOrWhiteSpace(path) || !File.Exists(path)) return;
+
+        string? newHash = PrimeDesktop.Services.AvatarManager.ComputeFileSha256(path);
+        if (!string.IsNullOrEmpty(newHash))
+        {
+            // Remove any existing entries with identical content hash
+            for (int i = _avatarHistory.Count - 1; i >= 0; i--)
+            {
+                string existing = _avatarHistory[i];
+                if (existing == path || PrimeDesktop.Services.AvatarManager.ComputeFileSha256(existing) == newHash)
+                {
+                    _avatarHistory.RemoveAt(i);
+                }
+            }
+        }
+        else
         {
             _avatarHistory.Remove(path);
         }
+
         _avatarHistory.Insert(0, path);
         _avatarPath = path;
         _currentAvatarIndex = 0;
+        OnPropertyChanged(nameof(AvatarPath));
+        OnPropertyChanged(nameof(CurrentAvatarDisplayPath));
+        OnPropertyChanged(nameof(AvatarCounterText));
+        OnPropertyChanged(nameof(HasMultipleAvatars));
+        OnPropertyChanged(nameof(CanGoPreviousAvatar));
+        OnPropertyChanged(nameof(CanGoNextAvatar));
+        OnPropertyChanged(nameof(HasAvatar));
+    }
+
+    public void DeduplicateAvatarHistory()
+    {
+        if (_avatarHistory == null || _avatarHistory.Count == 0) return;
+
+        var seenHashes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        for (int i = _avatarHistory.Count - 1; i >= 0; i--)
+        {
+            string p = _avatarHistory[i];
+            if (string.IsNullOrWhiteSpace(p) || !File.Exists(p))
+            {
+                _avatarHistory.RemoveAt(i);
+                continue;
+            }
+
+            string? hash = PrimeDesktop.Services.AvatarManager.ComputeFileSha256(p);
+            if (!string.IsNullOrEmpty(hash))
+            {
+                if (seenHashes.Contains(hash))
+                {
+                    _avatarHistory.RemoveAt(i);
+                }
+                else
+                {
+                    seenHashes.Add(hash);
+                }
+            }
+        }
+
+        if (_currentAvatarIndex >= _avatarHistory.Count)
+        {
+            _currentAvatarIndex = Math.Max(0, _avatarHistory.Count - 1);
+        }
+        _avatarPath = _avatarHistory.Count > 0 ? _avatarHistory[_currentAvatarIndex] : null;
         OnPropertyChanged(nameof(AvatarPath));
         OnPropertyChanged(nameof(CurrentAvatarDisplayPath));
         OnPropertyChanged(nameof(AvatarCounterText));
