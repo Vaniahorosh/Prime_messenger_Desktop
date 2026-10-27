@@ -464,7 +464,10 @@ public class MainViewModel : ViewModelBase
             OnPropertyChanged(nameof(IsDarkTheme));
 
             CaptureSettingsSnapshot();
-            await BroadcastMyProfileAndAvatarAsync();
+            _ = Task.Run(async () =>
+            {
+                try { await BroadcastMyProfileAndAvatarAsync(); } catch { }
+            });
 
             StatusMessage = "Настройки успешно сохранены и применены";
         }

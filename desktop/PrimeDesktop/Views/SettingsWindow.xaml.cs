@@ -55,12 +55,8 @@ public partial class SettingsWindow : Window
         WindowState = (WindowState == WindowState.Maximized) ? WindowState.Normal : WindowState.Maximized;
     }
 
-    private async void BtnClose_Click(object sender, RoutedEventArgs e)
+    private void BtnClose_Click(object sender, RoutedEventArgs e)
     {
-        if (DataContext is ViewModels.MainViewModel vm)
-        {
-            await vm.ApplyAndSaveSettingsAsync();
-        }
         Close();
     }
 
