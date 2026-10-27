@@ -1,6 +1,8 @@
 using System;
+using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Interop;
 using PrimeDesktop.Services;
 using PrimeDesktop.ViewModels;
 using Application = System.Windows.Application;
@@ -10,13 +12,30 @@ namespace PrimeDesktop;
 public partial class MainWindow : Window
 {
     public static SystemTrayService? TrayService { get; private set; }
+    private bool _isExplicitExit = false;
+
+    public void ForceClose()
+    {
+        _isExplicitExit = true;
+        Close();
+    }
 
     public MainWindow()
     {
         InitializeComponent();
         App.Log("MainWindow Initialized");
-        Closing += (s, e) => App.Log($"MainWindow Closing (Cancel={e.Cancel})");
+        Closing += (s, e) =>
+        {
+            if (!_isExplicitExit)
+            {
+                e.Cancel = true;
+                Hide();
+                TrayService?.ShowNotification("Прайм Мессенджер", "Приложение свернуто в системный трей.");
+            }
+            App.Log($"MainWindow Closing (Cancel={e.Cancel})");
+        };
         Closed += (s, e) => App.Log("MainWindow Closed");
+        StateChanged += MainWindow_StateChanged;
 
         TrayService = new SystemTrayService(this);
         Loaded += (s, e) =>
@@ -59,10 +78,124 @@ public partial class MainWindow : Window
         };
     }
 
+    private void MainWindow_StateChanged(object? sender, EventArgs e)
+    {
+        if (IconMaximize == null || IconRestore == null || BtnMaximize == null) return;
+
+        if (WindowState == WindowState.Maximized)
+        {
+            IconMaximize.Visibility = Visibility.Collapsed;
+            IconRestore.Visibility = Visibility.Visible;
+            BtnMaximize.ToolTip = "Восстановить";
+        }
+        else
+        {
+            IconMaximize.Visibility = Visibility.Visible;
+            IconRestore.Visibility = Visibility.Collapsed;
+            BtnMaximize.ToolTip = "Развернуть";
+        }
+    }
+
+    protected override void OnSourceInitialized(EventArgs e)
+    {
+        base.OnSourceInitialized(e);
+        var handle = new WindowInteropHelper(this).Handle;
+        var source = HwndSource.FromHwnd(handle);
+        source?.AddHook(WindowProc);
+    }
+
+    private IntPtr WindowProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+    {
+        if (msg == WM_GETMINMAXINFO)
+        {
+            WmGetMinMaxInfo(hwnd, lParam);
+            handled = true;
+        }
+        return IntPtr.Zero;
+    }
+
+    private static void WmGetMinMaxInfo(IntPtr hwnd, IntPtr lParam)
+    {
+        var mmi = Marshal.PtrToStructure<MINMAXINFO>(lParam);
+        var monitor = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST);
+        if (monitor != IntPtr.Zero)
+        {
+            var monitorInfo = new MONITORINFO();
+            GetMonitorInfo(monitor, monitorInfo);
+
+            mmi.ptMaxPosition.x = monitorInfo.rcWork.left - monitorInfo.rcMonitor.left;
+            mmi.ptMaxPosition.y = monitorInfo.rcWork.top - monitorInfo.rcMonitor.top;
+            mmi.ptMaxSize.x = monitorInfo.rcWork.right - monitorInfo.rcWork.left;
+            mmi.ptMaxSize.y = monitorInfo.rcWork.bottom - monitorInfo.rcWork.top;
+            mmi.ptMaxTrackSize.x = mmi.ptMaxSize.x;
+            mmi.ptMaxTrackSize.y = mmi.ptMaxSize.y;
+        }
+        Marshal.StructureToPtr(mmi, lParam, true);
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct POINT
+    {
+        public int x;
+        public int y;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct MINMAXINFO
+    {
+        public POINT ptReserved;
+        public POINT ptMaxSize;
+        public POINT ptMaxPosition;
+        public POINT ptMinTrackSize;
+        public POINT ptMaxTrackSize;
+    }
+
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto)]
+    private class MONITORINFO
+    {
+        public int cbSize = Marshal.SizeOf(typeof(MONITORINFO));
+        public RECT rcMonitor = new RECT();
+        public RECT rcWork = new RECT();
+        public int dwFlags = 0;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct RECT
+    {
+        public int left;
+        public int top;
+        public int right;
+        public int bottom;
+    }
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr MonitorFromWindow(IntPtr hwnd, uint dwFlags);
+
+    [DllImport("user32.dll", CharSet = CharSet.Auto)]
+    private static extern bool GetMonitorInfo(IntPtr hMonitor, [In, Out] MONITORINFO lpmi);
+
+    private const uint MONITOR_DEFAULTTONEAREST = 0x00000002;
+    private const int WM_GETMINMAXINFO = 0x0024;
+
     private void TitleBar_MouseDown(object sender, MouseButtonEventArgs e)
     {
         if (e.ChangedButton == MouseButton.Left)
         {
+            if (e.ClickCount == 2)
+            {
+                BtnMaximize_Click(sender, e);
+                return;
+            }
+
+            if (WindowState == WindowState.Maximized)
+            {
+                var mousePos = PointToScreen(e.GetPosition(this));
+                var ratio = e.GetPosition(this).X / Math.Max(ActualWidth, 1);
+                WindowState = WindowState.Normal;
+                Left = mousePos.X - (ActualWidth * ratio);
+                Top = mousePos.Y - 18;
+            }
+
             DragMove();
         }
     }
