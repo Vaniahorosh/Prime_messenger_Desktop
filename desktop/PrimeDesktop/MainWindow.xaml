@@ -1293,41 +1293,11 @@
 
 
                 <Grid>
-
-                    <Grid.RowDefinitions>
-
-                        <RowDefinition Height="Auto"/> <!-- Top Bar -->
-
-                        <RowDefinition Height="*"/>    <!-- Scrollable Profile Content -->
-
-                    </Grid.RowDefinitions>
-
-
-
-                    <!-- Top Bar -->
-
-                    <Border Grid.Row="0" Background="{DynamicResource HeaderBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1" Padding="14,10">
-
-                        <DockPanel VerticalAlignment="Center">
-
-                            <Button Content="✕" Style="{StaticResource ModernButton}" Command="{Binding ToggleMediaDrawerCommand}" DockPanel.Dock="Right" Width="28" Height="28" Padding="0"/>
-
-                            <TextBlock Text="Информация о контакте" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="Bold" FontSize="14" VerticalAlignment="Center"/>
-
-                        </DockPanel>
-
-                    </Border>
-
-
-
-                    <!-- Scrollable Content -->
-
-                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="14">
-
+                    <!-- Scrollable Profile Content -->
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="14">
                         <StackPanel>
-
-                            <!-- 7.1. Header Card with Large Photo, Avatar History and Gradient Overlay -->
-                            <Border Height="230" CornerRadius="16" ClipToBounds="True" Background="{DynamicResource CardBrush}" Margin="0,0,0,14" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                            <!-- 7.1. Header Card with Large Photo and Left Vertical Action Buttons -->
+                            <Border Height="270" CornerRadius="16" ClipToBounds="True" Background="{DynamicResource CardBrush}" Margin="0,0,0,14" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
                                 <Grid>
                                     <!-- Fallback Initials Display -->
                                     <Grid Background="{DynamicResource AccentBrush}" Visibility="{Binding SelectedChat.HasAvatar, Converter={StaticResource InverseBoolToVis}}">
@@ -1335,13 +1305,18 @@
                                                    HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                     </Grid>
 
-                                    <!-- Actual Avatar Photo -->
+                                    <!-- Actual Avatar Photo (Floods the top/card) -->
                                     <Image Source="{Binding SelectedChat.CurrentAvatarDisplayPath, Converter={StaticResource NonLockingImgConverter}}" Stretch="UniformToFill"
                                            RenderOptions.BitmapScalingMode="HighQuality"
                                            Visibility="{Binding SelectedChat.HasAvatar, Converter={StaticResource BoolToVis}}"/>
 
                                     <!-- Clickable Overlay to open Avatar in full-screen Photo Viewer -->
                                     <Border Background="Transparent" Cursor="Hand">
+                                        <Border.ContextMenu>
+                                            <ContextMenu Style="{StaticResource ModernContextMenu}">
+                                                <MenuItem Header="📷 Сменить аватар" Style="{StaticResource ModernMenuItem}" Command="{Binding ChangeContactAvatarCommand}"/>
+                                            </ContextMenu>
+                                        </Border.ContextMenu>
                                         <Border.InputBindings>
                                             <MouseBinding Gesture="LeftClick"
                                                           Command="{Binding OpenPhotoViewerCommand}"
@@ -1349,108 +1324,82 @@
                                         </Border.InputBindings>
                                     </Border>
 
-                                    <!-- Left Navigation Arrow for Avatar History -->
-                                    <Border HorizontalAlignment="Left" VerticalAlignment="Center" Margin="8,0,0,0"
-                                            Visibility="{Binding SelectedChat.CanGoPreviousAvatar, Converter={StaticResource BoolToVis}}">
-                                        <Border Background="#B3000000" CornerRadius="16" Width="32" Height="32">
-                                            <Button Style="{StaticResource ModernButton}" Command="{Binding PrevContactAvatarCommand}"
-                                                    Width="32" Height="32" Padding="0" Background="Transparent" BorderThickness="0"
-                                                    ToolTip="Предыдущий аватар">
-                                                <TextBlock Text="‹" Foreground="White" FontSize="20" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,-2,0,0"/>
-                                            </Button>
-                                        </Border>
-                                    </Border>
+                                    <!-- Left Vertical Action Buttons (In front of photo with light shadow) -->
+                                    <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Margin="12,12,0,0">
+                                        <!-- 1. Закрыть -->
+                                        <Button Style="{StaticResource ProfileGlassButton}"
+                                                Command="{Binding ToggleMediaDrawerCommand}"
+                                                ToolTip="Закрыть"
+                                                Margin="0,0,0,6">
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="✕" FontSize="11" FontWeight="Bold" Foreground="White" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                                <TextBlock Text="Закрыть" FontSize="11" FontWeight="SemiBold" Foreground="White" VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                        </Button>
 
-                                    <!-- Right Navigation Arrow for Avatar History -->
-                                    <Border HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,8,0"
-                                            Visibility="{Binding SelectedChat.CanGoNextAvatar, Converter={StaticResource BoolToVis}}">
-                                        <Border Background="#B3000000" CornerRadius="16" Width="32" Height="32">
-                                            <Button Style="{StaticResource ModernButton}" Command="{Binding NextContactAvatarCommand}"
-                                                    Width="32" Height="32" Padding="0" Background="Transparent" BorderThickness="0"
-                                                    ToolTip="Следующий аватар">
-                                                <TextBlock Text="›" Foreground="White" FontSize="20" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,-2,0,0"/>
-                                            </Button>
-                                        </Border>
-                                    </Border>
+                                        <!-- 2. Фото -->
+                                        <Button Style="{StaticResource ProfileGlassButton}"
+                                                Command="{Binding OpenPhotoViewerCommand}"
+                                                CommandParameter="{Binding SelectedChat.CurrentAvatarDisplayPath}"
+                                                ToolTip="Просмотр фото"
+                                                Margin="0,0,0,6">
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="👁️" FontSize="11" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                                <TextBlock Text="Фото" FontSize="11" FontWeight="SemiBold" Foreground="White" VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                        </Button>
 
-                                    <!-- Top-right Avatar Counter Pill (e.g. 1/3) -->
-                                    <Border HorizontalAlignment="Right" VerticalAlignment="Top" Margin="10"
-                                            Background="#99000000" CornerRadius="10" Padding="8,3"
-                                            Visibility="{Binding SelectedChat.HasAvatar, Converter={StaticResource BoolToVis}}">
-                                        <controls:AnimatedTextTransitionControl Text="{Binding SelectedChat.AvatarCounterText}" Foreground="White" FontSize="11" FontWeight="SemiBold"/>
-                                    </Border>
+                                        <!-- 3. Чтение -->
+                                        <Button Style="{StaticResource ProfileGlassButton}"
+                                                Command="{Binding ToggleReadingModeCommand}"
+                                                ToolTip="{Binding ReadingModeToolTip}"
+                                                Margin="0,0,0,6">
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="{Binding ReadingModeButtonIcon}" FontSize="11" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                                <controls:AnimatedTextTransitionControl Text="{Binding ReadingModeButtonText}" Foreground="White" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                        </Button>
 
-                                    <!-- Bottom Gradient Overlay -->
-                                    <Border VerticalAlignment="Bottom" Height="110" IsHitTestVisible="False">
+                                        <!-- 4. Удалить -->
+                                        <Button Style="{StaticResource ProfileGlassDangerButton}"
+                                                Command="{Binding DeleteSelectedChatCommand}"
+                                                ToolTip="Удалить чат">
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="🗑️" FontSize="11" Foreground="#EF4444" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                                <TextBlock Text="Удалить" FontSize="11" FontWeight="SemiBold" Foreground="#EF4444" VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                        </Button>
+                                    </StackPanel>
+
+                                    <!-- Bottom Gradient Overlay with Contact Info & Avatar Counter (кол-во фото) -->
+                                    <Border VerticalAlignment="Bottom" Height="80" IsHitTestVisible="False">
                                         <Border.Background>
                                             <LinearGradientBrush StartPoint="0.5,0" EndPoint="0.5,1">
                                                 <GradientStop Color="#000B1017" Offset="0.0"/>
-                                                <GradientStop Color="#CC0B1017" Offset="0.5"/>
-                                                <GradientStop Color="#FA0B1017" Offset="1.0"/>
+                                                <GradientStop Color="#CC0B1017" Offset="0.45"/>
+                                                <GradientStop Color="#F50B1017" Offset="1.0"/>
                                             </LinearGradientBrush>
                                         </Border.Background>
-                                        <StackPanel VerticalAlignment="Bottom" Margin="14,0,14,12">
-                                            <TextBlock Text="{Binding SelectedChat.DisplayName}" Foreground="White" FontSize="18" FontWeight="Bold" TextTrimming="CharacterEllipsis"/>
-                                            <StackPanel Orientation="Horizontal">
-                                                 <Ellipse Width="8" Height="8" Fill="{Binding SelectedChat.StatusColorHex, Converter={StaticResource HexToBrush}}" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                                                 <controls:AnimatedTextTransitionControl Text="{Binding SelectedChat.StatusText}" Foreground="{Binding SelectedChat.StatusColorHex, Converter={StaticResource HexToBrush}}" FontSize="11" FontWeight="SemiBold"/>
+                                        <DockPanel VerticalAlignment="Bottom" Margin="14,0,14,10">
+                                            <!-- Avatar Counter Pill on the right: (кол-во фото) -->
+                                            <Border DockPanel.Dock="Right" VerticalAlignment="Center" Margin="8,0,0,0"
+                                                    Background="#B3000000" CornerRadius="10" Padding="8,4"
+                                                    Visibility="{Binding SelectedChat.HasAvatar, Converter={StaticResource BoolToVis}}">
+                                                <controls:AnimatedTextTransitionControl Text="{Binding SelectedChat.AvatarCounterText}" Foreground="White" FontSize="11" FontWeight="SemiBold"/>
+                                            </Border>
+
+                                            <!-- Contact Display Name & Status -->
+                                            <StackPanel VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding SelectedChat.DisplayName}" Foreground="White" FontSize="17" FontWeight="Bold" TextTrimming="CharacterEllipsis"/>
+                                                <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                                                     <Ellipse Width="8" Height="8" Fill="{Binding SelectedChat.StatusColorHex, Converter={StaticResource HexToBrush}}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                                     <controls:AnimatedTextTransitionControl Text="{Binding SelectedChat.StatusText}" Foreground="{Binding SelectedChat.StatusColorHex, Converter={StaticResource HexToBrush}}" FontSize="11" FontWeight="SemiBold"/>
+                                                </StackPanel>
                                             </StackPanel>
-                                        </StackPanel>
+                                        </DockPanel>
                                     </Border>
                                 </Grid>
                             </Border>
-
-                            <!-- 7.2. Quick Action Buttons Bar (4 columns) -->
-                            <Grid Margin="0,0,0,16">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-
-                                <!-- View Photo -->
-                                <Button Grid.Column="0" Style="{StaticResource ModernButton}" Margin="0,0,2,0" Padding="0,8"
-                                        Command="{Binding OpenPhotoViewerCommand}" CommandParameter="{Binding SelectedChat.CurrentAvatarDisplayPath}"
-                                        ToolTip="Просмотреть аватары в медиаплеере">
-                                    <StackPanel HorizontalAlignment="Center">
-                                        <TextBlock Text="👁️" FontSize="13" HorizontalAlignment="Center"/>
-                                        <TextBlock Text="Фото" FontSize="10" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,3,0,0" HorizontalAlignment="Center"/>
-                                    </StackPanel>
-                                </Button>
-
-                                <!-- Add / Change Avatar -->
-                                <Button Grid.Column="1" Style="{StaticResource ModernButton}" Margin="2,0,2,0" Padding="0,8"
-                                        Command="{Binding ChangeContactAvatarCommand}"
-                                        ToolTip="Сменить или загрузить новый аватар в историю">
-                                    <StackPanel HorizontalAlignment="Center">
-                                        <TextBlock Text="📷" FontSize="13" HorizontalAlignment="Center"/>
-                                        <TextBlock Text="Аватар" FontSize="10" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,3,0,0" HorizontalAlignment="Center"/>
-                                    </StackPanel>
-                                </Button>
-
-                                <!-- Reading Mode / Connect Toggle Button -->
-                                <Button Grid.Column="2" Style="{StaticResource ModernButton}" Margin="2,0,2,0" Padding="0,8"
-                                        Command="{Binding ToggleReadingModeCommand}"
-                                        ToolTip="{Binding ReadingModeToolTip}">
-                                    <StackPanel HorizontalAlignment="Center">
-                                        <TextBlock Text="{Binding ReadingModeButtonIcon}" FontSize="13" HorizontalAlignment="Center"/>
-                                        <TextBlock Text="{Binding ReadingModeButtonText}" FontSize="10" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,3,0,0" HorizontalAlignment="Center"/>
-                                    </StackPanel>
-                                </Button>
-
-                                <!-- Delete Chat -->
-                                <Button Grid.Column="3" Style="{StaticResource ModernButton}" Margin="2,0,0,0" Padding="0,8"
-                                        Command="{Binding DeleteSelectedChatCommand}"
-                                        ToolTip="Удалить переписку и контакт">
-                                    <StackPanel HorizontalAlignment="Center">
-                                        <TextBlock Text="🗑️" FontSize="13" HorizontalAlignment="Center"/>
-                                        <TextBlock Text="Удалить" FontSize="10" Foreground="#EF4444" Margin="0,3,0,0" HorizontalAlignment="Center"/>
-                                    </StackPanel>
-                                </Button>
-                            </Grid>
-
-
 
                             <!-- 7.3. Sticky Tab Bar: Медиа | Файлы | Аудио -->
 
