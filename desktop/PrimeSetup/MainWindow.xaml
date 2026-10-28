@@ -131,7 +131,7 @@
                                     </Grid.ColumnDefinitions>
 
                                     <!-- Avatar Preview Box -->
-                                    <Border Width="64" Height="64" CornerRadius="32" Background="#181F2C" BorderBrush="#38BDF8" BorderThickness="2"
+                                    <Border Width="64" Height="64" CornerRadius="10" Background="#181F2C" BorderBrush="#38BDF8" BorderThickness="2"
                                             ClipToBounds="True" Cursor="Hand" MouseDown="AvatarBox_MouseDown">
                                         <Grid>
                                             <Image x:Name="AvatarPreviewImage" Stretch="UniformToFill" RenderOptions.BitmapScalingMode="HighQuality" Visibility="Collapsed"/>
@@ -156,27 +156,27 @@
                                         <TextBlock Text="Или выберите готовый аватар:" FontSize="11" Foreground="#8B949E" Margin="0,0,0,4"/>
                                         <StackPanel Orientation="Horizontal">
                                             <Button Click="PresetAvatar_Click" Tag="avatar_1.jpg" Width="32" Height="32" Margin="0,0,6,0" Cursor="Hand" Background="Transparent" BorderThickness="0" Padding="0" ToolTip="Аватар 1">
-                                                <Border CornerRadius="16" Width="32" Height="32" ClipToBounds="True" BorderBrush="#38BDF8" BorderThickness="1">
+                                                <Border CornerRadius="5" Width="32" Height="32" ClipToBounds="True" BorderBrush="#38BDF8" BorderThickness="1">
                                                     <Image Source="Assets/avatar_1.jpg" Stretch="UniformToFill" RenderOptions.BitmapScalingMode="HighQuality"/>
                                                 </Border>
                                             </Button>
                                             <Button Click="PresetAvatar_Click" Tag="avatar_2.jpg" Width="32" Height="32" Margin="0,0,6,0" Cursor="Hand" Background="Transparent" BorderThickness="0" Padding="0" ToolTip="Аватар 2">
-                                                <Border CornerRadius="16" Width="32" Height="32" ClipToBounds="True" BorderBrush="#38BDF8" BorderThickness="1">
+                                                <Border CornerRadius="5" Width="32" Height="32" ClipToBounds="True" BorderBrush="#38BDF8" BorderThickness="1">
                                                     <Image Source="Assets/avatar_2.jpg" Stretch="UniformToFill" RenderOptions.BitmapScalingMode="HighQuality"/>
                                                 </Border>
                                             </Button>
                                             <Button Click="PresetAvatar_Click" Tag="avatar_3.jpg" Width="32" Height="32" Margin="0,0,6,0" Cursor="Hand" Background="Transparent" BorderThickness="0" Padding="0" ToolTip="Аватар 3">
-                                                <Border CornerRadius="16" Width="32" Height="32" ClipToBounds="True" BorderBrush="#38BDF8" BorderThickness="1">
+                                                <Border CornerRadius="5" Width="32" Height="32" ClipToBounds="True" BorderBrush="#38BDF8" BorderThickness="1">
                                                     <Image Source="Assets/avatar_3.jpg" Stretch="UniformToFill" RenderOptions.BitmapScalingMode="HighQuality"/>
                                                 </Border>
                                             </Button>
                                             <Button Click="PresetAvatar_Click" Tag="avatar_4.jpg" Width="32" Height="32" Margin="0,0,6,0" Cursor="Hand" Background="Transparent" BorderThickness="0" Padding="0" ToolTip="Аватар 4">
-                                                <Border CornerRadius="16" Width="32" Height="32" ClipToBounds="True" BorderBrush="#38BDF8" BorderThickness="1">
+                                                <Border CornerRadius="5" Width="32" Height="32" ClipToBounds="True" BorderBrush="#38BDF8" BorderThickness="1">
                                                     <Image Source="Assets/avatar_4.jpg" Stretch="UniformToFill" RenderOptions.BitmapScalingMode="HighQuality"/>
                                                 </Border>
                                             </Button>
                                             <Button Click="PresetAvatar_Click" Tag="avatar_5.jpg" Width="32" Height="32" Cursor="Hand" Background="Transparent" BorderThickness="0" Padding="0" ToolTip="Аватар 5">
-                                                <Border CornerRadius="16" Width="32" Height="32" ClipToBounds="True" BorderBrush="#38BDF8" BorderThickness="1">
+                                                <Border CornerRadius="5" Width="32" Height="32" ClipToBounds="True" BorderBrush="#38BDF8" BorderThickness="1">
                                                     <Image Source="Assets/avatar_5.jpg" Stretch="UniformToFill" RenderOptions.BitmapScalingMode="HighQuality"/>
                                                 </Border>
                                             </Button>

@@ -25,6 +25,15 @@ namespace PrimeSetup
             "Programs", "PrimeMessenger");
 
         private string? _chosenAvatarPath = null;
+
+        private enum SetupMode
+        {
+            Install,
+            Reinstall,
+            Update
+        }
+        private SetupMode _setupMode = SetupMode.Install;
+        private string? _installedVersion = null;
         private DispatcherTimer? _sloganTimer;
         private int _currentSloganIndex = 0;
 
@@ -89,6 +98,10 @@ namespace PrimeSetup
             if (_isUninstallMode)
             {
                 ConfigureUninstallUi();
+            }
+            else
+            {
+                DetectInstallationState();
             }
         }
 
@@ -373,8 +386,22 @@ namespace PrimeSetup
         {
             AnimateExpansionToFull();
 
-            InstallBtn.Content = "Установка...";
-            StatusTitle.Text = "Распаковка файлов Prime Messenger...";
+            if (_setupMode == SetupMode.Update)
+            {
+                InstallBtn.Content = "Обновление...";
+                StatusTitle.Text = "Обновление файлов Prime Messenger...";
+            }
+            else if (_setupMode == SetupMode.Reinstall)
+            {
+                InstallBtn.Content = "Переустановка...";
+                StatusTitle.Text = "Переустановка файлов Prime Messenger...";
+            }
+            else
+            {
+                InstallBtn.Content = "Установка...";
+                StatusTitle.Text = "Копирование файлов Prime Messenger...";
+            }
+
             InstallProgress.Value = 20;
 
             try
@@ -382,8 +409,22 @@ namespace PrimeSetup
                 await Task.Run(() => PerformInstallation());
 
                 InstallProgress.Value = 100;
-                StatusTitle.Text = "Установка успешно завершена!";
-                StatusSub.Text = $"Prime Messenger установлен в:\n{TargetDir}";
+                if (_setupMode == SetupMode.Update)
+                {
+                    StatusTitle.Text = "Prime Messenger успешно обновлен!";
+                    StatusSub.Text = $"Обновлено в:\n{TargetDir}";
+                }
+                else if (_setupMode == SetupMode.Reinstall)
+                {
+                    StatusTitle.Text = "Prime Messenger успешно переустановлен!";
+                    StatusSub.Text = $"Файлы восстановлены в:\n{TargetDir}";
+                }
+                else
+                {
+                    StatusTitle.Text = "Установка успешно завершена!";
+                    StatusSub.Text = $"Prime Messenger установлен в:\n{TargetDir}";
+                }
+
                 InstallBtn.IsEnabled = true;
                 InstallBtn.Content = "Завершить";
                 _isCompleted = true;
@@ -713,5 +754,167 @@ namespace PrimeSetup
             }
             catch { }
         }
+    
+        private void DetectInstallationState()
+        {
+            if (_isUninstallMode) return;
+
+            bool isInstalled = false;
+            string? loc = null;
+            string? installedVer = null;
+
+            try
+            {
+                using var key = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Uninstall\PrimeMessenger");
+                if (key != null)
+                {
+                    loc = key.GetValue("InstallLocation") as string;
+                    installedVer = key.GetValue("DisplayVersion") as string;
+                }
+            }
+            catch { }
+
+            if (string.IsNullOrEmpty(loc))
+            {
+                loc = TargetDir;
+            }
+
+            string exePath = Path.Combine(loc, "PrimeDesktop.exe");
+            if (File.Exists(exePath))
+            {
+                isInstalled = true;
+                TargetDir = loc;
+                TxtInstallPath.Text = loc;
+
+                if (string.IsNullOrEmpty(installedVer))
+                {
+                    try
+                    {
+                        var fvi = System.Diagnostics.FileVersionInfo.GetVersionInfo(exePath);
+                        installedVer = fvi.ProductVersion ?? fvi.FileVersion;
+                    }
+                    catch { }
+                }
+            }
+
+            if (!isInstalled)
+            {
+                _setupMode = SetupMode.Install;
+                InstallBtn.Content = "Установить";
+                return;
+            }
+
+            _installedVersion = installedVer;
+
+            string installerVer = "0.1 Desk";
+            try
+            {
+                var asm = Assembly.GetExecutingAssembly();
+                var infoVer = asm.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
+                if (!string.IsNullOrEmpty(infoVer))
+                {
+                    int plus = infoVer.IndexOf('+');
+                    if (plus >= 0) infoVer = infoVer.Substring(0, plus);
+                    installerVer = infoVer;
+                }
+            }
+            catch { }
+
+            int cmp = CompareVersions(installerVer, _installedVersion);
+            if (cmp > 0)
+            {
+                _setupMode = SetupMode.Update;
+                InstallBtn.Content = "Обновить";
+                StatusSub.Text = $"Найдена версия {_installedVersion ?? "0.1"}. Нажмите «Обновить» для перехода на {installerVer}.";
+            }
+            else
+            {
+                _setupMode = SetupMode.Reinstall;
+                InstallBtn.Content = "Переустановить";
+                StatusSub.Text = $"Приложение уже установлено ({_installedVersion ?? installerVer}). Нажмите «Переустановить» для восстановления.";
+            }
+
+            LoadExistingProfileIfAvailable();
+        }
+
+        private void LoadExistingProfileIfAvailable()
+        {
+            try
+            {
+                string appDataDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "PrimeDesktop");
+                string settingsPath = Path.Combine(appDataDir, "settings.json");
+                if (File.Exists(settingsPath))
+                {
+                    string json = File.ReadAllText(settingsPath);
+                    using var doc = System.Text.Json.JsonDocument.Parse(json);
+                    var root = doc.RootElement;
+                    if (root.ValueKind == System.Text.Json.JsonValueKind.Object)
+                    {
+                        if (root.TryGetProperty("MyDisplayName", out var nameProp) && nameProp.ValueKind == System.Text.Json.JsonValueKind.String)
+                        {
+                            string name = nameProp.GetString() ?? "";
+                            if (!string.IsNullOrEmpty(name)) TxtDisplayName.Text = name;
+                        }
+                        if (root.TryGetProperty("MyUsername", out var userProp) && userProp.ValueKind == System.Text.Json.JsonValueKind.String)
+                        {
+                            string user = userProp.GetString() ?? "";
+                            if (!string.IsNullOrEmpty(user)) TxtUsername.Text = user;
+                        }
+                        if (root.TryGetProperty("MyAvatarPath", out var avProp) && avProp.ValueKind == System.Text.Json.JsonValueKind.String)
+                        {
+                            string avPath = avProp.GetString() ?? "";
+                            if (File.Exists(avPath))
+                            {
+                                _chosenAvatarPath = avPath;
+                                DisplayAvatarPreview(avPath);
+                            }
+                        }
+                    }
+                }
+            }
+            catch { }
+        }
+
+        private static int CompareVersions(string? v1, string? v2)
+        {
+            if (string.IsNullOrWhiteSpace(v1) && string.IsNullOrWhiteSpace(v2)) return 0;
+            if (string.IsNullOrWhiteSpace(v2)) return 1;
+            if (string.IsNullOrWhiteSpace(v1)) return -1;
+
+            var ver1 = ParseVersion(v1);
+            var ver2 = ParseVersion(v2);
+
+            if (ver1 != null && ver2 != null)
+            {
+                return ver1.CompareTo(ver2);
+            }
+
+            return string.Compare(v1.Trim(), v2.Trim(), StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static Version? ParseVersion(string input)
+        {
+            try
+            {
+                var match = System.Text.RegularExpressions.Regex.Match(input, @"\d+(\.\d+)+");
+                if (match.Success)
+                {
+                    string[] parts = match.Value.Split('.');
+                    int major = int.Parse(parts[0]);
+                    int minor = parts.Length > 1 ? int.Parse(parts[1]) : 0;
+                    int build = parts.Length > 2 ? int.Parse(parts[2]) : 0;
+                    int rev = parts.Length > 3 ? int.Parse(parts[3]) : 0;
+                    return new Version(major, minor, build, rev);
+                }
+                var singleMatch = System.Text.RegularExpressions.Regex.Match(input, @"\d+");
+                if (singleMatch.Success && int.TryParse(singleMatch.Value, out int m))
+                {
+                    return new Version(m, 0, 0, 0);
+                }
+            }
+            catch { }
+            return null;
+        }
+
     }
 }

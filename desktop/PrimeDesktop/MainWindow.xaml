@@ -215,7 +215,7 @@
 
                                 <StackPanel Margin="10,0,0,0" VerticalAlignment="Center">
                                     <TextBlock Text="{Binding Settings.MyDisplayName}" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold" FontSize="13"/>
-                                    <TextBlock Text="ПК клиент • Онлайн" Foreground="{DynamicResource AccentBrush}" FontSize="10"/>
+                                    <TextBlock Text="Настройки" Foreground="{DynamicResource AccentBrush}" FontSize="10"/>
                                 </StackPanel>
                             </StackPanel>
                         </DockPanel>
