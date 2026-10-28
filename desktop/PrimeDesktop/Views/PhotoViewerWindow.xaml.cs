@@ -540,6 +540,8 @@ namespace PrimeDesktop.Views
         private void ResetZoomAndPosition()
         {
             _currentZoom = 1.0;
+            ImageScale.CenterX = TargetImage.ActualWidth / 2.0;
+            ImageScale.CenterY = TargetImage.ActualHeight / 2.0;
             ImageScale.ScaleX = 1.0;
             ImageScale.ScaleY = 1.0;
             ImageTranslate.X = 0;
@@ -552,6 +554,8 @@ namespace PrimeDesktop.Views
             newZoom = Math.Clamp(newZoom, 0.1, 10.0);
             _currentZoom = newZoom;
 
+            ImageScale.CenterX = TargetImage.ActualWidth / 2.0;
+            ImageScale.CenterY = TargetImage.ActualHeight / 2.0;
             ImageScale.ScaleX = newZoom;
             ImageScale.ScaleY = newZoom;
             BtnZoomReset.Content = $"{Math.Round(newZoom * 100)}%";
@@ -742,6 +746,54 @@ namespace PrimeDesktop.Views
             Close();
         }
 
+        #region Bottom Action Tray Hover & Animations
+
+        private void BottomActionTray_MouseEnter(object sender, MouseEventArgs e)
+        {
+            TrayExpandedContent.Visibility = Visibility.Visible;
+
+            var duration = TimeSpan.FromMilliseconds(260);
+            var backEase = new System.Windows.Media.Animation.BackEase { EasingMode = System.Windows.Media.Animation.EasingMode.EaseOut, Amplitude = 0.3 };
+            var cubicEase = new System.Windows.Media.Animation.CubicEase { EasingMode = System.Windows.Media.Animation.EasingMode.EaseOut };
+
+            // 1. Expand opacity
+            var fadeAnim = new System.Windows.Media.Animation.DoubleAnimation(0.0, 1.0, duration) { EasingFunction = cubicEase };
+            TrayExpandedContent.BeginAnimation(UIElement.OpacityProperty, fadeAnim);
+
+            // 2. Scale Tray up slightly from bottom-left corner
+            var scaleXAnim = new System.Windows.Media.Animation.DoubleAnimation(0.92, 1.0, duration) { EasingFunction = backEase };
+            var scaleYAnim = new System.Windows.Media.Animation.DoubleAnimation(0.92, 1.0, duration) { EasingFunction = backEase };
+            TrayScale.BeginAnimation(System.Windows.Media.ScaleTransform.ScaleXProperty, scaleXAnim);
+            TrayScale.BeginAnimation(System.Windows.Media.ScaleTransform.ScaleYProperty, scaleYAnim);
+
+            // 3. Upward flyout translate
+            var transYAnim = new System.Windows.Media.Animation.DoubleAnimation(6.0, 0.0, duration) { EasingFunction = cubicEase };
+            TrayTranslate.BeginAnimation(System.Windows.Media.TranslateTransform.YProperty, transYAnim);
+        }
+
+        private void BottomActionTray_MouseLeave(object sender, MouseEventArgs e)
+        {
+            var duration = TimeSpan.FromMilliseconds(180);
+            var cubicEase = new System.Windows.Media.Animation.CubicEase { EasingMode = System.Windows.Media.Animation.EasingMode.EaseIn };
+
+            var fadeAnim = new System.Windows.Media.Animation.DoubleAnimation(1.0, 0.0, duration) { EasingFunction = cubicEase };
+            fadeAnim.Completed += (s, args) =>
+            {
+                if (!BottomActionTray.IsMouseOver)
+                {
+                    TrayExpandedContent.Visibility = Visibility.Collapsed;
+                }
+            };
+            TrayExpandedContent.BeginAnimation(UIElement.OpacityProperty, fadeAnim);
+
+            var scaleXAnim = new System.Windows.Media.Animation.DoubleAnimation(1.0, 0.96, duration) { EasingFunction = cubicEase };
+            var scaleYAnim = new System.Windows.Media.Animation.DoubleAnimation(1.0, 0.96, duration) { EasingFunction = cubicEase };
+            TrayScale.BeginAnimation(System.Windows.Media.ScaleTransform.ScaleXProperty, scaleXAnim);
+            TrayScale.BeginAnimation(System.Windows.Media.ScaleTransform.ScaleYProperty, scaleYAnim);
+        }
+
+        #endregion
+
         private void Window_StateChanged(object? sender, EventArgs e)
         {
             if (IconMaximize == null || IconRestore == null) return;
@@ -771,4 +823,5 @@ namespace PrimeDesktop.Views
         #endregion
     }
 }
+
 
