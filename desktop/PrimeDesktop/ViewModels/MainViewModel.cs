@@ -1325,13 +1325,16 @@ public class MainViewModel : ViewModelBase
 
         ClearAllChatsCommand = new RelayCommand(async () =>
         {
-            var res = MessageBox.Show(
-                "Вы уверены, что хотите удалить все чаты и историю сообщений?",
-                "Очистка всех чатов",
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Warning);
+            var iconTrash = Application.Current?.TryFindResource("IconTrash") as System.Windows.Media.Geometry;
+            bool confirmed = PrimeDesktop.Views.PrimeDialogWindow.Confirm(
+                title: "Очистка всех чатов",
+                message: "Вы уверены, что хотите удалить все чаты и историю сообщений? Это действие необратимо.",
+                positiveText: "Удалить все",
+                negativeText: "Отмена",
+                isDanger: true,
+                icon: iconTrash);
 
-            if (res == MessageBoxResult.Yes)
+            if (confirmed)
             {
                 IsMediaDrawerOpen = false;
                 _allChats.Clear();
@@ -3156,13 +3159,16 @@ public async Task SendTextMessageAsync()
 
     private async Task ConfirmAndDeleteChatAsync(ChatItem chat)
     {
-        var result = MessageBox.Show(
-            $"Вы действительно хотите удалить переписку и контакт «{chat.DisplayName}»?\n\nДиалог будет навсегда удален из списка чатов, а устройство полностью забыто.",
-            "Удаление чата",
-            MessageBoxButton.YesNo,
-            MessageBoxImage.Warning);
+        var iconTrash = Application.Current?.TryFindResource("IconTrash") as System.Windows.Media.Geometry;
+        bool confirmed = PrimeDesktop.Views.PrimeDialogWindow.Confirm(
+            title: "Удалить чат?",
+            message: $"Вы действительно хотите удалить переписку и контакт «{chat.DisplayName}»?\n\nДиалог будет навсегда удален из списка чатов, а устройство полностью забыто.",
+            positiveText: "Удалить",
+            negativeText: "Отмена",
+            isDanger: true,
+            icon: iconTrash);
 
-        if (result != MessageBoxResult.Yes) return;
+        if (!confirmed) return;
 
         string targetAddr = !string.IsNullOrWhiteSpace(chat.DeviceAddress) ? chat.DeviceAddress : chat.PeerId;
 

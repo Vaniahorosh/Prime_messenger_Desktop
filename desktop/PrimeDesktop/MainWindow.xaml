@@ -1755,28 +1755,57 @@
         <!-- ============================================== -->
 
         <Grid Grid.Row="0" Grid.RowSpan="2" Background="#A005070D"
-
               Visibility="{Binding IsDiscoveryOpen, Converter={StaticResource BoolToVis}}"
-
               Panel.ZIndex="90">
 
             <Border Background="{DynamicResource CardBrush}"
-
                     BorderBrush="{DynamicResource BorderBrush}"
-
                     BorderThickness="1"
-
-                    CornerRadius="16"
-
+                    CornerRadius="24"
                     Width="480" MaxHeight="520"
-
-                    VerticalAlignment="Center" HorizontalAlignment="Center">
+                    VerticalAlignment="Center" HorizontalAlignment="Center"
+                    RenderTransformOrigin="0.5,0.5">
 
                 <Border.Effect>
-
-                    <DropShadowEffect BlurRadius="30" ShadowDepth="6" Opacity="0.6" Color="#000000"/>
-
+                    <DropShadowEffect BlurRadius="40" ShadowDepth="8" Direction="270" Opacity="0.6" Color="#000000"/>
                 </Border.Effect>
+
+                <Border.RenderTransform>
+                    <TransformGroup>
+                        <ScaleTransform ScaleX="1.0" ScaleY="1.0"/>
+                        <TranslateTransform Y="0"/>
+                    </TransformGroup>
+                </Border.RenderTransform>
+
+                <Border.Style>
+                    <Style TargetType="Border">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsDiscoveryOpen}" Value="True">
+                                <DataTrigger.EnterActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0.0" To="1.0" Duration="0:0:0.32">
+                                                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleX)"
+                                                             From="0.82" To="1.0" Duration="0:0:0.32">
+                                                <DoubleAnimation.EasingFunction><BackEase EasingMode="EaseOut" Amplitude="0.35"/></DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleY)"
+                                                             From="0.82" To="1.0" Duration="0:0:0.32">
+                                                <DoubleAnimation.EasingFunction><BackEase EasingMode="EaseOut" Amplitude="0.35"/></DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[1].(TranslateTransform.Y)"
+                                                             From="40" To="0" Duration="0:0:0.32">
+                                                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </DataTrigger.EnterActions>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
 
                 <Grid Margin="22">
 

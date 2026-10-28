@@ -49,7 +49,7 @@ public partial class PhotoEditorWindow : Window
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Не удалось загрузить изображение: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+            PrimeDialogWindow.Alert("Ошибка", $"Не удалось загрузить изображение: {ex.Message}", "Понятно", owner: this);
             Close();
         }
     }
@@ -277,7 +277,7 @@ public partial class PhotoEditorWindow : Window
         {
             var final = RenderFinalImage();
             SaveBitmapToFile(final, dlg.FileName);
-            MessageBox.Show("Изображение успешно сохранено!", "Прайм", MessageBoxButton.OK, MessageBoxImage.Information);
+            PrimeDialogWindow.Alert("Прайм", "Изображение успешно сохранено!", "Отлично", owner: this);
         }
     }
 
