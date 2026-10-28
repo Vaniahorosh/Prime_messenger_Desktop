@@ -524,7 +524,6 @@ public class MainViewModel : ViewModelBase
     public ICommand ConnectChatCommand { get; }
 
     public ICommand DisconnectChatCommand { get; }
-    public ICommand SyncChatsCommand { get; }
 
     private bool _isReadingMode;
     public bool IsReadingMode
@@ -1249,7 +1248,6 @@ public class MainViewModel : ViewModelBase
         ConnectChatCommand = new RelayCommand(async () => await ConnectSelectedChatAsync(), () => HasSelectedChat);
 
         DisconnectChatCommand = new RelayCommand(async () => await DisconnectSelectedChatAsync(), () => HasSelectedChat);
-        SyncChatsCommand = new RelayCommand(async () => await RequestChatsSyncAsync());
         ToggleReadingModeCommand = new RelayCommand(async () =>
         {
             if (SelectedChat == null) return;
@@ -3156,31 +3154,6 @@ public async Task SendTextMessageAsync()
         }
     }
 
-    public async Task RequestChatsSyncAsync()
-    {
-        try
-        {
-            StatusMessage = "Синхронизация чатов...";
-            var targetChats = _allChats.Where(c => _bluetoothService.IsConnected(c.DeviceAddress) || _companionService.IsConnected(c.DeviceAddress) || c.IsOnline).ToList();
-            if (targetChats.Count == 0)
-            {
-                StatusMessage = "Нет активных подключений для синхронизации";
-                return;
-            }
-            foreach (var c in targetChats)
-            {
-                string addr = !string.IsNullOrWhiteSpace(c.DeviceAddress) ? c.DeviceAddress : c.PeerId;
-                await SendNetworkPacketAsync(addr, PacketType.SyncChats, System.Text.Encoding.UTF8.GetBytes("REQUEST_SYNC"));
-                await SendNetworkPacketAsync(addr, PacketType.Presence, System.Text.Encoding.UTF8.GetBytes("ONLINE"));
-            }
-            StatusMessage = "Запрос синхронизации отправлен";
-        }
-        catch (Exception ex)
-        {
-            StatusMessage = $"Ошибка синхронизации: {ex.Message}";
-        }
-    }
-
     private async Task ConfirmAndDeleteChatAsync(ChatItem chat)
     {
         var result = MessageBox.Show(
@@ -3598,8 +3571,6 @@ public async Task SendTextMessageAsync()
                     await BroadcastMyProfileAndAvatarAsync();
                     await Task.Delay(150);
 
-                    // 3. Request full chat sync from peer
-                    try { await SendNetworkPacketAsync(target, PacketType.SyncChats, System.Text.Encoding.UTF8.GetBytes("REQUEST_SYNC")); } catch { }
                 });
             }
         });
@@ -4141,77 +4112,6 @@ public async Task SendTextMessageAsync()
 
                     break;
 
-                case PacketType.SyncChats:
-                    try
-                    {
-                        string syncJson = System.Text.Encoding.UTF8.GetString(payload).Trim();
-                        if (!string.IsNullOrWhiteSpace(syncJson))
-                        {
-                            if (syncJson == "REQUEST_SYNC")
-                            {
-                                _ = Task.Run(async () =>
-                                {
-                                    try
-                                    {
-                                        string json = System.Text.Json.JsonSerializer.Serialize(_allChats.ToList());
-                                        string addr = !string.IsNullOrWhiteSpace(chat.DeviceAddress) ? chat.DeviceAddress : chat.PeerId;
-                                        await SendNetworkPacketAsync(addr, PacketType.SyncChats, System.Text.Encoding.UTF8.GetBytes(json));
-                                    }
-                                    catch { }
-                                });
-                                break;
-                            }
-
-                            var syncedList = System.Text.Json.JsonSerializer.Deserialize<System.Collections.Generic.List<ChatItem>>(syncJson);
-                            if (syncedList != null && syncedList.Count > 0)
-                            {
-                                foreach (var syncChat in syncedList)
-                                {
-                                    if (IsSelfDevice(syncChat.DeviceAddress, syncChat.DisplayName, syncChat.Username) ||
-                                        IsSelfDevice(syncChat.PeerId, syncChat.DisplayName, syncChat.Username))
-                                    {
-                                        continue;
-                                    }
-                                    if (IsDeviceForgotten(syncChat.DeviceAddress) || IsDeviceForgotten(syncChat.PeerId)) continue;
-                                    var existing = FindChatByAddressOrPeer(syncChat.PeerId) ?? 
-                                                   FindChatByAddressOrPeer(syncChat.DeviceAddress) ?? 
-                                                   FindChatByAddressOrPeer(null, syncChat.DisplayName);
-                                    if (existing != null)
-                                    {
-                                        foreach (var m in syncChat.Messages)
-                                        {
-                                            if (!existing.Messages.Any(x => x.Id == m.Id))
-                                            {
-                                                existing.Messages.Add(m);
-                                            }
-                                        }
-                                        if (syncChat.Messages.Count > 0)
-                                        {
-                                            var last = existing.Messages.LastOrDefault();
-                                            if (last != null)
-                                            {
-                                                existing.LastMessage = last.Text ?? existing.LastMessage;
-                                                existing.LastMessageTime = last.FormattedTime;
-                                            }
-                                        }
-                                        if (syncChat.IsOnline) existing.IsOnline = true;
-                                    }
-                                    else
-                                    {
-                                        _allChats.Add(syncChat);
-                                    }
-                                }
-                                _ = _storageService.SaveChatsAsync(_allChats);
-                                ApplySearchFilter();
-                                StatusMessage = "Чаты синхронизированы с телефоном";
-                            }
-                        }
-                    }
-                    catch (Exception syncEx)
-                    {
-                        App.Log($"[SyncChats ERROR] Failed to parse sync payload: {syncEx.Message}");
-                    }
-                    break;
 
                 case PacketType.ChatDeleted:
                     try

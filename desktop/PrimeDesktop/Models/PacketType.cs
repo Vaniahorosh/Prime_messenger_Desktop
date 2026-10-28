@@ -21,6 +21,5 @@ public enum PacketType : byte
     File = 0x0E,
     ProfileUpdate = 0x0F,
     Voice = 0x10,
-    SyncChats = 0x11,
     KeepAlive = 0xFE
 }
