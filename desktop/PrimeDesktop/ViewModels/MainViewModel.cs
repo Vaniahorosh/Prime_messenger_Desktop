@@ -559,6 +559,7 @@ public class MainViewModel : ViewModelBase
     public ICommand ChangeContactAvatarCommand { get; }
 
     public ICommand ChangeMyAvatarCommand { get; }
+    public ICommand SelectPresetAvatarCommand { get; }
     public ICommand ResetMyAvatarCommand { get; }
     public ICommand BroadcastProfileCommand { get; }
     public ICommand ClearMediaCacheCommand { get; }
@@ -1325,6 +1326,38 @@ public class MainViewModel : ViewModelBase
         OpenSearchCommand = new RelayCommand(() => IsSearchActive = true);
         CloseSearchCommand = new RelayCommand(() => IsSearchActive = false);
         ToggleSearchCommand = new RelayCommand(() => IsSearchActive = !IsSearchActive);
+
+        SelectPresetAvatarCommand = new RelayCommand(param =>
+        {
+            if (param is string assetName && !string.IsNullOrWhiteSpace(assetName))
+            {
+                try
+                {
+                    var uri = new Uri($"pack://application:,,,/Assets/{assetName}", UriKind.Absolute);
+                    var streamInfo = Application.GetResourceStream(uri);
+                    if (streamInfo != null)
+                    {
+                        using var ms = new MemoryStream();
+                        streamInfo.Stream.CopyTo(ms);
+                        byte[] bytes = ms.ToArray();
+                        string? saved = AvatarManager.SaveAvatarBytesToHistory("my_profile", bytes, ".jpg");
+                        if (saved != null)
+                        {
+                            Settings.MyAvatarPath = null;
+                            Settings.MyAvatarPath = saved;
+                            OnPropertyChanged(nameof(Settings));
+                            _ = _storageService.SaveSettingsAsync(Settings);
+                            _ = BroadcastMyProfileAndAvatarAsync();
+                            StatusMessage = "Аватар профиля успешно установлен";
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    StatusMessage = $"Ошибка выбора аватара: {ex.Message}";
+                }
+            }
+        });
 
         ResetMyAvatarCommand = new RelayCommand(() =>
         {

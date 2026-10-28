@@ -65,8 +65,8 @@ namespace PrimeSetup
             catch { }
 
             TxtInstallPath.Text = TargetDir;
-            TxtDisplayName.Text = Environment.UserName;
-            TxtUsername.Text = Environment.UserName.ToLowerInvariant().Replace(" ", "_");
+            TxtDisplayName.Text = "";
+            TxtUsername.Text = "";
 
             try
             {
@@ -229,6 +229,31 @@ namespace PrimeSetup
                     _chosenAvatarPath = cropper.CroppedResultPath;
                     DisplayAvatarPreview(_chosenAvatarPath);
                 }
+            }
+        }
+
+        private void PresetAvatar_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is FrameworkElement fe && fe.Tag is string assetName && !string.IsNullOrWhiteSpace(assetName))
+            {
+                try
+                {
+                    var uri = new Uri($"pack://application:,,,/Assets/{assetName}", UriKind.Absolute);
+                    var streamInfo = Application.GetResourceStream(uri);
+                    if (streamInfo != null)
+                    {
+                        string tempDir = Path.Combine(Path.GetTempPath(), "PrimeSetup");
+                        Directory.CreateDirectory(tempDir);
+                        string tempFile = Path.Combine(tempDir, $"{Guid.NewGuid():N}.jpg");
+                        using (var fs = File.Create(tempFile))
+                        {
+                            streamInfo.Stream.CopyTo(fs);
+                        }
+                        _chosenAvatarPath = tempFile;
+                        DisplayAvatarPreview(tempFile);
+                    }
+                }
+                catch { }
             }
         }
 

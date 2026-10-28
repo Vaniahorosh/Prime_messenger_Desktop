@@ -302,11 +302,49 @@
                                             </Border>
 
                                             <StackPanel VerticalAlignment="Center">
-                                                <Button Content="📷 Сменить мой аватар" Command="{Binding ChangeMyAvatarCommand}"
-                                                        Style="{StaticResource ModernButton}" Padding="12,6" Margin="0,0,0,4"/>
-                                                <Button Content="🗑️ Сбросить аватар" Command="{Binding ResetMyAvatarCommand}"
-                                                        Style="{StaticResource ModernButton}" Padding="12,4" Margin="0,0,0,4"
-                                                        Visibility="{Binding Settings.MyAvatarPath, Converter={StaticResource NotNullToVis}}"/>
+                                                <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                                                    <Button Content="📷 Сменить мой аватар" Command="{Binding ChangeMyAvatarCommand}"
+                                                            Style="{StaticResource ModernButton}" Padding="12,5" Margin="0,0,8,0"/>
+                                                    <Button Content="🗑️ Сбросить аватар" Command="{Binding ResetMyAvatarCommand}"
+                                                            Style="{StaticResource ModernButton}" Padding="10,5"
+                                                            Visibility="{Binding Settings.MyAvatarPath, Converter={StaticResource NotNullToVis}}"/>
+                                                </StackPanel>
+
+                                                <!-- 5 Preset Avatars (Android Parity) -->
+                                                <TextBlock Text="Готовые аватары" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,2,0,4"/>
+                                                <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                                                    <Button Command="{Binding SelectPresetAvatarCommand}" CommandParameter="avatar_1.jpg"
+                                                            Width="38" Height="38" Margin="0,0,6,0" Cursor="Hand" Style="{StaticResource ModernButton}" Padding="0" ToolTip="Аватар 1">
+                                                        <Border CornerRadius="{Binding AvatarCornerRadius}" Width="38" Height="38" ClipToBounds="True">
+                                                            <Image Source="../Assets/avatar_1.jpg" Stretch="UniformToFill" RenderOptions.BitmapScalingMode="HighQuality"/>
+                                                        </Border>
+                                                    </Button>
+                                                    <Button Command="{Binding SelectPresetAvatarCommand}" CommandParameter="avatar_2.jpg"
+                                                            Width="38" Height="38" Margin="0,0,6,0" Cursor="Hand" Style="{StaticResource ModernButton}" Padding="0" ToolTip="Аватар 2">
+                                                        <Border CornerRadius="{Binding AvatarCornerRadius}" Width="38" Height="38" ClipToBounds="True">
+                                                            <Image Source="../Assets/avatar_2.jpg" Stretch="UniformToFill" RenderOptions.BitmapScalingMode="HighQuality"/>
+                                                        </Border>
+                                                    </Button>
+                                                    <Button Command="{Binding SelectPresetAvatarCommand}" CommandParameter="avatar_3.jpg"
+                                                            Width="38" Height="38" Margin="0,0,6,0" Cursor="Hand" Style="{StaticResource ModernButton}" Padding="0" ToolTip="Аватар 3">
+                                                        <Border CornerRadius="{Binding AvatarCornerRadius}" Width="38" Height="38" ClipToBounds="True">
+                                                            <Image Source="../Assets/avatar_3.jpg" Stretch="UniformToFill" RenderOptions.BitmapScalingMode="HighQuality"/>
+                                                        </Border>
+                                                    </Button>
+                                                    <Button Command="{Binding SelectPresetAvatarCommand}" CommandParameter="avatar_4.jpg"
+                                                            Width="38" Height="38" Margin="0,0,6,0" Cursor="Hand" Style="{StaticResource ModernButton}" Padding="0" ToolTip="Аватар 4">
+                                                        <Border CornerRadius="{Binding AvatarCornerRadius}" Width="38" Height="38" ClipToBounds="True">
+                                                            <Image Source="../Assets/avatar_4.jpg" Stretch="UniformToFill" RenderOptions.BitmapScalingMode="HighQuality"/>
+                                                        </Border>
+                                                    </Button>
+                                                    <Button Command="{Binding SelectPresetAvatarCommand}" CommandParameter="avatar_5.jpg"
+                                                            Width="38" Height="38" Cursor="Hand" Style="{StaticResource ModernButton}" Padding="0" ToolTip="Аватар 5">
+                                                        <Border CornerRadius="{Binding AvatarCornerRadius}" Width="38" Height="38" ClipToBounds="True">
+                                                            <Image Source="../Assets/avatar_5.jpg" Stretch="UniformToFill" RenderOptions.BitmapScalingMode="HighQuality"/>
+                                                        </Border>
+                                                    </Button>
+                                                </StackPanel>
+
                                                 <TextBlock Text="Аватар и имя автоматически передаются собеседникам" Foreground="{StaticResource TextMutedBrush}" FontSize="10"/>
                                             </StackPanel>
                                         </StackPanel>

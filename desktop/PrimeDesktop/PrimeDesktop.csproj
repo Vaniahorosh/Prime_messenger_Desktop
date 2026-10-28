@@ -20,6 +20,7 @@
   <ItemGroup>
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.2" />
     <Resource Include="Assets\*.png" />
+    <Resource Include="Assets\*.jpg" />
     <Resource Include="Assets\*.ico" />
   </ItemGroup>
 
