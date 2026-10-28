@@ -74,6 +74,11 @@ namespace PrimeSetup
                 var infoVer = asm.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
                 if (!string.IsNullOrEmpty(infoVer))
                 {
+                    int plusIdx = infoVer.IndexOf('+');
+                    if (plusIdx >= 0)
+                    {
+                        infoVer = infoVer.Substring(0, plusIdx);
+                    }
                     TxtAppVersion.Text = $"v{infoVer}";
                 }
             }

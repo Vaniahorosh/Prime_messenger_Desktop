@@ -19,39 +19,23 @@ public partial class PhotoEditorWindow : Window
 
     public string? ResultFilePath { get; private set; }
 
-    public bool IsAvatarMode { get; set; } = false;
-
     public PhotoEditorWindow(string imagePath, bool avatarMode = false)
     {
         InitializeComponent();
         _sourcePath = imagePath;
-        IsAvatarMode = avatarMode;
         Loaded += OnWindowLoaded;
-        SizeChanged += (s, e) => UpdateCropOverlay();
     }
 
     private void OnWindowLoaded(object sender, RoutedEventArgs e)
     {
         try
         {
-            if (IsAvatarMode)
-            {
-                Title = "Настройка аватара профиля — Prime Desktop";
-                TxtEditorHeaderTitle.Text = "👤 Настройка аватара профиля";
-                TxtEditorHeaderSubtitle.Text = "кадрирование";
-                BtnApply.Content = "✓ Сохранить аватар";
-                BtnSaveDisk.Visibility = Visibility.Collapsed;
-                ChkAvatarCrop.IsChecked = true;
-                ChkAvatarCrop.IsEnabled = false; // Forced circular frame for avatar
-            }
-            else
-            {
-                Title = "Редактор фото — Prime Desktop";
-                TxtEditorHeaderTitle.Text = "🎨 Фоторедактор Прайм";
-                TxtEditorHeaderSubtitle.Text = "v0.1";
-                BtnApply.Content = "✓ Применить и отправить";
-                BtnSaveDisk.Visibility = Visibility.Visible;
-            }
+            Title = "Редактор фото — Prime Desktop";
+            TxtEditorHeaderTitle.Text = "🎨 Фоторедактор Прайм";
+            TxtEditorHeaderSubtitle.Text = "v0.1";
+            BtnApply.Content = "✓ Применить и отправить";
+            BtnSaveDisk.Visibility = Visibility.Visible;
+
             var uri = new Uri(_sourcePath);
             var bmp = new BitmapImage();
             bmp.BeginInit();
@@ -95,70 +79,72 @@ public partial class PhotoEditorWindow : Window
         if (transformGroup.Children.Count > 0)
         {
             transformed = new TransformedBitmap(_originalBitmap, transformGroup);
+            transformed.Freeze();
         }
 
-        // 2. Brightness / Contrast / Saturation pixel adjustment
-        double brightness = SliderBrightness?.Value ?? 0;
-        double contrast = SliderContrast?.Value ?? 0;
-        double saturation = SliderSaturation?.Value ?? 0;
+        // 2. Color adjustments
+        int b = (int)(SliderBrightness?.Value ?? 0);
+        int c = (int)(SliderContrast?.Value ?? 0);
+        int s = (int)(SliderSaturation?.Value ?? 0);
 
-        if (brightness != 0 || contrast != 0 || saturation != 0)
+        if (b != 0 || c != 0 || s != 0)
         {
-            transformed = AdjustPixels(transformed, brightness, contrast, saturation);
+            transformed = AdjustImagePixels(transformed, b, c, s);
         }
 
         TargetImage.Source = transformed;
-        CanvasContainer.Width = TargetImage.ActualWidth > 0 ? TargetImage.ActualWidth : double.NaN;
-        CanvasContainer.Height = TargetImage.ActualHeight > 0 ? TargetImage.ActualHeight : double.NaN;
+
+        // Align InkCanvas size to displayed image size
+        CanvasContainer.Width = double.NaN;
+        CanvasContainer.Height = double.NaN;
     }
 
-    private BitmapSource AdjustPixels(BitmapSource source, double brightness, double contrast, double saturation)
+    private BitmapSource AdjustImagePixels(BitmapSource source, int brightness, int contrast, int saturation)
     {
-        // Convert to standard Bgr32
-        var formatConverted = new FormatConvertedBitmap(source, PixelFormats.Bgra32, null, 0);
-        int width = formatConverted.PixelWidth;
-        int height = formatConverted.PixelHeight;
-        int stride = width * 4;
-        byte[] pixels = new byte[height * stride];
-        formatConverted.CopyPixels(pixels, stride, 0);
-
-        // Precompute factors
-        double bFactor = brightness * 1.5; // -150 to +150
-        double cFactor = (contrast + 100.0) / 100.0; // 0.0 to 2.0
-        cFactor = cFactor * cFactor; // steeper curve
-        double sFactor = (saturation + 100.0) / 100.0; // 0.0 to 2.0
-
-        for (int i = 0; i < pixels.Length; i += 4)
+        try
         {
-            double b = pixels[i];
-            double g = pixels[i + 1];
-            double r = pixels[i + 2];
+            var formatConverted = new FormatConvertedBitmap(source, PixelFormats.Bgra32, null, 0);
+            int width = formatConverted.PixelWidth;
+            int height = formatConverted.PixelHeight;
+            int stride = width * 4;
+            byte[] pixels = new byte[stride * height];
+            formatConverted.CopyPixels(pixels, stride, 0);
 
-            // 1. Brightness
-            r += bFactor;
-            g += bFactor;
-            b += bFactor;
+            float bOffset = brightness * 1.28f;
+            float cFactor = (contrast >= 0) ? (1f + contrast / 50f) : (1f + contrast / 100f);
+            float sFactor = 1f + saturation / 100f;
 
-            // 2. Contrast around midpoint 128
-            r = ((r - 128.0) * cFactor) + 128.0;
-            g = ((g - 128.0) * cFactor) + 128.0;
-            b = ((b - 128.0) * cFactor) + 128.0;
-
-            // 3. Saturation (grayscale weighted)
-            if (sFactor != 1.0)
+            for (int i = 0; i < pixels.Length; i += 4)
             {
-                double gray = (0.299 * r) + (0.587 * g) + (0.114 * b);
-                r = gray + ((r - gray) * sFactor);
-                g = gray + ((g - gray) * sFactor);
-                b = gray + ((b - gray) * sFactor);
+                byte b = pixels[i];
+                byte g = pixels[i + 1];
+                byte r = pixels[i + 2];
+
+                float rf = (r - 128f) * cFactor + 128f + bOffset;
+                float gf = (g - 128f) * cFactor + 128f + bOffset;
+                float bf = (b - 128f) * cFactor + 128f + bOffset;
+
+                if (saturation != 0)
+                {
+                    float gray = 0.299f * rf + 0.587f * gf + 0.114f * bf;
+                    rf = gray + (rf - gray) * sFactor;
+                    gf = gray + (gf - gray) * sFactor;
+                    bf = gray + (bf - gray) * sFactor;
+                }
+
+                pixels[i] = (byte)Math.Clamp(bf, 0f, 255f);
+                pixels[i + 1] = (byte)Math.Clamp(gf, 0f, 255f);
+                pixels[i + 2] = (byte)Math.Clamp(rf, 0f, 255f);
             }
 
-            pixels[i] = (byte)Math.Clamp(b, 0, 255);
-            pixels[i + 1] = (byte)Math.Clamp(g, 0, 255);
-            pixels[i + 2] = (byte)Math.Clamp(r, 0, 255);
+            var result = BitmapSource.Create(width, height, 96, 96, PixelFormats.Bgra32, null, pixels, stride);
+            result.Freeze();
+            return result;
         }
-
-        return BitmapSource.Create(width, height, source.DpiX, source.DpiY, PixelFormats.Bgra32, null, pixels, stride);
+        catch
+        {
+            return source;
+        }
     }
 
     private void BtnRotateCW_Click(object sender, RoutedEventArgs e)
@@ -200,19 +186,19 @@ public partial class PhotoEditorWindow : Window
     private void SliderBrushSize_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
         if (DrawingCanvas == null) return;
-        double sz = SliderBrushSize.Value;
-        if (TxtBrushSize != null) TxtBrushSize.Text = $"{(int)sz} px";
+        double sz = Math.Round(e.NewValue);
+        if (TxtBrushSize != null) TxtBrushSize.Text = $"{sz} px";
         DrawingCanvas.DefaultDrawingAttributes.Width = sz;
         DrawingCanvas.DefaultDrawingAttributes.Height = sz;
     }
 
     private void ColorSwatch_Click(object sender, RoutedEventArgs e)
     {
-        if (sender is Button b && b.Tag is string hex)
+        if (sender is Button btn && btn.Tag is string hex)
         {
             var c = (Color)ColorConverter.ConvertFromString(hex);
             DrawingCanvas.DefaultDrawingAttributes.Color = c;
-            if (RadioBrush != null) RadioBrush.IsChecked = true;
+            RadioBrush.IsChecked = true;
             DrawingCanvas.EditingMode = InkCanvasEditingMode.Ink;
         }
     }
@@ -250,105 +236,29 @@ public partial class PhotoEditorWindow : Window
         ApplyTransformsAndFilters();
     }
 
-    private void ChkAvatarCrop_Checked(object sender, RoutedEventArgs e)
-    {
-        CropOverlayGrid.Visibility = Visibility.Visible;
-        UpdateCropOverlay();
-    }
-
-    private void ChkAvatarCrop_Unchecked(object sender, RoutedEventArgs e)
-    {
-        CropOverlayGrid.Visibility = Visibility.Collapsed;
-    }
-
-    private void UpdateCropOverlay()
-    {
-        if (CropOverlayGrid == null || CropOverlayGrid.Visibility != Visibility.Visible) return;
-
-        double w = CanvasContainer.ActualWidth;
-        double h = CanvasContainer.ActualHeight;
-        if (w <= 0 || h <= 0)
-        {
-            w = TargetImage.ActualWidth;
-            h = TargetImage.ActualHeight;
-        }
-        if (w <= 0 || h <= 0) return;
-
-        double size = Math.Min(w, h);
-        CropFullRect.Rect = new Rect(0, 0, Math.Max(w, CropOverlayGrid.ActualWidth), Math.Max(h, CropOverlayGrid.ActualHeight));
-        CropHoleCircle.Center = new Point(w / 2.0, h / 2.0);
-        CropHoleCircle.RadiusX = size / 2.0;
-        CropHoleCircle.RadiusY = size / 2.0;
-
-        CropFrameBorder.Width = size;
-        CropFrameBorder.Height = size;
-    }
-
     private BitmapSource RenderFinalImage()
     {
         var bmpSource = TargetImage.Source as BitmapSource ?? _originalBitmap!;
         int origW = bmpSource.PixelWidth;
         int origH = bmpSource.PixelHeight;
 
-        bool cropToAvatar = ChkAvatarCrop.IsChecked == true;
         int outW = origW;
         int outH = origH;
-
-        if (cropToAvatar)
-        {
-            int side = Math.Min(origW, origH);
-            outW = side;
-            outH = side;
-        }
 
         var visual = new DrawingVisual();
         using (var dc = visual.RenderOpen())
         {
-            if (cropToAvatar)
+            // Draw transformed photo
+            dc.DrawImage(bmpSource, new Rect(0, 0, outW, outH));
+
+            // Scale and draw ink strokes if any
+            if (DrawingCanvas.Strokes.Count > 0)
             {
-                int side = Math.Min(origW, origH);
-                double offsetX = (origW - side) / 2.0;
-                double offsetY = (origH - side) / 2.0;
-
-                // Push avatar clip (circle)
-                var clipGeo = new EllipseGeometry(new Point(side / 2.0, side / 2.0), side / 2.0, side / 2.0);
-                dc.PushClip(clipGeo);
-
-                // Draw source image shifted
-                dc.DrawImage(bmpSource, new Rect(-offsetX, -offsetY, origW, origH));
-
-                if (DrawingCanvas.Strokes.Count > 0)
-                {
-                    double scaleX = (double)origW / (TargetImage.ActualWidth > 0 ? TargetImage.ActualWidth : origW);
-                    double scaleY = (double)origH / (TargetImage.ActualHeight > 0 ? TargetImage.ActualHeight : origH);
-                    dc.PushTransform(new TransformGroup
-                    {
-                        Children =
-                        {
-                            new ScaleTransform(scaleX, scaleY),
-                            new TranslateTransform(-offsetX / scaleX, -offsetY / scaleY)
-                        }
-                    });
-                    DrawingCanvas.Strokes.Draw(dc);
-                    dc.Pop();
-                }
-
-                dc.Pop(); // Pop clip
-            }
-            else
-            {
-                // Draw transformed photo
-                dc.DrawImage(bmpSource, new Rect(0, 0, outW, outH));
-
-                // Scale and draw ink strokes if any
-                if (DrawingCanvas.Strokes.Count > 0)
-                {
-                    double scaleX = (double)outW / (TargetImage.ActualWidth > 0 ? TargetImage.ActualWidth : outW);
-                    double scaleY = (double)outH / (TargetImage.ActualHeight > 0 ? TargetImage.ActualHeight : outH);
-                    dc.PushTransform(new ScaleTransform(scaleX, scaleY));
-                    DrawingCanvas.Strokes.Draw(dc);
-                    dc.Pop();
-                }
+                double scaleX = (double)outW / (TargetImage.ActualWidth > 0 ? TargetImage.ActualWidth : outW);
+                double scaleY = (double)outH / (TargetImage.ActualHeight > 0 ? TargetImage.ActualHeight : outH);
+                dc.PushTransform(new ScaleTransform(scaleX, scaleY));
+                DrawingCanvas.Strokes.Draw(dc);
+                dc.Pop();
             }
         }
 

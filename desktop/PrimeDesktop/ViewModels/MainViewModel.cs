@@ -1529,7 +1529,22 @@ public class MainViewModel : ViewModelBase
 
             if (dlg.ShowDialog() == true)
             {
-                string? saved = AvatarManager.SaveAvatarToHistory(SelectedChat.DeviceAddress, dlg.FileName);
+                string sourceFile = dlg.FileName;
+                try
+                {
+                    var cropper = new Views.AvatarCropperWindow(sourceFile);
+                    if (cropper.ShowDialog() == true && !string.IsNullOrEmpty(cropper.CroppedResultPath))
+                    {
+                        sourceFile = cropper.CroppedResultPath;
+                    }
+                    else
+                    {
+                        return;
+                    }
+                }
+                catch { }
+
+                string? saved = AvatarManager.SaveAvatarToHistory(SelectedChat.DeviceAddress, sourceFile);
                 if (saved != null)
                 {
                     SelectedChat.AddAvatarToHistory(saved);
@@ -1572,10 +1587,14 @@ public class MainViewModel : ViewModelBase
                 string sourceFile = dlg.FileName;
                 try
                 {
-                    var editor = new Views.PhotoEditorWindow(sourceFile, avatarMode: true);
-                    if (editor.ShowDialog() == true && !string.IsNullOrEmpty(editor.ResultFilePath))
+                    var cropper = new Views.AvatarCropperWindow(sourceFile);
+                    if (cropper.ShowDialog() == true && !string.IsNullOrEmpty(cropper.CroppedResultPath))
                     {
-                        sourceFile = editor.ResultFilePath;
+                        sourceFile = cropper.CroppedResultPath;
+                    }
+                    else
+                    {
+                        return;
                     }
                 }
                 catch { }

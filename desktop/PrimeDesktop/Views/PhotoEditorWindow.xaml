@@ -46,24 +46,7 @@
                         <InkCanvas x:Name="DrawingCanvas" Background="Transparent"/>
                     </Grid>
 
-                    <!-- Avatar Crop Overlay -->
-                    <Grid x:Name="CropOverlayGrid" Visibility="Collapsed" IsHitTestVisible="False">
-                        <Path Fill="#A0000000">
-                            <Path.Data>
-                                <CombinedGeometry GeometryCombineMode="Exclude">
-                                    <CombinedGeometry.Geometry1>
-                                        <RectangleGeometry x:Name="CropFullRect"/>
-                                    </CombinedGeometry.Geometry1>
-                                    <CombinedGeometry.Geometry2>
-                                        <EllipseGeometry x:Name="CropHoleCircle"/>
-                                    </CombinedGeometry.Geometry2>
-                                </CombinedGeometry>
-                            </Path.Data>
-                        </Path>
-                        <Border x:Name="CropFrameBorder" BorderBrush="#4D9FFF" BorderThickness="2"
-                                HorizontalAlignment="Center" VerticalAlignment="Center"
-                                CornerRadius="999"/>
-                    </Grid>
+
                 </Grid>
             </Border>
 
@@ -71,11 +54,7 @@
             <Border Grid.Column="1" Background="#0F151F" BorderBrush="#223045" BorderThickness="1,0,0,0" Padding="14">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel>
-                        <!-- Crop / Framing Mode -->
-                        <TextBlock Text="КАДРИРОВАНИЕ / АВАТАР" FontSize="11" FontWeight="Bold" Foreground="#4D9FFF" Margin="0,0,0,8"/>
-                        <CheckBox x:Name="ChkAvatarCrop" Content="Круглая рамка (аватар)" IsChecked="False"
-                                  Checked="ChkAvatarCrop_Checked" Unchecked="ChkAvatarCrop_Unchecked"
-                                  Foreground="#F0F6FC" Margin="0,0,0,14"/>
+
 
                         <!-- Geometric Transforms -->
                         <TextBlock Text="ТРАНСФОРМАЦИЯ" FontSize="11" FontWeight="Bold" Foreground="#4D9FFF" Margin="0,0,0,10"/>

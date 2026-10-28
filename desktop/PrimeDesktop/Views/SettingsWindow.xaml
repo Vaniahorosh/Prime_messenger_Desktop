@@ -696,7 +696,7 @@
                                         <Border Background="{DynamicResource CardBrush}" CornerRadius="10" Padding="10" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
                                             <StackPanel>
                                                 <TextBlock Text="ПРОТОКОЛ И СОВМЕСТИМОСТЬ" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,2"/>
-                                                <TextBlock Text="UUID: fa87c0d0-afac-11de-8a39-0800200c9a66&#x0a;Аппаратное локальное шифрование AES-256-GCM. Полная совместимость с мобильной версией Prime Messenger."
+                                                <TextBlock Text="Аппаратное локальное шифрование AES-256-GCM. Полная совместимость с мобильной версией Prime Messenger."
                                                            FontSize="10" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap"/>
                                             </StackPanel>
                                         </Border>
