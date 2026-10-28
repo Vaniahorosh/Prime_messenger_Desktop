@@ -226,17 +226,17 @@
                 </Border>
             </Grid>
 
-            <!-- 2. Clean Uninstall Mode (Centrally Aligned Card) -->
+            <!-- 2. Clean Uninstall Mode (Centrally Aligned Card with dedicated Question & Buttons) -->
             <Border x:Name="UninstallModeCard" Grid.Row="1" Background="#121620" BorderBrush="#1F2636" BorderThickness="1" 
-                    CornerRadius="16" Padding="32,24" Margin="4,0,4,12" Visibility="Collapsed" VerticalAlignment="Center">
+                    CornerRadius="16" Padding="32,24" Margin="4,0,4,8" Visibility="Collapsed" VerticalAlignment="Center">
                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="440">
                     <!-- App Logo with danger glow -->
-                    <Border Width="88" Height="88" CornerRadius="22" Background="#161C28" BorderBrush="#2F394D" BorderThickness="1.5"
+                    <Border Width="76" Height="76" CornerRadius="20" Background="#161C28" BorderBrush="#2F394D" BorderThickness="1.5"
                             HorizontalAlignment="Center" Margin="0,0,0,16">
                         <Border.Effect>
                             <DropShadowEffect BlurRadius="20" ShadowDepth="3" Opacity="0.35" Color="#FF5252"/>
                         </Border.Effect>
-                        <Image Source="Assets/prime_logo.png" Width="60" Height="60"
+                        <Image Source="Assets/prime_logo.png" Width="52" Height="52"
                                HorizontalAlignment="Center" VerticalAlignment="Center"
                                RenderOptions.BitmapScalingMode="HighQuality"/>
                     </Border>
@@ -244,16 +244,44 @@
                     <TextBlock Text="Удаление Prime Desktop" FontSize="20" FontWeight="Bold" Foreground="#FFFFFF" 
                                HorizontalAlignment="Center" Margin="0,0,0,8"/>
 
-                    <TextBlock Text="Вы действительно хотите удалить Prime Desktop с вашего компьютера?" 
+                    <TextBlock Text="Вы уверены, что хотите удалить Prime Desktop с вашего компьютера?" 
                                FontSize="13.5" Foreground="#C9D1D9" TextAlignment="Center" TextWrapping="Wrap" LineHeight="20" Margin="0,0,0,16"/>
 
                     <CheckBox x:Name="ChkDeleteUserData" Content="Также удалить историю сообщений и сохраненный профиль"
-                              IsChecked="True" Foreground="#8B949E" FontSize="12" HorizontalAlignment="Center" Margin="0,0,0,10"/>
+                              IsChecked="True" Foreground="#8B949E" FontSize="12" HorizontalAlignment="Center" Margin="0,0,0,20"/>
+
+                    <!-- Action buttons row: Cancel and Delete -->
+                    <Grid HorizontalAlignment="Center" Width="290">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="14"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <Button Grid.Column="0" Content="Отмена" Height="38" Click="CloseButton_Click"
+                                Cursor="Hand" Background="#21262D" Foreground="#C9D1D9" BorderBrush="#30363D" BorderThickness="1"
+                                FontSize="13" FontWeight="SemiBold">
+                            <Button.Resources>
+                                <Style TargetType="Border"><Setter Property="CornerRadius" Value="8"/></Style>
+                            </Button.Resources>
+                        </Button>
+
+                        <Button Grid.Column="2" x:Name="BtnConfirmUninstall" Content="Удалить" Height="38" Click="BtnConfirmUninstall_Click"
+                                Cursor="Hand" Background="#DC2626" Foreground="#FFFFFF" BorderThickness="0"
+                                FontSize="13" FontWeight="Bold">
+                            <Button.Resources>
+                                <Style TargetType="Border"><Setter Property="CornerRadius" Value="8"/></Style>
+                            </Button.Resources>
+                        </Button>
+                    </Grid>
+
+                    <TextBlock x:Name="TxtUninstallStatus" Text="" FontSize="12" Foreground="#8B949E"
+                               HorizontalAlignment="Center" Margin="0,12,0,0" Visibility="Collapsed"/>
                 </StackPanel>
             </Border>
 
             <!-- Bottom Actions: Progress Bar on the left, Action button on the right at the SAME LEVEL -->
-            <Border Grid.Row="2" Background="#121620" BorderBrush="#1F2636" BorderThickness="1" CornerRadius="12" Padding="14,10">
+            <Border x:Name="BottomActionBorder" Grid.Row="2" Background="#121620" BorderBrush="#1F2636" BorderThickness="1" CornerRadius="12" Padding="14,10">
                 <Grid VerticalAlignment="Center">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>

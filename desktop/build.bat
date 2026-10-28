@@ -29,8 +29,10 @@ powershell -NoProfile -ExecutionPolicy Bypass -Command "Compress-Archive -Path '
 
 echo.
 echo Building PrimeSetup installer...
+if exist "%ROOT%bin\Installer" rd /s /q "%ROOT%bin\Installer"
+mkdir "%ROOT%bin\Installer"
 cd /d "%ROOT%PrimeSetup"
-dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -o "%ROOT%bin\Installer"
+dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:IncludeAllContentForSelfExtract=true -p:EnableCompressionInSingleFile=true -o "%ROOT%bin\Installer"
 
 if %ERRORLEVEL% equ 0 (
     echo.

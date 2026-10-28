@@ -133,8 +133,8 @@ namespace PrimeSetup
         private void ConfigureUninstallUi()
         {
             Title = "Удаление Prime Desktop";
-            Width = 560;
-            Height = 440;
+            Width = 490;
+            Height = 360;
 
             if (_sloganTimer != null)
             {
@@ -142,13 +142,32 @@ namespace PrimeSetup
             }
 
             SetupModeGrid.Visibility = Visibility.Collapsed;
+            BottomActionBorder.Visibility = Visibility.Collapsed;
             UninstallModeCard.Visibility = Visibility.Visible;
+        }
 
-            StatusTitle.Text = "Готово к удалению";
-            StatusSub.Text = $"Программа будет полностью удалена из: {TargetDir}";
+        private async void BtnConfirmUninstall_Click(object sender, RoutedEventArgs e)
+        {
+            BtnConfirmUninstall.IsEnabled = false;
+            BtnConfirmUninstall.Content = "Удаление...";
+            TxtUninstallStatus.Text = "Удаление файлов и системных ссылок...";
+            TxtUninstallStatus.Visibility = Visibility.Visible;
 
-            InstallBtn.Content = "Удалить";
-            InstallBtn.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FF5252"));
+            bool deleteUserData = ChkDeleteUserData.IsChecked == true;
+
+            try
+            {
+                await Task.Run(() => PerformUninstallation(deleteUserData));
+                TxtUninstallStatus.Text = "Prime Desktop успешно удален.";
+                await Task.Delay(400);
+                Close();
+            }
+            catch (Exception ex)
+            {
+                TxtUninstallStatus.Text = $"Ошибка: {ex.Message}";
+                BtnConfirmUninstall.IsEnabled = true;
+                BtnConfirmUninstall.Content = "Повторить";
+            }
         }
 
         private void TitleBar_MouseDown(object sender, MouseButtonEventArgs e)
@@ -550,7 +569,7 @@ namespace PrimeSetup
 
             try
             {
-                string cmd = $"/c timeout /t 1 /nobreak > nul & rmdir /s /q \"{TargetDir}\"";
+                string cmd = $"/c timeout /t 2 /nobreak > nul & rmdir /s /q \"{TargetDir}\"";
                 Process.Start(new ProcessStartInfo
                 {
                     FileName = "cmd.exe",
