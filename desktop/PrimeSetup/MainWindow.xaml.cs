@@ -68,6 +68,17 @@ namespace PrimeSetup
             TxtDisplayName.Text = Environment.UserName;
             TxtUsername.Text = Environment.UserName.ToLowerInvariant().Replace(" ", "_");
 
+            try
+            {
+                var asm = Assembly.GetExecutingAssembly();
+                var infoVer = asm.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
+                if (!string.IsNullOrEmpty(infoVer))
+                {
+                    TxtAppVersion.Text = $"v{infoVer}";
+                }
+            }
+            catch { }
+
             InitSloganCarousel();
 
             if (_isUninstallMode)
@@ -305,6 +316,8 @@ namespace PrimeSetup
 
         private async Task HandleInstallAsync()
         {
+            AnimateExpansionToFull();
+
             InstallBtn.Content = "Установка...";
             StatusTitle.Text = "Распаковка файлов Prime Messenger...";
             InstallProgress.Value = 20;
@@ -337,6 +350,34 @@ namespace PrimeSetup
                 InstallBtn.Content = "Повторить";
                 BtnBrowse.IsEnabled = true;
                 TxtInstallPath.IsEnabled = true;
+            }
+        }
+
+        private void AnimateExpansionToFull()
+        {
+            try
+            {
+                var fadeOutRight = new DoubleAnimation(1.0, 0.0, TimeSpan.FromMilliseconds(300))
+                {
+                    EasingFunction = new CubicEase { EasingMode = EasingMode.EaseIn }
+                };
+
+                fadeOutRight.Completed += (s, e) =>
+                {
+                    RightPanelContainer.Visibility = Visibility.Collapsed;
+                    ColGap.Width = new GridLength(0);
+                    ColRight.Width = new GridLength(0);
+                    ColLeft.Width = new GridLength(1, GridUnitType.Star);
+                };
+
+                RightPanelContainer.BeginAnimation(UIElement.OpacityProperty, fadeOutRight);
+            }
+            catch
+            {
+                RightPanelContainer.Visibility = Visibility.Collapsed;
+                ColGap.Width = new GridLength(0);
+                ColRight.Width = new GridLength(0);
+                ColLeft.Width = new GridLength(1, GridUnitType.Star);
             }
         }
 
