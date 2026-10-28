@@ -210,7 +210,12 @@ public partial class MainWindow : Window
 
     private IntPtr WindowProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
     {
-        if (msg == WM_GETMINMAXINFO)
+        if (msg == App.WM_SHOWME && App.WM_SHOWME != 0)
+        {
+            TrayService?.RestoreWindow();
+            handled = true;
+        }
+        else if (msg == WM_GETMINMAXINFO)
         {
             WmGetMinMaxInfo(hwnd, lParam);
             handled = true;
