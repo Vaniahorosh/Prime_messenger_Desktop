@@ -31,6 +31,7 @@ public class AppSettings : INotifyPropertyChanged
     private bool _minimizeToTray = true;
     private bool _enableScreenshotProtection = false;
     private bool _maskDeviceIdentifiers = true;
+    private bool _launchAtStartup = false;
     private int _companionPort = 8989;
     private bool _autoConnectBluetooth = true;
     private string _searchEngine = "Google";
@@ -185,6 +186,12 @@ public class AppSettings : INotifyPropertyChanged
     {
         get => _maskDeviceIdentifiers;
         set => SetField(ref _maskDeviceIdentifiers, value);
+    }
+
+    public bool LaunchAtStartup
+    {
+        get => _launchAtStartup;
+        set => SetField(ref _launchAtStartup, value);
     }
 
     public int CompanionPort

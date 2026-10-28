@@ -19,17 +19,25 @@ public partial class PhotoEditorWindow : Window
 
     public string? ResultFilePath { get; private set; }
 
-    public PhotoEditorWindow(string imagePath)
+    public bool IsAvatarMode { get; set; } = false;
+
+    public PhotoEditorWindow(string imagePath, bool avatarMode = false)
     {
         InitializeComponent();
         _sourcePath = imagePath;
+        IsAvatarMode = avatarMode;
         Loaded += OnWindowLoaded;
+        SizeChanged += (s, e) => UpdateCropOverlay();
     }
 
     private void OnWindowLoaded(object sender, RoutedEventArgs e)
     {
         try
         {
+            if (IsAvatarMode)
+            {
+                ChkAvatarCrop.IsChecked = true;
+            }
             var uri = new Uri(_sourcePath);
             var bmp = new BitmapImage();
             bmp.BeginInit();
@@ -228,30 +236,109 @@ public partial class PhotoEditorWindow : Window
         ApplyTransformsAndFilters();
     }
 
+    private void ChkAvatarCrop_Checked(object sender, RoutedEventArgs e)
+    {
+        CropOverlayGrid.Visibility = Visibility.Visible;
+        UpdateCropOverlay();
+    }
+
+    private void ChkAvatarCrop_Unchecked(object sender, RoutedEventArgs e)
+    {
+        CropOverlayGrid.Visibility = Visibility.Collapsed;
+    }
+
+    private void UpdateCropOverlay()
+    {
+        if (CropOverlayGrid == null || CropOverlayGrid.Visibility != Visibility.Visible) return;
+
+        double w = CanvasContainer.ActualWidth;
+        double h = CanvasContainer.ActualHeight;
+        if (w <= 0 || h <= 0)
+        {
+            w = TargetImage.ActualWidth;
+            h = TargetImage.ActualHeight;
+        }
+        if (w <= 0 || h <= 0) return;
+
+        double size = Math.Min(w, h);
+        CropFullRect.Rect = new Rect(0, 0, Math.Max(w, CropOverlayGrid.ActualWidth), Math.Max(h, CropOverlayGrid.ActualHeight));
+        CropHoleCircle.Center = new Point(w / 2.0, h / 2.0);
+        CropHoleCircle.RadiusX = size / 2.0;
+        CropHoleCircle.RadiusY = size / 2.0;
+
+        CropFrameBorder.Width = size;
+        CropFrameBorder.Height = size;
+    }
+
     private BitmapSource RenderFinalImage()
     {
         var bmpSource = TargetImage.Source as BitmapSource ?? _originalBitmap!;
-        int width = bmpSource.PixelWidth;
-        int height = bmpSource.PixelHeight;
+        int origW = bmpSource.PixelWidth;
+        int origH = bmpSource.PixelHeight;
+
+        bool cropToAvatar = ChkAvatarCrop.IsChecked == true;
+        int outW = origW;
+        int outH = origH;
+
+        if (cropToAvatar)
+        {
+            int side = Math.Min(origW, origH);
+            outW = side;
+            outH = side;
+        }
 
         var visual = new DrawingVisual();
         using (var dc = visual.RenderOpen())
         {
-            // Draw transformed photo
-            dc.DrawImage(bmpSource, new Rect(0, 0, width, height));
-
-            // Scale and draw ink strokes if any
-            if (DrawingCanvas.Strokes.Count > 0)
+            if (cropToAvatar)
             {
-                double scaleX = (double)width / (TargetImage.ActualWidth > 0 ? TargetImage.ActualWidth : width);
-                double scaleY = (double)height / (TargetImage.ActualHeight > 0 ? TargetImage.ActualHeight : height);
-                dc.PushTransform(new ScaleTransform(scaleX, scaleY));
-                DrawingCanvas.Strokes.Draw(dc);
-                dc.Pop();
+                int side = Math.Min(origW, origH);
+                double offsetX = (origW - side) / 2.0;
+                double offsetY = (origH - side) / 2.0;
+
+                // Push avatar clip (circle)
+                var clipGeo = new EllipseGeometry(new Point(side / 2.0, side / 2.0), side / 2.0, side / 2.0);
+                dc.PushClip(clipGeo);
+
+                // Draw source image shifted
+                dc.DrawImage(bmpSource, new Rect(-offsetX, -offsetY, origW, origH));
+
+                if (DrawingCanvas.Strokes.Count > 0)
+                {
+                    double scaleX = (double)origW / (TargetImage.ActualWidth > 0 ? TargetImage.ActualWidth : origW);
+                    double scaleY = (double)origH / (TargetImage.ActualHeight > 0 ? TargetImage.ActualHeight : origH);
+                    dc.PushTransform(new TransformGroup
+                    {
+                        Children =
+                        {
+                            new ScaleTransform(scaleX, scaleY),
+                            new TranslateTransform(-offsetX / scaleX, -offsetY / scaleY)
+                        }
+                    });
+                    DrawingCanvas.Strokes.Draw(dc);
+                    dc.Pop();
+                }
+
+                dc.Pop(); // Pop clip
+            }
+            else
+            {
+                // Draw transformed photo
+                dc.DrawImage(bmpSource, new Rect(0, 0, outW, outH));
+
+                // Scale and draw ink strokes if any
+                if (DrawingCanvas.Strokes.Count > 0)
+                {
+                    double scaleX = (double)outW / (TargetImage.ActualWidth > 0 ? TargetImage.ActualWidth : outW);
+                    double scaleY = (double)outH / (TargetImage.ActualHeight > 0 ? TargetImage.ActualHeight : outH);
+                    dc.PushTransform(new ScaleTransform(scaleX, scaleY));
+                    DrawingCanvas.Strokes.Draw(dc);
+                    dc.Pop();
+                }
             }
         }
 
-        var rtb = new RenderTargetBitmap(width, height, 96, 96, PixelFormats.Pbgra32);
+        var rtb = new RenderTargetBitmap(outW, outH, 96, 96, PixelFormats.Pbgra32);
         rtb.Render(visual);
         rtb.Freeze();
         return rtb;

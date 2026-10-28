@@ -462,6 +462,7 @@ public class MainViewModel : ViewModelBase
             OnPropertyChanged(nameof(IsLightThemeSelected));
             OnPropertyChanged(nameof(IsSystemTheme));
             OnPropertyChanged(nameof(IsDarkTheme));
+            OnPropertyChanged(nameof(LaunchAtStartup));
 
             CaptureSettingsSnapshot();
             _ = Task.Run(async () =>
@@ -598,6 +599,45 @@ public class MainViewModel : ViewModelBase
 
     public bool CanResetAvatarRadius => Settings.AvatarCornerRadiusPercent != 15;
     public bool CanResetBubbleRadius => Settings.BubbleRadius != 16;
+
+    public bool LaunchAtStartup
+    {
+        get => Settings.LaunchAtStartup;
+        set
+        {
+            if (Settings.LaunchAtStartup != value)
+            {
+                Settings.LaunchAtStartup = value;
+                OnPropertyChanged();
+                UpdateAutostartRegistry(value);
+                _ = _storageService.SaveSettingsAsync(Settings);
+            }
+        }
+    }
+
+    private static void UpdateAutostartRegistry(bool enable)
+    {
+        try
+        {
+            using var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Run", writable: true);
+            if (key != null)
+            {
+                if (enable)
+                {
+                    string? currentModule = System.Diagnostics.Process.GetCurrentProcess().MainModule?.FileName;
+                    if (!string.IsNullOrEmpty(currentModule) && File.Exists(currentModule))
+                    {
+                        key.SetValue("PrimeDesktop", $"\"{currentModule}\"");
+                    }
+                }
+                else
+                {
+                    key.DeleteValue("PrimeDesktop", throwOnMissingValue: false);
+                }
+            }
+        }
+        catch { }
+    }
     public bool CanResetWallpaperOpacity => Math.Abs(Settings.WallpaperOpacity - 0.35) > 0.001;
     public bool CanResetVideoNoteRadius => Settings.VideoNoteRadiusPercent != 50;
     public bool CanResetSoundVolume => Settings.SoundEffectsVolume != 80;
@@ -1496,7 +1536,18 @@ public class MainViewModel : ViewModelBase
 
             if (dlg.ShowDialog() == true)
             {
-                string? saved = AvatarManager.SaveAvatar("my_profile", dlg.FileName);
+                string sourceFile = dlg.FileName;
+                try
+                {
+                    var editor = new Views.PhotoEditorWindow(sourceFile, avatarMode: true);
+                    if (editor.ShowDialog() == true && !string.IsNullOrEmpty(editor.ResultFilePath))
+                    {
+                        sourceFile = editor.ResultFilePath;
+                    }
+                }
+                catch { }
+
+                string? saved = AvatarManager.SaveAvatar("my_profile", sourceFile);
                 if (saved != null)
                 {
                     Settings.MyAvatarPath = null;

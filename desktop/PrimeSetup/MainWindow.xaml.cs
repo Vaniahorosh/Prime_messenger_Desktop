@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
@@ -8,6 +9,9 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Animation;
+using System.Windows.Media.Imaging;
+using System.Windows.Threading;
 using Microsoft.Win32;
 
 namespace PrimeSetup
@@ -19,6 +23,21 @@ namespace PrimeSetup
         private string _targetDir = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "Programs", "PrimeMessenger");
+
+        private string? _chosenAvatarPath = null;
+        private DispatcherTimer? _sloganTimer;
+        private int _currentSloganIndex = 0;
+
+        private record SloganItem(string Prefix, string Button, string Subtitle, string Desc, string HexColor);
+
+        private readonly List<SloganItem> _slogans = new()
+        {
+            new("Всегда будь в", "Прайме!", "Мессенджер нового поколения", "Приватный и свободный мессенджер для общения по Bluetooth P2P и онлайн.", "#38BDF8"),
+            new("Всегда сообщение", "Быстрее!", "Мгновенная доставка & Скорость", "Мгновенная отправка сообщений и медиафайлов с плавным откликом интерфейса.", "#22C55E"),
+            new("Всегда будь на", "Связи!", "Связь без интернета & Контакты", "Общайся без интернета по Bluetooth P2P или онлайн, используй глобальный поиск.", "#EAB308"),
+            new("Всегда будь в", "Приватности!", "Анонимность & Шифрование", "Защищенная локальная база данных, анонимизация устройств и защита от посторонних.", "#EC4899"),
+            new("Всегда мы", "Кастомнее!", "Лавовый фон & Персонализация", "Живой лавовый фон, Material 3 акценты, медиаплеер и редактор изображений.", "#A855F7")
+        };
 
         public string TargetDir
         {
@@ -34,7 +53,6 @@ namespace PrimeSetup
             _isUninstallMode = args.Any(a => a.Equals("--uninstall", StringComparison.OrdinalIgnoreCase) ||
                                              a.Equals("/uninstall", StringComparison.OrdinalIgnoreCase));
 
-            // If existing installation is found in registry, prefill it
             try
             {
                 using var key = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Uninstall\PrimeMessenger");
@@ -47,6 +65,10 @@ namespace PrimeSetup
             catch { }
 
             TxtInstallPath.Text = TargetDir;
+            TxtDisplayName.Text = Environment.UserName;
+            TxtUsername.Text = Environment.UserName.ToLowerInvariant().Replace(" ", "_");
+
+            InitSloganCarousel();
 
             if (_isUninstallMode)
             {
@@ -54,15 +76,57 @@ namespace PrimeSetup
             }
         }
 
+        private void InitSloganCarousel()
+        {
+            _sloganTimer = new DispatcherTimer
+            {
+                Interval = TimeSpan.FromSeconds(3.5)
+            };
+            _sloganTimer.Tick += (s, e) => AnimateToNextSlogan();
+            _sloganTimer.Start();
+        }
+
+        private void AnimateToNextSlogan()
+        {
+            // Slide down and fade out
+            var fadeOut = new DoubleAnimation(1.0, 0.0, TimeSpan.FromMilliseconds(220));
+            var slideOut = new DoubleAnimation(0.0, 16.0, TimeSpan.FromMilliseconds(220));
+
+            slideOut.Completed += (s, e) =>
+            {
+                _currentSloganIndex = (_currentSloganIndex + 1) % _slogans.Count;
+                var next = _slogans[_currentSloganIndex];
+
+                TxtSloganPrefix.Text = next.Prefix;
+                TxtSloganButton.Text = next.Button;
+                TxtSloganButton.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString(next.HexColor));
+                TxtSloganSubtitle.Text = next.Subtitle;
+                TxtSloganDesc.Text = next.Desc;
+
+                // Prepare for entry from top
+                SloganTranslate.Y = -16.0;
+                var fadeIn = new DoubleAnimation(0.0, 1.0, TimeSpan.FromMilliseconds(260));
+                var slideIn = new DoubleAnimation(-16.0, 0.0, TimeSpan.FromMilliseconds(260))
+                {
+                    EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+                };
+
+                SloganContainer.BeginAnimation(UIElement.OpacityProperty, fadeIn);
+                SloganTranslate.BeginAnimation(TranslateTransform.YProperty, slideIn);
+            };
+
+            SloganContainer.BeginAnimation(UIElement.OpacityProperty, fadeOut);
+            SloganTranslate.BeginAnimation(TranslateTransform.YProperty, slideOut);
+        }
+
         private void ConfigureUninstallUi()
         {
             Title = "Удаление Prime Desktop";
-            HeaderTitle.Text = "Prime Desktop";
-            HeaderSubtitle.Text = "Удаление программы";
             StatusTitle.Text = "Удаление Prime Messenger с компьютера";
             StatusSub.Text = $"Приложение будет удалено из: {TargetDir}";
-            DescriptionCard.Visibility = Visibility.Collapsed;
             PathPanel.Visibility = Visibility.Collapsed;
+            ChkStartMenuShortcut.Visibility = Visibility.Collapsed;
+            ChkAutostart.Visibility = Visibility.Collapsed;
             ChkDesktopShortcut.Content = "Также удалить историю сообщений и профиль";
             ChkDesktopShortcut.IsChecked = true;
             ChkLaunchAfter.Visibility = Visibility.Collapsed;
@@ -102,6 +166,52 @@ namespace PrimeSetup
                 TxtInstallPath.Text = selected;
                 TargetDir = selected;
             }
+        }
+
+        private void AvatarBox_MouseDown(object sender, MouseButtonEventArgs e)
+        {
+            BtnPickAvatar_Click(sender, e);
+        }
+
+        private void BtnPickAvatar_Click(object sender, RoutedEventArgs e)
+        {
+            var dlg = new OpenFileDialog
+            {
+                Title = "Выберите фотографию для профиля Prime",
+                Filter = "Изображения (*.png;*.jpg;*.jpeg;*.webp)|*.png;*.jpg;*.jpeg;*.webp|Все файлы (*.*)|*.*"
+            };
+
+            if (dlg.ShowDialog() == true)
+            {
+                var cropper = new AvatarCropperDialog(dlg.FileName)
+                {
+                    Owner = this
+                };
+
+                if (cropper.ShowDialog() == true && !string.IsNullOrEmpty(cropper.CroppedResultPath))
+                {
+                    _chosenAvatarPath = cropper.CroppedResultPath;
+                    DisplayAvatarPreview(_chosenAvatarPath);
+                }
+            }
+        }
+
+        private void DisplayAvatarPreview(string path)
+        {
+            try
+            {
+                var bmp = new BitmapImage();
+                bmp.BeginInit();
+                bmp.CacheOption = BitmapCacheOption.OnLoad;
+                bmp.UriSource = new Uri(path);
+                bmp.EndInit();
+                bmp.Freeze();
+
+                AvatarPreviewImage.Source = bmp;
+                AvatarPreviewImage.Visibility = Visibility.Visible;
+                AvatarPlaceholder.Visibility = Visibility.Collapsed;
+            }
+            catch { }
         }
 
         private async void InstallBtn_Click(object sender, RoutedEventArgs e)
@@ -199,44 +309,36 @@ namespace PrimeSetup
 
         private void PerformInstallation()
         {
-            // 1. Close running processes
             KillPrimeProcesses();
-
-            // 2. Prepare directory
             Directory.CreateDirectory(TargetDir);
 
-            // 3. Extract embedded payload
             var assembly = Assembly.GetExecutingAssembly();
             string? resourceName = assembly.GetManifestResourceNames()
                 .FirstOrDefault(name => name.EndsWith("app_files.zip", StringComparison.OrdinalIgnoreCase));
 
-            if (string.IsNullOrEmpty(resourceName))
+            if (!string.IsNullOrEmpty(resourceName))
             {
-                throw new FileNotFoundException("Файл полезной нагрузки инсталлятора не найден.");
-            }
-
-            string tempZip = Path.Combine(Path.GetTempPath(), $"prime_inst_{Guid.NewGuid():N}.zip");
-            try
-            {
-                using (var stream = assembly.GetManifestResourceStream(resourceName)!)
-                using (var fs = new FileStream(tempZip, FileMode.Create, FileAccess.Write))
+                string tempZip = Path.Combine(Path.GetTempPath(), $"prime_inst_{Guid.NewGuid():N}.zip");
+                try
                 {
-                    stream.CopyTo(fs);
+                    using (var stream = assembly.GetManifestResourceStream(resourceName)!)
+                    using (var fs = new FileStream(tempZip, FileMode.Create, FileAccess.Write))
+                    {
+                        stream.CopyTo(fs);
+                    }
+
+                    Dispatcher.Invoke(() => { InstallProgress.Value = 60; StatusTitle.Text = "Развертывание программы..."; });
+                    ZipFile.ExtractToDirectory(tempZip, TargetDir, overwriteFiles: true);
                 }
-
-                Dispatcher.Invoke(() => { InstallProgress.Value = 60; StatusTitle.Text = "Развертывание программы..."; });
-
-                ZipFile.ExtractToDirectory(tempZip, TargetDir, overwriteFiles: true);
-            }
-            finally
-            {
-                if (File.Exists(tempZip))
+                finally
                 {
-                    try { File.Delete(tempZip); } catch { }
+                    if (File.Exists(tempZip))
+                    {
+                        try { File.Delete(tempZip); } catch { }
+                    }
                 }
             }
 
-            // 4. Copy uninstaller (copying current setup exe to installation dir)
             string uninstallerPath = Path.Combine(TargetDir, "PrimeSetup.exe");
             try
             {
@@ -253,10 +355,17 @@ namespace PrimeSetup
 
             Dispatcher.Invoke(() => { InstallProgress.Value = 85; StatusTitle.Text = "Регистрация в Windows и создание ярлыков..."; });
 
-            // 5. Create Shortcuts
             string exePath = Path.Combine(TargetDir, "PrimeDesktop.exe");
             bool createDesktop = false;
-            Dispatcher.Invoke(() => createDesktop = ChkDesktopShortcut.IsChecked == true);
+            bool createStartMenu = false;
+            bool enableAutostart = false;
+
+            Dispatcher.Invoke(() =>
+            {
+                createDesktop = ChkDesktopShortcut.IsChecked == true;
+                createStartMenu = ChkStartMenuShortcut.IsChecked == true;
+                enableAutostart = ChkAutostart.IsChecked == true;
+            });
 
             if (createDesktop)
             {
@@ -264,36 +373,63 @@ namespace PrimeSetup
                 CreateShortcut(Path.Combine(desktopFolder, "Prime Desktop.lnk"), exePath, TargetDir);
             }
 
-            string startMenuPrograms = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.StartMenu), "Programs");
-            if (Directory.Exists(startMenuPrograms))
+            if (createStartMenu)
             {
-                CreateShortcut(Path.Combine(startMenuPrograms, "Prime Desktop.lnk"), exePath, TargetDir);
+                string startMenuPrograms = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.StartMenu), "Programs");
+                if (Directory.Exists(startMenuPrograms))
+                {
+                    CreateShortcut(Path.Combine(startMenuPrograms, "Prime Desktop.lnk"), exePath, TargetDir);
+                }
             }
 
-            // 6. Register in Windows Settings / Apps & features (Installed apps)
+            // Register/remove autostart in Windows Run registry key
+            ConfigureAutostart(exePath, enableAutostart);
+
             RegisterInWindowsSettings(exePath, uninstallerPath);
+
+            // 7. Save initial profile and settings
+            SaveInitialUserProfile();
+        }
+
+        private static void ConfigureAutostart(string exePath, bool enable)
+        {
+            try
+            {
+                using var key = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Run", writable: true);
+                if (key != null)
+                {
+                    if (enable)
+                    {
+                        key.SetValue("PrimeDesktop", $"\"{exePath}\"");
+                    }
+                    else
+                    {
+                        key.DeleteValue("PrimeDesktop", throwOnMissingValue: false);
+                    }
+                }
+            }
+            catch { }
         }
 
         private void PerformUninstallation(bool deleteUserData)
         {
-            // 1. Kill processes
             KillPrimeProcesses();
 
-            // 2. Remove Shortcuts
             string desktopShortcut = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "Prime Desktop.lnk");
             if (File.Exists(desktopShortcut)) try { File.Delete(desktopShortcut); } catch { }
 
             string startMenuShortcut = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.StartMenu), "Programs", "Prime Desktop.lnk");
             if (File.Exists(startMenuShortcut)) try { File.Delete(startMenuShortcut); } catch { }
 
-            // 3. Unregister from Windows Settings
+            // Remove Autostart
+            ConfigureAutostart("", false);
+
             try
             {
                 Registry.CurrentUser.DeleteSubKeyTree(@"Software\Microsoft\Windows\CurrentVersion\Uninstall\PrimeMessenger", throwOnMissingSubKey: false);
             }
             catch { }
 
-            // 4. Delete user data if requested
             if (deleteUserData)
             {
                 string appData = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "PrimeDesktop");
@@ -303,7 +439,6 @@ namespace PrimeSetup
                 }
             }
 
-            // 5. Self-delete folder on exit
             try
             {
                 string cmd = $"/c timeout /t 1 /nobreak > nul & rmdir /s /q \"{TargetDir}\"";
@@ -345,6 +480,56 @@ namespace PrimeSetup
                     key.SetValue("NoRepair", 1, RegistryValueKind.DWord);
                     key.SetValue("URLInfoAbout", "https://github.com/Vaniahorosh/Prime_messenger");
                 }
+            }
+            catch { }
+        }
+
+        private void SaveInitialUserProfile()
+        {
+            try
+            {
+                string appDataDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "PrimeDesktop");
+                Directory.CreateDirectory(appDataDir);
+                string avatarsDir = Path.Combine(appDataDir, "Avatars");
+                Directory.CreateDirectory(avatarsDir);
+
+                string myDisplayName = Environment.UserName;
+                string myUsername = Environment.UserName.ToLowerInvariant().Replace(" ", "_");
+
+                Dispatcher.Invoke(() =>
+                {
+                    string name = TxtDisplayName.Text.Trim();
+                    string user = TxtUsername.Text.Trim();
+                    if (!string.IsNullOrEmpty(name)) myDisplayName = name;
+                    if (!string.IsNullOrEmpty(user)) myUsername = user;
+                });
+
+                string? finalAvatarPath = null;
+                if (!string.IsNullOrEmpty(_chosenAvatarPath) && File.Exists(_chosenAvatarPath))
+                {
+                    finalAvatarPath = Path.Combine(avatarsDir, "avatar_my_profile.png");
+                    File.Copy(_chosenAvatarPath, finalAvatarPath, overwrite: true);
+                }
+
+                string settingsPath = Path.Combine(appDataDir, "settings.json");
+                string json = "{}";
+
+                if (File.Exists(settingsPath))
+                {
+                    try { json = File.ReadAllText(settingsPath); } catch { }
+                }
+
+                var dict = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(json) ?? new();
+
+                dict["MyDisplayName"] = myDisplayName;
+                dict["MyUsername"] = myUsername;
+                if (!string.IsNullOrEmpty(finalAvatarPath))
+                {
+                    dict["MyAvatarPath"] = finalAvatarPath;
+                }
+
+                var options = new System.Text.Json.JsonSerializerOptions { WriteIndented = true };
+                File.WriteAllText(settingsPath, System.Text.Json.JsonSerializer.Serialize(dict, options));
             }
             catch { }
         }
