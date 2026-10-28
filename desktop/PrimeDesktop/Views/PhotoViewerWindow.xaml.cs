@@ -58,9 +58,86 @@ namespace PrimeDesktop.Views
             PreviewMouseWheel += Window_PreviewMouseWheel;
             PreviewKeyDown += Window_PreviewKeyDown;
             StateChanged += Window_StateChanged;
+            SourceInitialized += Window_SourceInitialized;
+            Loaded += Window_Loaded;
+            SizeChanged += Window_SizeChanged;
             Closed += Window_Closed;
 
             SetMediaList(initialPath, items);
+        }
+
+        private void Window_SourceInitialized(object? sender, EventArgs e)
+        {
+            ThemeManager.ApplyWindowDwm(this, forceDark: true);
+            WindowUtils.EnableNativeWindowAnimations(this);
+            WindowUtils.EnableWindowMinMaxHook(this);
+        }
+
+        private void Window_Loaded(object sender, RoutedEventArgs e)
+        {
+            ApplySavedWindowPlacement();
+        }
+
+        private void Window_SizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            SaveWindowPlacement();
+        }
+
+        private void ApplySavedWindowPlacement()
+        {
+            try
+            {
+                var vm = DataContext as ViewModels.MainViewModel;
+                var s = vm?.Settings;
+                if (s == null)
+                {
+                    WindowState = WindowState.Maximized;
+                    return;
+                }
+
+                // If user previously set a custom window size, restore it
+                if (s.PhotoViewerWidth >= MinWidth && s.PhotoViewerHeight >= MinHeight)
+                {
+                    Width = s.PhotoViewerWidth;
+                    Height = s.PhotoViewerHeight;
+                }
+
+                // Default is Maximized (fullscreen), or restore last state
+                if (s.PhotoViewerWasMaximized)
+                {
+                    WindowState = WindowState.Maximized;
+                }
+                else
+                {
+                    WindowState = WindowState.Normal;
+                }
+            }
+            catch
+            {
+                WindowState = WindowState.Maximized;
+            }
+        }
+
+        private void SaveWindowPlacement()
+        {
+            try
+            {
+                var vm = DataContext as ViewModels.MainViewModel;
+                var s = vm?.Settings;
+                if (s == null) return;
+
+                if (WindowState == WindowState.Maximized)
+                {
+                    s.PhotoViewerWasMaximized = true;
+                }
+                else if (WindowState == WindowState.Normal)
+                {
+                    s.PhotoViewerWasMaximized = false;
+                    if (ActualWidth >= MinWidth) s.PhotoViewerWidth = ActualWidth;
+                    if (ActualHeight >= MinHeight) s.PhotoViewerHeight = ActualHeight;
+                }
+            }
+            catch { }
         }
 
         public static bool IsVideoPath(string? path)
@@ -284,6 +361,14 @@ namespace PrimeDesktop.Views
             }
             else if (e.LeftButton == MouseButtonState.Pressed)
             {
+                if (WindowState == WindowState.Maximized)
+                {
+                    var mousePos = PointToScreen(e.GetPosition(this));
+                    var ratio = e.GetPosition(this).X / Math.Max(ActualWidth, 1);
+                    WindowState = WindowState.Normal;
+                    Left = mousePos.X - (ActualWidth * ratio);
+                    Top = mousePos.Y - 20;
+                }
                 DragMove();
             }
         }
@@ -675,12 +760,15 @@ namespace PrimeDesktop.Views
         private void Window_Closed(object? sender, EventArgs e)
         {
             StopVideo();
+            SaveWindowPlacement();
             if (DataContext is ViewModels.MainViewModel vm)
             {
                 vm.SendMyActivityState("IDLE", true);
+                _ = new StorageService().SaveSettingsAsync(vm.Settings);
             }
         }
 
         #endregion
     }
 }
+

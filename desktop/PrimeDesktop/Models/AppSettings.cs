@@ -42,6 +42,9 @@ public class AppSettings : INotifyPropertyChanged
     private int _thanksHeartCount = 0;
     private bool _hasShownTrayNotification = false;
     private List<string> _forgottenDevices = new();
+    private double _photoViewerWidth = 0;
+    private double _photoViewerHeight = 0;
+    private bool _photoViewerWasMaximized = true;
 
     public string MyUsername
     {
@@ -242,6 +245,24 @@ public class AppSettings : INotifyPropertyChanged
     {
         get => _hasShownTrayNotification;
         set => SetField(ref _hasShownTrayNotification, value);
+    }
+
+    public double PhotoViewerWidth
+    {
+        get => _photoViewerWidth;
+        set => SetField(ref _photoViewerWidth, value);
+    }
+
+    public double PhotoViewerHeight
+    {
+        get => _photoViewerHeight;
+        set => SetField(ref _photoViewerHeight, value);
+    }
+
+    public bool PhotoViewerWasMaximized
+    {
+        get => _photoViewerWasMaximized;
+        set => SetField(ref _photoViewerWasMaximized, value);
     }
 
     public List<string> ForgottenDevices
