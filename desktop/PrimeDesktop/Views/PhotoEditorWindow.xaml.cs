@@ -36,7 +36,21 @@ public partial class PhotoEditorWindow : Window
         {
             if (IsAvatarMode)
             {
+                Title = "Настройка аватара профиля — Prime Desktop";
+                TxtEditorHeaderTitle.Text = "👤 Настройка аватара профиля";
+                TxtEditorHeaderSubtitle.Text = "кадрирование";
+                BtnApply.Content = "✓ Сохранить аватар";
+                BtnSaveDisk.Visibility = Visibility.Collapsed;
                 ChkAvatarCrop.IsChecked = true;
+                ChkAvatarCrop.IsEnabled = false; // Forced circular frame for avatar
+            }
+            else
+            {
+                Title = "Редактор фото — Prime Desktop";
+                TxtEditorHeaderTitle.Text = "🎨 Фоторедактор Прайм";
+                TxtEditorHeaderSubtitle.Text = "v0.1";
+                BtnApply.Content = "✓ Применить и отправить";
+                BtnSaveDisk.Visibility = Visibility.Visible;
             }
             var uri = new Uri(_sourcePath);
             var bmp = new BitmapImage();

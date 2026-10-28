@@ -147,7 +147,7 @@
                         </Border>
 
                         <!-- Name & Username (Login) -->
-                        <Grid Margin="0,0,0,12">
+                        <Grid Margin="0,0,0,6">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="12"/>
@@ -156,20 +156,26 @@
 
                             <StackPanel Grid.Column="0">
                                 <TextBlock Text="Ваше имя:" FontSize="12" FontWeight="SemiBold" Foreground="#C9D1D9" Margin="0,0,0,5"/>
-                                <Border Background="#161B22" BorderBrush="#30363D" BorderThickness="1" CornerRadius="8" Padding="10,6">
+                                <Border x:Name="BorderDisplayName" Background="#161B22" BorderBrush="#30363D" BorderThickness="1" CornerRadius="8" Padding="10,6">
                                     <TextBox x:Name="TxtDisplayName" Background="Transparent" Foreground="#E6EDF3"
-                                             BorderThickness="0" FontSize="12.5" VerticalAlignment="Center"/>
+                                             BorderThickness="0" FontSize="12.5" VerticalAlignment="Center"
+                                             MaxLength="32" TextChanged="InputFields_TextChanged"/>
                                 </Border>
                             </StackPanel>
 
                             <StackPanel Grid.Column="2">
                                 <TextBlock Text="Имя пользователя (@логин):" FontSize="12" FontWeight="SemiBold" Foreground="#C9D1D9" Margin="0,0,0,5"/>
-                                <Border Background="#161B22" BorderBrush="#30363D" BorderThickness="1" CornerRadius="8" Padding="10,6">
+                                <Border x:Name="BorderUsername" Background="#161B22" BorderBrush="#30363D" BorderThickness="1" CornerRadius="8" Padding="10,6">
                                     <TextBox x:Name="TxtUsername" Background="Transparent" Foreground="#E6EDF3"
-                                             BorderThickness="0" FontSize="12.5" VerticalAlignment="Center"/>
+                                             BorderThickness="0" FontSize="12.5" VerticalAlignment="Center"
+                                             MaxLength="25" TextChanged="InputFields_TextChanged"/>
                                 </Border>
                             </StackPanel>
                         </Grid>
+
+                        <!-- Validation Error TextBlock -->
+                        <TextBlock x:Name="TxtValidationError" Text="" Foreground="#FF6B6B" FontSize="11" TextWrapping="Wrap"
+                                   Visibility="Collapsed" Margin="0,0,0,10"/>
 
                         <!-- Installation Folder Selector -->
                         <StackPanel x:Name="PathPanel" Margin="0,0,0,12">

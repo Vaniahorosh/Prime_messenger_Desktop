@@ -25,8 +25,8 @@
                             Padding="12,6" Cursor="Hand"/>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                    <TextBlock Text="🎨 Фоторедактор Прайм" FontSize="15" FontWeight="Bold" Foreground="#F0F6FC"/>
-                    <TextBlock Text="v0.1" FontSize="11" Foreground="#4D9FFF" Margin="8,0,0,0" VerticalAlignment="Center"/>
+                    <TextBlock x:Name="TxtEditorHeaderTitle" Text="🎨 Фоторедактор Прайм" FontSize="15" FontWeight="Bold" Foreground="#F0F6FC"/>
+                    <TextBlock x:Name="TxtEditorHeaderSubtitle" Text="v0.1" FontSize="11" Foreground="#4D9FFF" Margin="8,0,0,0" VerticalAlignment="Center"/>
                 </StackPanel>
             </DockPanel>
         </Border>
@@ -158,10 +158,10 @@
                         Background="#182232" Foreground="#8B949E" BorderBrush="#223045" BorderThickness="1"
                         Padding="16,8" Cursor="Hand"/>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                    <Button Content="💾 Сохранить на диск" Click="BtnSaveDisk_Click"
+                    <Button x:Name="BtnSaveDisk" Content="💾 Сохранить на диск" Click="BtnSaveDisk_Click"
                             Background="#182232" Foreground="#F0F6FC" BorderBrush="#223045" BorderThickness="1"
                             Padding="16,8" Margin="0,0,10,0" Cursor="Hand"/>
-                    <Button Content="✓ Применить и отправить" Click="BtnApply_Click"
+                    <Button x:Name="BtnApply" Content="✓ Применить и отправить" Click="BtnApply_Click"
                             Background="#4D9FFF" Foreground="#FFFFFF" FontWeight="Bold" BorderThickness="0"
                             Padding="20,8" Cursor="Hand"/>
                 </StackPanel>

@@ -214,12 +214,74 @@ namespace PrimeSetup
             catch { }
         }
 
+        private void InputFields_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
+        {
+            ValidateInputs(showErrors: false);
+        }
+
+        private bool ValidateInputs(bool showErrors = true)
+        {
+            string name = TxtDisplayName?.Text?.Trim() ?? "";
+            string username = TxtUsername?.Text?.Trim() ?? "";
+
+            string? nameError = PrimeCommon.ValidationUtils.ValidateName(name);
+            string? usernameError = PrimeCommon.ValidationUtils.ValidateLogin(username);
+
+            string? firstError = nameError ?? usernameError;
+
+            if (firstError != null)
+            {
+                if (showErrors && TxtValidationError != null)
+                {
+                    TxtValidationError.Text = firstError;
+                    TxtValidationError.Visibility = Visibility.Visible;
+                }
+
+                if (BorderDisplayName != null)
+                {
+                    BorderDisplayName.BorderBrush = nameError != null 
+                        ? new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FF6B6B"))
+                        : new SolidColorBrush((Color)ColorConverter.ConvertFromString("#30363D"));
+                }
+
+                if (BorderUsername != null)
+                {
+                    BorderUsername.BorderBrush = usernameError != null 
+                        ? new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FF6B6B"))
+                        : new SolidColorBrush((Color)ColorConverter.ConvertFromString("#30363D"));
+                }
+
+                return false;
+            }
+
+            if (TxtValidationError != null)
+            {
+                TxtValidationError.Text = "";
+                TxtValidationError.Visibility = Visibility.Collapsed;
+            }
+
+            if (BorderDisplayName != null)
+                BorderDisplayName.BorderBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#30363D"));
+            if (BorderUsername != null)
+                BorderUsername.BorderBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#30363D"));
+
+            return true;
+        }
+
         private async void InstallBtn_Click(object sender, RoutedEventArgs e)
         {
             if (_isCompleted)
             {
                 Close();
                 return;
+            }
+
+            if (!_isUninstallMode)
+            {
+                if (!ValidateInputs(showErrors: true))
+                {
+                    return;
+                }
             }
 
             InstallBtn.IsEnabled = false;
