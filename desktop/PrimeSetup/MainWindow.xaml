@@ -20,8 +20,8 @@
         <Grid Margin="20,12,20,16">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/> <!-- Top bar with only Close button -->
-                <RowDefinition Height="*"/>    <!-- Split Content: Left Promo & Right Settings -->
-                <RowDefinition Height="Auto"/> <!-- Bottom Row: Progress bar & Install Button -->
+                <RowDefinition Height="*"/>    <!-- Content Area -->
+                <RowDefinition Height="Auto"/> <!-- Bottom Row: Progress bar & Action Button -->
             </Grid.RowDefinitions>
 
             <!-- Top bar: Clean draggable area with ONLY the close button -->
@@ -51,8 +51,8 @@
                 </Button>
             </Grid>
 
-            <!-- Split Main Content Area -->
-            <Grid Grid.Row="1" Margin="2,0,2,12">
+            <!-- 1. Normal Setup Mode (Split Area) -->
+            <Grid x:Name="SetupModeGrid" Grid.Row="1" Margin="2,0,2,12">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition x:Name="ColLeft" Width="280"/> <!-- Left Column: Expands on install -->
                     <ColumnDefinition x:Name="ColGap" Width="20"/>    <!-- Gap: Collapses on install -->
@@ -226,7 +226,33 @@
                 </Border>
             </Grid>
 
-            <!-- Bottom Actions: Progress Bar on the left, Install button on the right at the SAME LEVEL -->
+            <!-- 2. Clean Uninstall Mode (Centrally Aligned Card) -->
+            <Border x:Name="UninstallModeCard" Grid.Row="1" Background="#121620" BorderBrush="#1F2636" BorderThickness="1" 
+                    CornerRadius="16" Padding="32,24" Margin="4,0,4,12" Visibility="Collapsed" VerticalAlignment="Center">
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="440">
+                    <!-- App Logo with danger glow -->
+                    <Border Width="88" Height="88" CornerRadius="22" Background="#161C28" BorderBrush="#2F394D" BorderThickness="1.5"
+                            HorizontalAlignment="Center" Margin="0,0,0,16">
+                        <Border.Effect>
+                            <DropShadowEffect BlurRadius="20" ShadowDepth="3" Opacity="0.35" Color="#FF5252"/>
+                        </Border.Effect>
+                        <Image Source="Assets/prime_logo.png" Width="60" Height="60"
+                               HorizontalAlignment="Center" VerticalAlignment="Center"
+                               RenderOptions.BitmapScalingMode="HighQuality"/>
+                    </Border>
+
+                    <TextBlock Text="Удаление Prime Desktop" FontSize="20" FontWeight="Bold" Foreground="#FFFFFF" 
+                               HorizontalAlignment="Center" Margin="0,0,0,8"/>
+
+                    <TextBlock Text="Вы действительно хотите удалить Prime Desktop с вашего компьютера?" 
+                               FontSize="13.5" Foreground="#C9D1D9" TextAlignment="Center" TextWrapping="Wrap" LineHeight="20" Margin="0,0,0,16"/>
+
+                    <CheckBox x:Name="ChkDeleteUserData" Content="Также удалить историю сообщений и сохраненный профиль"
+                              IsChecked="True" Foreground="#8B949E" FontSize="12" HorizontalAlignment="Center" Margin="0,0,0,10"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Bottom Actions: Progress Bar on the left, Action button on the right at the SAME LEVEL -->
             <Border Grid.Row="2" Background="#121620" BorderBrush="#1F2636" BorderThickness="1" CornerRadius="12" Padding="14,10">
                 <Grid VerticalAlignment="Center">
                     <Grid.ColumnDefinitions>

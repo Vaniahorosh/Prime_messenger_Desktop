@@ -133,15 +133,21 @@ namespace PrimeSetup
         private void ConfigureUninstallUi()
         {
             Title = "Удаление Prime Desktop";
-            StatusTitle.Text = "Удаление Prime Messenger с компьютера";
-            StatusSub.Text = $"Приложение будет удалено из: {TargetDir}";
-            PathPanel.Visibility = Visibility.Collapsed;
-            ChkStartMenuShortcut.Visibility = Visibility.Collapsed;
-            ChkAutostart.Visibility = Visibility.Collapsed;
-            ChkDesktopShortcut.Content = "Также удалить историю сообщений и профиль";
-            ChkDesktopShortcut.IsChecked = true;
-            ChkLaunchAfter.Visibility = Visibility.Collapsed;
-            InstallBtn.Content = "Удалить с компьютера";
+            Width = 560;
+            Height = 440;
+
+            if (_sloganTimer != null)
+            {
+                _sloganTimer.Stop();
+            }
+
+            SetupModeGrid.Visibility = Visibility.Collapsed;
+            UninstallModeCard.Visibility = Visibility.Visible;
+
+            StatusTitle.Text = "Готово к удалению";
+            StatusSub.Text = $"Программа будет полностью удалена из: {TargetDir}";
+
+            InstallBtn.Content = "Удалить";
             InstallBtn.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FF5252"));
         }
 
@@ -387,7 +393,7 @@ namespace PrimeSetup
             StatusTitle.Text = "Удаление файлов и системных ссылок...";
             InstallProgress.Value = 30;
 
-            bool deleteUserData = ChkDesktopShortcut.IsChecked == true;
+            bool deleteUserData = ChkDeleteUserData.IsChecked == true;
 
             try
             {
