@@ -1324,16 +1324,18 @@
                                         </Border.InputBindings>
                                     </Border>
 
-                                    <!-- Left Vertical Action Buttons (In front of photo with light shadow) -->
-                                    <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Margin="12,12,0,0">
+                                    <!-- Left Vertical Action Buttons (Square along the left middle edge, expanding label on hover) -->
+                                    <StackPanel HorizontalAlignment="Left" VerticalAlignment="Center" Margin="10,0,0,0">
                                         <!-- 1. Закрыть -->
                                         <Button Style="{StaticResource ProfileGlassButton}"
                                                 Command="{Binding ToggleMediaDrawerCommand}"
                                                 ToolTip="Закрыть"
-                                                Margin="0,0,0,6">
+                                                Margin="0,0,0,8">
                                             <StackPanel Orientation="Horizontal">
-                                                <TextBlock Text="✕" FontSize="11" FontWeight="Bold" Foreground="White" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                                                <TextBlock Text="Закрыть" FontSize="11" FontWeight="SemiBold" Foreground="White" VerticalAlignment="Center"/>
+                                                <Border Width="36" Height="36">
+                                                    <TextBlock Text="✕" FontSize="12" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                </Border>
+                                                <TextBlock Text="Закрыть" FontSize="11" FontWeight="SemiBold" Foreground="White" VerticalAlignment="Center" Margin="0,0,12,0"/>
                                             </StackPanel>
                                         </Button>
 
@@ -1342,10 +1344,12 @@
                                                 Command="{Binding OpenPhotoViewerCommand}"
                                                 CommandParameter="{Binding SelectedChat.CurrentAvatarDisplayPath}"
                                                 ToolTip="Просмотр фото"
-                                                Margin="0,0,0,6">
+                                                Margin="0,0,0,8">
                                             <StackPanel Orientation="Horizontal">
-                                                <TextBlock Text="👁️" FontSize="11" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                                                <TextBlock Text="Фото" FontSize="11" FontWeight="SemiBold" Foreground="White" VerticalAlignment="Center"/>
+                                                <Border Width="36" Height="36">
+                                                    <TextBlock Text="👁️" FontSize="13" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                </Border>
+                                                <TextBlock Text="Фото" FontSize="11" FontWeight="SemiBold" Foreground="White" VerticalAlignment="Center" Margin="0,0,12,0"/>
                                             </StackPanel>
                                         </Button>
 
@@ -1353,10 +1357,12 @@
                                         <Button Style="{StaticResource ProfileGlassButton}"
                                                 Command="{Binding ToggleReadingModeCommand}"
                                                 ToolTip="{Binding ReadingModeToolTip}"
-                                                Margin="0,0,0,6">
+                                                Margin="0,0,0,8">
                                             <StackPanel Orientation="Horizontal">
-                                                <TextBlock Text="{Binding ReadingModeButtonIcon}" FontSize="11" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                                                <controls:AnimatedTextTransitionControl Text="{Binding ReadingModeButtonText}" Foreground="White" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                                <Border Width="36" Height="36">
+                                                    <TextBlock Text="{Binding ReadingModeButtonIcon}" FontSize="13" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                </Border>
+                                                <controls:AnimatedTextTransitionControl Text="{Binding ReadingModeButtonText}" Foreground="White" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,12,0"/>
                                             </StackPanel>
                                         </Button>
 
@@ -1365,8 +1371,10 @@
                                                 Command="{Binding DeleteSelectedChatCommand}"
                                                 ToolTip="Удалить чат">
                                             <StackPanel Orientation="Horizontal">
-                                                <TextBlock Text="🗑️" FontSize="11" Foreground="#EF4444" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                                                <TextBlock Text="Удалить" FontSize="11" FontWeight="SemiBold" Foreground="#EF4444" VerticalAlignment="Center"/>
+                                                <Border Width="36" Height="36">
+                                                    <TextBlock Text="🗑️" FontSize="13" Foreground="#EF4444" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                </Border>
+                                                <TextBlock Text="Удалить" FontSize="11" FontWeight="SemiBold" Foreground="#EF4444" VerticalAlignment="Center" Margin="0,0,12,0"/>
                                             </StackPanel>
                                         </Button>
                                     </StackPanel>

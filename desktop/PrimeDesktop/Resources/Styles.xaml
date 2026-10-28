@@ -820,16 +820,18 @@
         </Setter>
     </Style>
 
-    <!-- Profile Card Floating Glass Buttons (Over avatar photo) -->
+    <!-- Profile Card Square Expandable Floating Glass Buttons (Over avatar photo) -->
     <Style x:Key="ProfileGlassButton" TargetType="Button">
-        <Setter Property="Height" Value="32"/>
-        <Setter Property="MinWidth" Value="86"/>
+        <Setter Property="Height" Value="36"/>
+        <Setter Property="MinWidth" Value="36"/>
+        <Setter Property="MaxWidth" Value="36"/>
         <Setter Property="Cursor" Value="Hand"/>
-        <Setter Property="Background" Value="#A6151E2B"/>
+        <Setter Property="Background" Value="#B3151E2B"/>
         <Setter Property="Foreground" Value="#FFFFFF"/>
-        <Setter Property="BorderBrush" Value="#33FFFFFF"/>
+        <Setter Property="BorderBrush" Value="#40FFFFFF"/>
         <Setter Property="BorderThickness" Value="1"/>
-        <Setter Property="Padding" Value="9,0"/>
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="HorizontalAlignment" Value="Left"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
@@ -837,20 +839,53 @@
                             Background="{TemplateBinding Background}"
                             BorderBrush="{TemplateBinding BorderBrush}"
                             BorderThickness="{TemplateBinding BorderThickness}"
-                            CornerRadius="9"
-                            Padding="{TemplateBinding Padding}">
+                            CornerRadius="10"
+                            Height="36"
+                            MinWidth="36"
+                            MaxWidth="36"
+                            ClipToBounds="True"
+                            HorizontalAlignment="Left"
+                            Padding="0">
                         <Border.Effect>
-                            <DropShadowEffect Color="#000000" BlurRadius="8" ShadowDepth="2" Direction="270" Opacity="0.4"/>
+                            <DropShadowEffect Color="#000000" BlurRadius="8" ShadowDepth="2" Direction="270" Opacity="0.45"/>
                         </Border.Effect>
-                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        <ContentPresenter HorizontalAlignment="Left" VerticalAlignment="Center"/>
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Bd" Property="Background" Value="#E01D283A"/>
+                            <Setter TargetName="Bd" Property="Background" Value="#E61E2C3D"/>
                             <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="Bd"
+                                                         Storyboard.TargetProperty="MaxWidth"
+                                                         To="180"
+                                                         Duration="0:0:0.2">
+                                            <DoubleAnimation.EasingFunction>
+                                                <CubicEase EasingMode="EaseOut"/>
+                                            </DoubleAnimation.EasingFunction>
+                                        </DoubleAnimation>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="Bd"
+                                                         Storyboard.TargetProperty="MaxWidth"
+                                                         To="36"
+                                                         Duration="0:0:0.18">
+                                            <DoubleAnimation.EasingFunction>
+                                                <CubicEase EasingMode="EaseOut"/>
+                                            </DoubleAnimation.EasingFunction>
+                                        </DoubleAnimation>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
                         </Trigger>
                         <Trigger Property="IsPressed" Value="True">
-                            <Setter TargetName="Bd" Property="Opacity" Value="0.75"/>
+                            <Setter TargetName="Bd" Property="Opacity" Value="0.8"/>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -867,20 +902,53 @@
                             Background="{TemplateBinding Background}"
                             BorderBrush="{TemplateBinding BorderBrush}"
                             BorderThickness="{TemplateBinding BorderThickness}"
-                            CornerRadius="9"
-                            Padding="{TemplateBinding Padding}">
+                            CornerRadius="10"
+                            Height="36"
+                            MinWidth="36"
+                            MaxWidth="36"
+                            ClipToBounds="True"
+                            HorizontalAlignment="Left"
+                            Padding="0">
                         <Border.Effect>
-                            <DropShadowEffect Color="#000000" BlurRadius="8" ShadowDepth="2" Direction="270" Opacity="0.4"/>
+                            <DropShadowEffect Color="#000000" BlurRadius="8" ShadowDepth="2" Direction="270" Opacity="0.45"/>
                         </Border.Effect>
-                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        <ContentPresenter HorizontalAlignment="Left" VerticalAlignment="Center"/>
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Bd" Property="Background" Value="#E0381822"/>
+                            <Setter TargetName="Bd" Property="Background" Value="#E63A1822"/>
                             <Setter TargetName="Bd" Property="BorderBrush" Value="#EF4444"/>
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="Bd"
+                                                         Storyboard.TargetProperty="MaxWidth"
+                                                         To="180"
+                                                         Duration="0:0:0.2">
+                                            <DoubleAnimation.EasingFunction>
+                                                <CubicEase EasingMode="EaseOut"/>
+                                            </DoubleAnimation.EasingFunction>
+                                        </DoubleAnimation>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="Bd"
+                                                         Storyboard.TargetProperty="MaxWidth"
+                                                         To="36"
+                                                         Duration="0:0:0.18">
+                                            <DoubleAnimation.EasingFunction>
+                                                <CubicEase EasingMode="EaseOut"/>
+                                            </DoubleAnimation.EasingFunction>
+                                        </DoubleAnimation>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
                         </Trigger>
                         <Trigger Property="IsPressed" Value="True">
-                            <Setter TargetName="Bd" Property="Opacity" Value="0.75"/>
+                            <Setter TargetName="Bd" Property="Opacity" Value="0.8"/>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
