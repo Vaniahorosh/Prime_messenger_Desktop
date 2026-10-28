@@ -1614,7 +1614,7 @@ public class MainViewModel : ViewModelBase
             var chat = param as ChatItem ?? SelectedChat;
             if (chat != null)
             {
-                string info = !string.IsNullOrEmpty(chat.Username) ? $"@{chat.Username}" : (!string.IsNullOrEmpty(chat.DeviceAddress) ? chat.DeviceAddress : chat.PeerId);
+                string info = !string.IsNullOrEmpty(chat.Username) ? $"@{chat.Username}" : chat.DisplayName;
                 if (!string.IsNullOrEmpty(info))
                 {
                     try
@@ -3141,7 +3141,7 @@ public async Task SendTextMessageAsync()
             if (devices.Count > 0)
             {
                 var target = devices[0];
-                StatusMessage = $"Подключение к {target.DisplayName} по Wi-Fi ({target.DeviceAddress})...";
+                StatusMessage = $"Подключение к {target.DisplayName} по Wi-Fi...";
                 bool connected = await _companionService.ConnectAsync(target.DeviceAddress);
                 if (connected)
                 {

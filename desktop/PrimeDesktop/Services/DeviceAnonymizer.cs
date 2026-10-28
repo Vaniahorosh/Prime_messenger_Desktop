@@ -26,7 +26,8 @@ namespace PrimeDesktop.Services
             return MacRegex.IsMatch(clean) || 
                    IpRegex.IsMatch(clean) || 
                    clean.StartsWith("Bluetooth#", StringComparison.OrdinalIgnoreCase) ||
-                   clean.StartsWith("peer_", StringComparison.OrdinalIgnoreCase);
+                   clean.StartsWith("peer_", StringComparison.OrdinalIgnoreCase) ||
+                   EmbeddedMacOrPeerRegex.IsMatch(clean);
         }
 
         public static string MaskMacAddresses(string? input, Func<string, string?>? resolver = null)
@@ -70,40 +71,63 @@ namespace PrimeDesktop.Services
                 return "Prime Телефон 📱";
             }
 
-            // Deterministic 4-digit pseudonym (1000..9999)
-            int hash = Math.Abs(clean.ToUpperInvariant().GetHashCode());
-            int code = (hash % 9000) + 1000;
+            // Cryptographic SHA-256 hash to a 4-digit code (1000..9999) - never reveals MAC bytes!
+            using var sha = SHA256.Create();
+            byte[] hash = sha.ComputeHash(Encoding.UTF8.GetBytes(clean.ToUpperInvariant()));
+            int code = (Math.Abs(BitConverter.ToInt32(hash, 0)) % 9000) + 1000;
             return $"Собеседник #{code}";
         }
 
         public static string SanitizeDisplayName(string? candidateName, string? rawAddress = null)
         {
             if (string.IsNullOrWhiteSpace(candidateName) ||
-                IsHardwareIdentifier(candidateName) ||
-                candidateName.Equals("unknown", StringComparison.OrdinalIgnoreCase))
+                candidateName.Equals("unknown", StringComparison.OrdinalIgnoreCase) ||
+                candidateName.Equals("null", StringComparison.OrdinalIgnoreCase) ||
+                IsHardwareIdentifier(candidateName))
             {
                 return AnonymizeIdentifier(rawAddress ?? candidateName);
             }
 
-            return candidateName.Trim();
+            // Scrub any embedded MAC addresses or hardware tags
+            string cleaned = EmbeddedMacOrPeerRegex.Replace(candidateName, "").Trim();
+            cleaned = cleaned.Replace("()", "").Replace("[]", "").Trim();
+
+            if (string.IsNullOrWhiteSpace(cleaned) || IsHardwareIdentifier(cleaned))
+            {
+                return AnonymizeIdentifier(rawAddress ?? candidateName);
+            }
+
+            return cleaned;
         }
 
         public static string SanitizeUsername(string? candidateUsername, string? rawAddress = null)
         {
             if (string.IsNullOrWhiteSpace(candidateUsername) ||
-                IsHardwareIdentifier(candidateUsername) ||
-                candidateUsername.Equals("unknown", StringComparison.OrdinalIgnoreCase))
+                candidateUsername.Equals("unknown", StringComparison.OrdinalIgnoreCase) ||
+                candidateUsername.Equals("null", StringComparison.OrdinalIgnoreCase) ||
+                IsHardwareIdentifier(candidateUsername))
             {
                 if (!string.IsNullOrWhiteSpace(rawAddress) && IpRegex.IsMatch(rawAddress.Trim()))
                     return "prime_companion";
 
                 string seed = rawAddress ?? candidateUsername ?? "user";
-                int hash = Math.Abs(seed.ToUpperInvariant().GetHashCode());
-                int code = (hash % 9000) + 1000;
+                using var sha = SHA256.Create();
+                byte[] hash = sha.ComputeHash(Encoding.UTF8.GetBytes(seed.ToUpperInvariant()));
+                int code = (Math.Abs(BitConverter.ToInt32(hash, 0)) % 9000) + 1000;
                 return $"id_{code}";
             }
 
-            return candidateUsername.Trim().TrimStart('@');
+            string cleaned = EmbeddedMacOrPeerRegex.Replace(candidateUsername, "").Trim().TrimStart('@');
+            if (string.IsNullOrWhiteSpace(cleaned) || IsHardwareIdentifier(cleaned))
+            {
+                string seed = rawAddress ?? candidateUsername ?? "user";
+                using var sha = SHA256.Create();
+                byte[] hash = sha.ComputeHash(Encoding.UTF8.GetBytes(seed.ToUpperInvariant()));
+                int code = (Math.Abs(BitConverter.ToInt32(hash, 0)) % 9000) + 1000;
+                return $"id_{code}";
+            }
+
+            return cleaned;
         }
 
         /// <summary>
