@@ -273,58 +273,93 @@ public class MainViewModel : ViewModelBase
             ? _bluetoothService.ResolvePeerId(addressOrPeer)
             : string.Empty;
 
-        foreach (var chat in _allChats)
+        // 1. Strict address/peer matching when addressOrPeer is provided
+        if (!string.IsNullOrWhiteSpace(addressOrPeer))
         {
-            // 1. Exact PeerId match
-            if (!string.IsNullOrWhiteSpace(addressOrPeer) &&
-                chat.PeerId.Equals(addressOrPeer, StringComparison.OrdinalIgnoreCase))
-                return chat;
-
-            // 2. Exact DeviceAddress match
-            if (!string.IsNullOrWhiteSpace(addressOrPeer) &&
-                !string.IsNullOrWhiteSpace(chat.DeviceAddress) &&
-                chat.DeviceAddress.Equals(addressOrPeer, StringComparison.OrdinalIgnoreCase))
-                return chat;
-
-            // 3. Resolved PeerId match
-            if (!string.IsNullOrWhiteSpace(resolvedPeer) &&
-                chat.PeerId.Equals(resolvedPeer, StringComparison.OrdinalIgnoreCase))
-                return chat;
-
-            // 4. Normalized MAC match with chat.DeviceAddress or chat.PeerId
-            if (!string.IsNullOrWhiteSpace(norm))
+            foreach (var chat in _allChats)
             {
+                // Exact PeerId match
+                if (chat.PeerId.Equals(addressOrPeer, StringComparison.OrdinalIgnoreCase))
+                    return chat;
+
+                // Exact DeviceAddress match
                 if (!string.IsNullOrWhiteSpace(chat.DeviceAddress) &&
-                    BluetoothRfcommService.NormalizeMacAddress(chat.DeviceAddress).Equals(norm, StringComparison.OrdinalIgnoreCase))
+                    chat.DeviceAddress.Equals(addressOrPeer, StringComparison.OrdinalIgnoreCase))
                     return chat;
 
-                if (BluetoothRfcommService.NormalizeMacAddress(chat.PeerId).Equals(norm, StringComparison.OrdinalIgnoreCase))
+                // Resolved PeerId match
+                if (!string.IsNullOrWhiteSpace(resolvedPeer) &&
+                    chat.PeerId.Equals(resolvedPeer, StringComparison.OrdinalIgnoreCase))
                     return chat;
+
+                // Normalized MAC match with chat.DeviceAddress or chat.PeerId
+                if (!string.IsNullOrWhiteSpace(norm))
+                {
+                    if (!string.IsNullOrWhiteSpace(chat.DeviceAddress) &&
+                        BluetoothRfcommService.NormalizeMacAddress(chat.DeviceAddress).Equals(norm, StringComparison.OrdinalIgnoreCase))
+                        return chat;
+
+                    if (BluetoothRfcommService.NormalizeMacAddress(chat.PeerId).Equals(norm, StringComparison.OrdinalIgnoreCase))
+                        return chat;
+                }
+
+                // Resolved hardware address match
+                if (!string.IsNullOrWhiteSpace(normResolvedHw))
+                {
+                    if (!string.IsNullOrWhiteSpace(chat.DeviceAddress) &&
+                        BluetoothRfcommService.NormalizeMacAddress(chat.DeviceAddress).Equals(normResolvedHw, StringComparison.OrdinalIgnoreCase))
+                        return chat;
+
+                    string chatResolvedHw = BluetoothRfcommService.NormalizeMacAddress(_bluetoothService.ResolveHardwareAddress(chat.PeerId));
+                    if (!string.IsNullOrWhiteSpace(chatResolvedHw) && chatResolvedHw.Equals(normResolvedHw, StringComparison.OrdinalIgnoreCase))
+                        return chat;
+                }
             }
+        }
 
-            // 5. Resolved hardware address match
-            if (!string.IsNullOrWhiteSpace(normResolvedHw))
+        // 2. Display name match ONLY if addressOrPeer is empty, or only against chats with no address
+        if (!string.IsNullOrWhiteSpace(displayName) &&
+            !IsStatusKeyword(displayName) &&
+            !IsGenericDeviceName(displayName))
+        {
+            foreach (var chat in _allChats)
             {
-                if (!string.IsNullOrWhiteSpace(chat.DeviceAddress) &&
-                    BluetoothRfcommService.NormalizeMacAddress(chat.DeviceAddress).Equals(normResolvedHw, StringComparison.OrdinalIgnoreCase))
-                    return chat;
+                // If caller had an addressOrPeer, do NOT match a chat that has a different address
+                if (!string.IsNullOrWhiteSpace(addressOrPeer) &&
+                    !string.IsNullOrWhiteSpace(chat.DeviceAddress) &&
+                    !string.IsNullOrWhiteSpace(chat.PeerId))
+                {
+                    continue;
+                }
 
-                string chatResolvedHw = BluetoothRfcommService.NormalizeMacAddress(_bluetoothService.ResolveHardwareAddress(chat.PeerId));
-                if (!string.IsNullOrWhiteSpace(chatResolvedHw) && chatResolvedHw.Equals(normResolvedHw, StringComparison.OrdinalIgnoreCase))
+                if (chat.DisplayName.Equals(displayName, StringComparison.OrdinalIgnoreCase))
+                {
                     return chat;
-            }
-
-            // 6. Non-generic display name match
-            if (!string.IsNullOrWhiteSpace(displayName) &&
-                !IsStatusKeyword(displayName) &&
-                !displayName.StartsWith("Собеседник") &&
-                chat.DisplayName.Equals(displayName, StringComparison.OrdinalIgnoreCase))
-            {
-                return chat;
+                }
             }
         }
 
         return null;
+    }
+
+    private static bool IsGenericDeviceName(string? name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return true;
+        string n = name.Trim().ToLowerInvariant();
+        return n.StartsWith("собеседник") ||
+               n.StartsWith("устройство") ||
+               n.StartsWith("телефон") ||
+               n.StartsWith("prime телефон") ||
+               n.StartsWith("prime user") ||
+               n.StartsWith("связь") ||
+               n.StartsWith("android") ||
+               n.StartsWith("galaxy") ||
+               n.StartsWith("redmi") ||
+               n.StartsWith("xiaomi") ||
+               n.StartsWith("pixel") ||
+               n.StartsWith("iphone") ||
+               n.StartsWith("huawei") ||
+               n.StartsWith("honor");
     }
 
     private void MergeChats(ChatItem target, ChatItem source)
@@ -3129,7 +3164,7 @@ public async Task SendTextMessageAsync()
     {
         try
         {
-            // 1. Check against local username and display name
+            // 1. Check against local username (unique identifier)
             if (!string.IsNullOrWhiteSpace(username) && !string.IsNullOrWhiteSpace(Settings.MyUsername))
             {
                 if (string.Equals(username.Trim(), Settings.MyUsername.Trim(), StringComparison.OrdinalIgnoreCase))
@@ -3138,19 +3173,12 @@ public async Task SendTextMessageAsync()
                 }
             }
 
-            if (!string.IsNullOrWhiteSpace(displayName) && !string.IsNullOrWhiteSpace(Settings.MyDisplayName))
+            // Also check if both username and displayName match and are non-generic
+            if (!string.IsNullOrWhiteSpace(displayName) && !string.IsNullOrWhiteSpace(username) &&
+                !string.IsNullOrWhiteSpace(Settings.MyDisplayName) && !string.IsNullOrWhiteSpace(Settings.MyUsername))
             {
-                if (string.Equals(displayName.Trim(), Settings.MyDisplayName.Trim(), StringComparison.OrdinalIgnoreCase))
-                {
-                    return true;
-                }
-            }
-
-            // Also check current machine name / hostname
-            string hostName = Environment.MachineName;
-            if (!string.IsNullOrWhiteSpace(displayName) && !string.IsNullOrWhiteSpace(hostName))
-            {
-                if (string.Equals(displayName.Trim(), hostName.Trim(), StringComparison.OrdinalIgnoreCase))
+                if (string.Equals(displayName.Trim(), Settings.MyDisplayName.Trim(), StringComparison.OrdinalIgnoreCase) &&
+                    string.Equals(username.Trim(), Settings.MyUsername.Trim(), StringComparison.OrdinalIgnoreCase))
                 {
                     return true;
                 }
@@ -3611,7 +3639,7 @@ public async Task SendTextMessageAsync()
     {
         Application.Current.Dispatcher.Invoke(() =>
         {
-            var chat = FindChatByAddressOrPeer(address, name);
+            var chat = FindChatByAddressOrPeer(address);
 
             if (chat == null)
             {
@@ -3656,7 +3684,7 @@ public async Task SendTextMessageAsync()
             chat.IsOnline = (state == DeviceConnectionState.Connected);
 
             // NEVER overwrite DisplayName with status messages like 'Ошибка подключения'
-            if (!string.IsNullOrWhiteSpace(name) && !IsStatusKeyword(name))
+            if (!string.IsNullOrWhiteSpace(name) && !IsStatusKeyword(name) && !IsGenericDeviceName(name))
             {
                 chat.DisplayName = DeviceAnonymizer.SanitizeDisplayName(name, chat.DeviceAddress);
             }
@@ -3683,10 +3711,23 @@ public async Task SendTextMessageAsync()
                     try { await SendNetworkPacketAsync(target, PacketType.Presence, System.Text.Encoding.UTF8.GetBytes("ONLINE")); } catch { }
                     await Task.Delay(150);
 
-                    // 2. Broadcast Profile & Avatar
-                    await BroadcastMyProfileAndAvatarAsync();
-                    await Task.Delay(150);
+                    // 2. Send Profile & Avatar strictly to the connected device
+                    try
+                    {
+                        byte[] profilePayload = PrimePacket.BuildProfileUpdatePayload(Settings.MyDisplayName, Settings.MyUsername);
+                        await SendNetworkPacketAsync(target, PacketType.ProfileUpdate, profilePayload);
+                        await Task.Delay(150);
 
+                        if (!string.IsNullOrWhiteSpace(Settings.MyAvatarPath) && File.Exists(Settings.MyAvatarPath))
+                        {
+                            byte[] avatarBytes = await File.ReadAllBytesAsync(Settings.MyAvatarPath);
+                            if (avatarBytes.Length > 0)
+                            {
+                                await SendNetworkPacketAsync(target, PacketType.Avatar, avatarBytes);
+                            }
+                        }
+                    }
+                    catch { }
                 });
             }
         });
