@@ -310,36 +310,27 @@ public class PrimePacket
     }
 
     public static byte[] BuildProfileUpdatePayload(string displayName, string username)
-
     {
-        string content = $"name={displayName};login={username}";
-
+        string content = $"HANDSHAKE:name={displayName};login={username}";
         return Encoding.UTF8.GetBytes(content);
-
     }
 
     public static (string? displayName, string? username) ParseProfileUpdatePayload(byte[] payload)
-
     {
         string text = Encoding.UTF8.GetString(payload);
-
-        string? name = null;
-
-        string? login = null;
-
-        string[] parts = text.Split(';');
-
-        foreach (var p in parts)
-
+        if (text.StartsWith("HANDSHAKE:", StringComparison.OrdinalIgnoreCase))
         {
-            if (p.StartsWith("name=")) name = p.Substring(5);
-
-            else if (p.StartsWith("login=")) login = p.Substring(6);
-
+            text = text.Substring(10).Trim();
         }
-
+        string? name = null;
+        string? login = null;
+        string[] parts = text.Split(';');
+        foreach (var p in parts)
+        {
+            if (p.StartsWith("name=", StringComparison.OrdinalIgnoreCase)) name = p.Substring(5).Trim();
+            else if (p.StartsWith("login=", StringComparison.OrdinalIgnoreCase)) login = p.Substring(6).Trim();
+        }
         return (name, login);
-
     }
 
     public static byte[] BuildHandshakePayload(string displayName, string username, bool isAck = false)

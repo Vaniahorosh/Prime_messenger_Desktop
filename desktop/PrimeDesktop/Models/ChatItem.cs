@@ -14,6 +14,25 @@ public enum DeviceConnectionState
     Connected
 }
 
+public class AvatarSegment : INotifyPropertyChanged
+{
+    private bool _isActive;
+    public bool IsActive
+    {
+        get => _isActive;
+        set
+        {
+            if (_isActive != value)
+            {
+                _isActive = value;
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsActive)));
+            }
+        }
+    }
+
+    public event PropertyChangedEventHandler? PropertyChanged;
+}
+
 public class ChatItem : INotifyPropertyChanged
 {
     private string _displayName = string.Empty;
@@ -75,6 +94,33 @@ public class ChatItem : INotifyPropertyChanged
         }
     }
 
+    [JsonIgnore]
+    public ObservableCollection<AvatarSegment> AvatarSegments { get; } = new();
+
+    public void UpdateAvatarSegments()
+    {
+        int count = _avatarHistory?.Count ?? 0;
+        if (count <= 1)
+        {
+            AvatarSegments.Clear();
+            return;
+        }
+
+        while (AvatarSegments.Count < count)
+        {
+            AvatarSegments.Add(new AvatarSegment());
+        }
+        while (AvatarSegments.Count > count)
+        {
+            AvatarSegments.RemoveAt(AvatarSegments.Count - 1);
+        }
+
+        for (int i = 0; i < count; i++)
+        {
+            AvatarSegments[i].IsActive = (i == _currentAvatarIndex);
+        }
+    }
+
     public ObservableCollection<string> AvatarHistory
     {
         get => _avatarHistory;
@@ -88,6 +134,7 @@ public class ChatItem : INotifyPropertyChanged
                 OnPropertyChanged(nameof(CanGoPreviousAvatar));
                 OnPropertyChanged(nameof(CanGoNextAvatar));
                 OnPropertyChanged(nameof(HasAvatar));
+                UpdateAvatarSegments();
             }
         }
     }
@@ -103,6 +150,7 @@ public class ChatItem : INotifyPropertyChanged
                 OnPropertyChanged(nameof(AvatarCounterText));
                 OnPropertyChanged(nameof(CanGoPreviousAvatar));
                 OnPropertyChanged(nameof(CanGoNextAvatar));
+                UpdateAvatarSegments();
             }
         }
     }
@@ -135,10 +183,10 @@ public class ChatItem : INotifyPropertyChanged
     public bool HasMultipleAvatars => (_avatarHistory?.Count ?? 0) > 1;
 
     [JsonIgnore]
-    public bool CanGoPreviousAvatar => _currentAvatarIndex > 0;
+    public bool CanGoPreviousAvatar => HasMultipleAvatars;
 
     [JsonIgnore]
-    public bool CanGoNextAvatar => _avatarHistory != null && _currentAvatarIndex < _avatarHistory.Count - 1;
+    public bool CanGoNextAvatar => HasMultipleAvatars;
 
     [JsonIgnore]
     public bool HasAvatar => (!string.IsNullOrEmpty(CurrentAvatarDisplayPath) && File.Exists(CurrentAvatarDisplayPath)) ||
@@ -176,6 +224,7 @@ public class ChatItem : INotifyPropertyChanged
         OnPropertyChanged(nameof(CanGoPreviousAvatar));
         OnPropertyChanged(nameof(CanGoNextAvatar));
         OnPropertyChanged(nameof(HasAvatar));
+        UpdateAvatarSegments();
     }
 
     public void DeduplicateAvatarHistory()
@@ -218,21 +267,22 @@ public class ChatItem : INotifyPropertyChanged
         OnPropertyChanged(nameof(CanGoPreviousAvatar));
         OnPropertyChanged(nameof(CanGoNextAvatar));
         OnPropertyChanged(nameof(HasAvatar));
+        UpdateAvatarSegments();
     }
 
     public void NextAvatar()
     {
-        if (CanGoNextAvatar)
+        if (_avatarHistory != null && _avatarHistory.Count > 1)
         {
-            CurrentAvatarIndex++;
+            CurrentAvatarIndex = (CurrentAvatarIndex + 1) % _avatarHistory.Count;
         }
     }
 
     public void PrevAvatar()
     {
-        if (CanGoPreviousAvatar)
+        if (_avatarHistory != null && _avatarHistory.Count > 1)
         {
-            CurrentAvatarIndex--;
+            CurrentAvatarIndex = (CurrentAvatarIndex - 1 + _avatarHistory.Count) % _avatarHistory.Count;
         }
     }
 
@@ -256,6 +306,7 @@ public class ChatItem : INotifyPropertyChanged
             OnPropertyChanged(nameof(CanGoPreviousAvatar));
             OnPropertyChanged(nameof(CanGoNextAvatar));
             OnPropertyChanged(nameof(HasAvatar));
+            UpdateAvatarSegments();
         }
     }
 
@@ -264,7 +315,13 @@ public class ChatItem : INotifyPropertyChanged
     public string DisplayName
     {
         get => _displayName;
-        set => SetField(ref _displayName, value);
+        set
+        {
+            if (SetField(ref _displayName, value))
+            {
+                OnPropertyChanged(nameof(Initials));
+            }
+        }
     }
 
     public string Username
@@ -370,12 +427,11 @@ public class ChatItem : INotifyPropertyChanged
                 return "Активность...";
             }
             if (IsTyping) return "Печатает...";
-            return ConnectionState switch
-            {
-                DeviceConnectionState.Connected => "в сети",
-                DeviceConnectionState.Connecting => "Установка связи...",
-                _ => "не в сети"
-            };
+            if (IsOnline || ConnectionState == DeviceConnectionState.Connected)
+                return "в сети";
+            if (ConnectionState == DeviceConnectionState.Connecting)
+                return "Установка связи...";
+            return "не в сети";
         }
     }
 

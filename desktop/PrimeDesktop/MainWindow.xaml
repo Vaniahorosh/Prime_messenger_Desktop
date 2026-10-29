@@ -698,7 +698,7 @@
 
                                             <Border Background="#20000000" BorderBrush="#35FFFFFF" BorderThickness="1" CornerRadius="8" Padding="8,6" Margin="0,0,0,6"
 
-                                                    Cursor="Hand" Visibility="{Binding IsFile, Converter={StaticResource BoolToVis}}">
+                                                    Cursor="Hand" Visibility="{Binding HasFileAttachmentCard, Converter={StaticResource BoolToVis}}">
 
                                                 <Border.InputBindings>
 
@@ -1296,7 +1296,7 @@
                     <!-- Scrollable Profile Content -->
                     <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="14">
                         <StackPanel>
-                            <!-- 7.1. Header Card with Large Photo and Left Vertical Action Buttons -->
+                            <!-- 7.1. Header Card with Large Photo, Left Actions, and Story Avatar Flipping -->
                             <Border Height="270" CornerRadius="16" ClipToBounds="True" Background="{DynamicResource CardBrush}" Margin="0,0,0,14" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
                                 <Grid>
                                     <!-- Fallback Initials Display -->
@@ -1310,19 +1310,81 @@
                                            RenderOptions.BitmapScalingMode="HighQuality"
                                            Visibility="{Binding SelectedChat.HasAvatar, Converter={StaticResource BoolToVis}}"/>
 
-                                    <!-- Clickable Overlay to open Avatar in full-screen Photo Viewer -->
-                                    <Border Background="Transparent" Cursor="Hand">
+                                    <!-- Left / Right Click Areas for fast cycling through avatar history -->
+                                    <Grid Visibility="{Binding SelectedChat.HasMultipleAvatars, Converter={StaticResource BoolToVis}}" Margin="48,25,0,80">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Border Grid.Column="0" Background="Transparent" Cursor="Hand" ToolTip="Предыдущий аватар">
+                                            <Border.InputBindings>
+                                                <MouseBinding Gesture="LeftClick" Command="{Binding PrevContactAvatarCommand}"/>
+                                            </Border.InputBindings>
+                                        </Border>
+                                        <Border Grid.Column="1" Background="Transparent" Cursor="Hand" ToolTip="Следующий аватар">
+                                            <Border.InputBindings>
+                                                <MouseBinding Gesture="LeftClick" Command="{Binding NextContactAvatarCommand}"/>
+                                            </Border.InputBindings>
+                                        </Border>
+                                    </Grid>
+
+                                    <!-- Context Menu Area for the Avatar Card -->
+                                    <Border Background="Transparent" IsHitTestVisible="True">
                                         <Border.ContextMenu>
                                             <ContextMenu Style="{StaticResource ModernContextMenu}">
                                                 <MenuItem Header="📷 Сменить аватар" Style="{StaticResource ModernMenuItem}" Command="{Binding ChangeContactAvatarCommand}"/>
+                                                <MenuItem Header="🗑️ Удалить этот аватар из истории" Style="{StaticResource DangerMenuItem}" Command="{Binding DeleteContactAvatarCommand}" Visibility="{Binding SelectedChat.HasAvatar, Converter={StaticResource BoolToVis}}"/>
                                             </ContextMenu>
                                         </Border.ContextMenu>
-                                        <Border.InputBindings>
-                                            <MouseBinding Gesture="LeftClick"
-                                                          Command="{Binding OpenPhotoViewerCommand}"
-                                                          CommandParameter="{Binding SelectedChat.CurrentAvatarDisplayPath}"/>
-                                        </Border.InputBindings>
                                     </Border>
+
+                                    <!-- Top Segment Indicator Bars (Telegram / Instagram story style) -->
+                                    <ItemsControl ItemsSource="{Binding SelectedChat.AvatarSegments}"
+                                                  VerticalAlignment="Top" Margin="14,12,14,0"
+                                                  Visibility="{Binding SelectedChat.HasMultipleAvatars, Converter={StaticResource BoolToVis}}"
+                                                  IsHitTestVisible="False">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <UniformGrid Rows="1"/>
+                                            </ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border Height="3" Margin="2,0" CornerRadius="1.5">
+                                                    <Border.Style>
+                                                        <Style TargetType="Border">
+                                                            <Setter Property="Background" Value="#55FFFFFF"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding IsActive}" Value="True">
+                                                                    <Setter Property="Background" Value="#FFFFFFFF"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Border.Style>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+
+                                    <!-- Left Chevron Navigation Button (‹) -->
+                                    <Button Style="{StaticResource ProfileChevronButton}"
+                                            Command="{Binding PrevContactAvatarCommand}"
+                                            HorizontalAlignment="Left" VerticalAlignment="Center"
+                                            Margin="52,0,0,0"
+                                            ToolTip="Предыдущий аватар"
+                                            Visibility="{Binding SelectedChat.HasMultipleAvatars, Converter={StaticResource BoolToVis}}">
+                                        <TextBlock Text="‹" FontSize="20" FontWeight="Bold" Foreground="White" Margin="0,-2,1,0"/>
+                                    </Button>
+
+                                    <!-- Right Chevron Navigation Button (›) -->
+                                    <Button Style="{StaticResource ProfileChevronButton}"
+                                            Command="{Binding NextContactAvatarCommand}"
+                                            HorizontalAlignment="Right" VerticalAlignment="Center"
+                                            Margin="0,0,12,0"
+                                            ToolTip="Следующий аватар"
+                                            Visibility="{Binding SelectedChat.HasMultipleAvatars, Converter={StaticResource BoolToVis}}">
+                                        <TextBlock Text="›" FontSize="20" FontWeight="Bold" Foreground="White" Margin="1,-2,0,0"/>
+                                    </Button>
 
                                     <!-- Left Vertical Action Buttons (Square along the left middle edge, expanding label on hover) -->
                                     <StackPanel HorizontalAlignment="Left" VerticalAlignment="Center" Margin="10,0,0,0">
@@ -1392,7 +1454,11 @@
                                             <!-- Avatar Counter Pill on the right: (кол-во фото) -->
                                             <Border DockPanel.Dock="Right" VerticalAlignment="Center" Margin="8,0,0,0"
                                                     Background="#B3000000" CornerRadius="10" Padding="8,4"
+                                                    Cursor="Hand" ToolTip="Следующий аватар"
                                                     Visibility="{Binding SelectedChat.HasAvatar, Converter={StaticResource BoolToVis}}">
+                                                <Border.InputBindings>
+                                                    <MouseBinding Gesture="LeftClick" Command="{Binding NextContactAvatarCommand}"/>
+                                                </Border.InputBindings>
                                                 <controls:AnimatedTextTransitionControl Text="{Binding SelectedChat.AvatarCounterText}" Foreground="White" FontSize="11" FontWeight="SemiBold"/>
                                             </Border>
 

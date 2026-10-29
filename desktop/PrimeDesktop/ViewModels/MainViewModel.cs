@@ -89,9 +89,15 @@ public class MainViewModel : ViewModelBase
                     {
                         _selectedChat.AvatarHistory.Add(_selectedChat.AvatarPath);
                     }
-                    var diskAvatars = AvatarManager.GetAvatarHistory(_selectedChat.DeviceAddress);
-                    var peerAvatars = AvatarManager.GetAvatarHistory(_selectedChat.PeerId);
-                    foreach (var a in diskAvatars.Concat(peerAvatars))
+                    var diskAvatars = new List<string>();
+                    if (!string.IsNullOrEmpty(_selectedChat.DeviceAddress))
+                        diskAvatars.AddRange(AvatarManager.GetAvatarHistory(_selectedChat.DeviceAddress));
+                    if (!string.IsNullOrEmpty(_selectedChat.PeerId))
+                        diskAvatars.AddRange(AvatarManager.GetAvatarHistory(_selectedChat.PeerId));
+                    if (!string.IsNullOrEmpty(_selectedChat.Username))
+                        diskAvatars.AddRange(AvatarManager.GetAvatarHistory(_selectedChat.Username));
+
+                    foreach (var a in diskAvatars)
                     {
                         if (!_selectedChat.AvatarHistory.Contains(a))
                         {
@@ -99,6 +105,7 @@ public class MainViewModel : ViewModelBase
                         }
                     }
                     _selectedChat.DeduplicateAvatarHistory();
+                    _selectedChat.UpdateAvatarSegments();
                     _selectedChat.CurrentAvatarIndex = 0;
 
                     OnPropertyChanged(nameof(SharedMedia));
@@ -1097,7 +1104,7 @@ public class MainViewModel : ViewModelBase
     }
 
     public System.Collections.Generic.IEnumerable<ChatMessage> SharedMedia =>
-        SelectedChat?.Messages.Where(m => m.IsPhoto || m.IsVideoNote || (!string.IsNullOrEmpty(m.FileName) && (m.FileName.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase) || m.FileName.EndsWith(".jpeg", StringComparison.OrdinalIgnoreCase) || m.FileName.EndsWith(".png", StringComparison.OrdinalIgnoreCase) || m.FileName.EndsWith(".webp", StringComparison.OrdinalIgnoreCase) || m.FileName.EndsWith(".gif", StringComparison.OrdinalIgnoreCase) || m.FileName.EndsWith(".mp4", StringComparison.OrdinalIgnoreCase)))) ?? Enumerable.Empty<ChatMessage>();
+        SelectedChat?.Messages.Where(m => m.IsPhoto || m.IsVideo || m.IsVideoNote) ?? Enumerable.Empty<ChatMessage>();
 
     public System.Collections.Generic.IEnumerable<SharedMediaItem> SharedMediaList
     {
@@ -1134,7 +1141,7 @@ public class MainViewModel : ViewModelBase
                         SourceMessage = msg
                     };
                 }
-                else if ((msg.IsVideoNote || Views.PhotoViewerWindow.IsVideoPath(msg.FilePath)) && !string.IsNullOrEmpty(msg.FilePath) && File.Exists(msg.FilePath))
+                else if ((msg.IsVideo || msg.IsVideoNote || Views.PhotoViewerWindow.IsVideoPath(msg.FilePath)) && !string.IsNullOrEmpty(msg.FilePath) && File.Exists(msg.FilePath))
                 {
                     yield return new SharedMediaItem
                     {
@@ -1151,7 +1158,7 @@ public class MainViewModel : ViewModelBase
     }
 
     public System.Collections.Generic.IEnumerable<ChatMessage> SharedFiles =>
-        SelectedChat?.Messages.Where(m => m.IsFile && !m.IsMusic && !m.IsVoice && !m.IsPhoto) ?? Enumerable.Empty<ChatMessage>();
+        SelectedChat?.Messages.Where(m => m.IsFile && !m.IsMusic && !m.IsVoice && !m.IsPhoto && !m.IsVideo && !m.IsVideoNote) ?? Enumerable.Empty<ChatMessage>();
 
     public System.Collections.Generic.IEnumerable<SharedFileItem> SharedFileList
     {
@@ -1160,7 +1167,7 @@ public class MainViewModel : ViewModelBase
             if (SelectedChat == null) yield break;
             foreach (var msg in SelectedChat.Messages)
             {
-                if (msg.IsFile && !msg.IsMusic && !msg.IsVoice && !msg.IsPhoto && !msg.IsVideoNote && !Views.PhotoViewerWindow.IsVideoPath(msg.FilePath))
+                if (msg.IsFile && !msg.IsMusic && !msg.IsVoice && !msg.IsPhoto && !msg.IsVideo && !msg.IsVideoNote && !Views.PhotoViewerWindow.IsVideoPath(msg.FilePath))
                 {
                     string fName = msg.FileName ?? (string.IsNullOrEmpty(msg.FilePath) ? "Документ" : Path.GetFileName(msg.FilePath));
                     var (badge, color) = SharedFileItem.GetExtensionStyle(fName);
@@ -1180,7 +1187,7 @@ public class MainViewModel : ViewModelBase
     }
 
     public System.Collections.Generic.IEnumerable<ChatMessage> SharedAudio =>
-        SelectedChat?.Messages.Where(m => m.IsVoice || m.IsMusic || (!string.IsNullOrEmpty(m.FileName) && (m.FileName.EndsWith(".mp3", StringComparison.OrdinalIgnoreCase) || m.FileName.EndsWith(".wav", StringComparison.OrdinalIgnoreCase) || m.FileName.EndsWith(".ogg", StringComparison.OrdinalIgnoreCase) || m.FileName.EndsWith(".m4a", StringComparison.OrdinalIgnoreCase) || m.FileName.EndsWith(".opus", StringComparison.OrdinalIgnoreCase) || m.FileName.EndsWith(".flac", StringComparison.OrdinalIgnoreCase)))) ?? Enumerable.Empty<ChatMessage>();
+        SelectedChat?.Messages.Where(m => (m.IsVoice || m.IsMusic) && !m.IsPhoto && !m.IsVideo && !m.IsVideoNote) ?? Enumerable.Empty<ChatMessage>();
 
     public bool HasSharedMedia => SharedMediaList.Any();
     public bool HasSharedFiles => SharedFileList.Any();
@@ -3693,10 +3700,77 @@ public async Task SendTextMessageAsync()
         {
             var chat = FindChatByAddressOrPeer(fromAddress);
 
+            // Handle ChatDeleted robustly before device resolution
+            if (type == PacketType.ChatDeleted)
+            {
+                string delPayload = payload != null ? System.Text.Encoding.UTF8.GetString(payload) : "";
+                string? delName = null;
+                string? delLogin = null;
+                if (delPayload.StartsWith("DELETE_CHAT:", StringComparison.OrdinalIgnoreCase))
+                {
+                    var parts = delPayload.Substring(12).Split(';');
+                    foreach (var p in parts)
+                    {
+                        if (p.StartsWith("name=", StringComparison.OrdinalIgnoreCase)) delName = p.Substring(5).Trim();
+                        else if (p.StartsWith("login=", StringComparison.OrdinalIgnoreCase)) delLogin = p.Substring(6).Trim();
+                    }
+                }
+
+                var targetChat = chat ?? _allChats.FirstOrDefault(c =>
+                    (!string.IsNullOrEmpty(delLogin) && string.Equals(c.Username, delLogin, StringComparison.OrdinalIgnoreCase)) ||
+                    (!string.IsNullOrEmpty(delName) && string.Equals(c.DisplayName, delName, StringComparison.OrdinalIgnoreCase)) ||
+                    (!string.IsNullOrEmpty(c.DeviceAddress) && (string.Equals(c.DeviceAddress, fromAddress, StringComparison.OrdinalIgnoreCase) || string.Equals(c.PeerId, fromAddress, StringComparison.OrdinalIgnoreCase))));
+
+                if (targetChat != null)
+                {
+                    try
+                    {
+                        _ = _bluetoothService.DisconnectAsync(targetChat.DeviceAddress);
+                        _ = _companionService.DisconnectAsync(targetChat.DeviceAddress);
+                    }
+                    catch { }
+
+                    MarkDeviceForgotten(targetChat.DeviceAddress);
+                    MarkDeviceForgotten(targetChat.PeerId);
+                    if (!string.IsNullOrEmpty(targetChat.Username)) MarkDeviceForgotten(targetChat.Username);
+                    _ = _storageService.SaveSettingsAsync(Settings);
+
+                    _bluetoothService.ForgetDevice(targetChat.DeviceAddress);
+                    _bluetoothService.ForgetDevice(targetChat.PeerId);
+                    _companionService.ForgetDevice(targetChat.DeviceAddress);
+                    _companionService.ForgetDevice(targetChat.PeerId);
+
+                    var disc = DiscoveredDevices.FirstOrDefault(d => d.PeerId == targetChat.PeerId || d.DeviceAddress == targetChat.DeviceAddress);
+                    if (disc != null) DiscoveredDevices.Remove(disc);
+
+                    _allChats.Remove(targetChat);
+
+                    AvatarManager.DeleteAvatar(targetChat.DeviceAddress);
+                    AvatarManager.DeleteAvatar(targetChat.PeerId);
+                    if (!string.IsNullOrEmpty(targetChat.Username)) AvatarManager.DeleteAvatar(targetChat.Username);
+
+                    ApplySearchFilter();
+
+                    bool isCurrent = SelectedChat == null || SelectedChat == targetChat ||
+                                     (!string.IsNullOrEmpty(targetChat.PeerId) && SelectedChat.PeerId == targetChat.PeerId) ||
+                                     (!string.IsNullOrEmpty(targetChat.DeviceAddress) && SelectedChat.DeviceAddress == targetChat.DeviceAddress);
+                    if (isCurrent)
+                    {
+                        IsMediaDrawerOpen = false;
+                        SelectedChat = null;
+                    }
+                    _ = _storageService.SaveChatsAsync(_allChats);
+
+                    MainWindow.TrayService?.ShowNotification("Прайм Мессенджер", $"Собеседник {targetChat.DisplayName} удалил чат.");
+                    StatusMessage = $"Собеседник {targetChat.DisplayName} удалил чат. Устройство забыто";
+                }
+                return;
+            }
+
             if (chat == null)
             {
-                // Ignore disconnect/delete packets for non-existent chats
-                if (type == PacketType.ChatDeleted || type == PacketType.Disconnect)
+                // Ignore disconnect packets for non-existent chats
+                if (type == PacketType.Disconnect)
                 {
                     return;
                 }
@@ -3786,6 +3860,22 @@ public async Task SendTextMessageAsync()
 
                     var (msgId, text, rId, rSender, rText) = PrimePacket.ParseTextPayload(payload);
 
+                    // Deduplicate message
+                    if (!string.IsNullOrEmpty(msgId) && chat.Messages.Any(m => m.Id == msgId))
+                    {
+                        _ = Task.Run(async () =>
+                        {
+                            try
+                            {
+                                byte[] ackPayload = System.Text.Encoding.UTF8.GetBytes(msgId);
+                                string addr = !string.IsNullOrWhiteSpace(chat.DeviceAddress) ? chat.DeviceAddress : chat.PeerId;
+                                await _bluetoothService.SendPacketAsync(addr, PacketType.ReadReceipt, ackPayload);
+                            }
+                            catch { }
+                        });
+                        break;
+                    }
+
                     var msg = new ChatMessage
 
                     {
@@ -3837,6 +3927,20 @@ public async Task SendTextMessageAsync()
 
                 case PacketType.Photo:
                     var photoResult = PrimePacket.ParsePhotoPayload(payload);
+                    if (!string.IsNullOrEmpty(photoResult.MsgId) && chat.Messages.Any(m => m.Id == photoResult.MsgId))
+                    {
+                        _ = Task.Run(async () =>
+                        {
+                            try
+                            {
+                                byte[] ackPayload = System.Text.Encoding.UTF8.GetBytes(photoResult.MsgId);
+                                string addr = !string.IsNullOrWhiteSpace(chat.DeviceAddress) ? chat.DeviceAddress : chat.PeerId;
+                                await _bluetoothService.SendPacketAsync(addr, PacketType.ReadReceipt, ackPayload);
+                            }
+                            catch { }
+                        });
+                        break;
+                    }
                     string mediaDir = StorageService.MediaDirectory;
                     Directory.CreateDirectory(mediaDir);
 
@@ -3890,6 +3994,20 @@ public async Task SendTextMessageAsync()
 
                 case PacketType.File:
                     var (fMsgId, fName, fDuration, fIsVoice, fBytes, fCaption) = PrimePacket.ParseFilePayload(payload);
+                    if (!string.IsNullOrEmpty(fMsgId) && chat.Messages.Any(m => m.Id == fMsgId))
+                    {
+                        _ = Task.Run(async () =>
+                        {
+                            try
+                            {
+                                byte[] ackPayload = System.Text.Encoding.UTF8.GetBytes(fMsgId);
+                                string addr = !string.IsNullOrWhiteSpace(chat.DeviceAddress) ? chat.DeviceAddress : chat.PeerId;
+                                await _bluetoothService.SendPacketAsync(addr, PacketType.ReadReceipt, ackPayload);
+                            }
+                            catch { }
+                        });
+                        break;
+                    }
                     string fDir = StorageService.MediaDirectory;
                     Directory.CreateDirectory(fDir);
                     string fPath = Path.Combine(fDir, $"file_{DateTime.Now:yyyyMMdd_HHmmss}_{fName}");
@@ -4218,6 +4336,7 @@ public async Task SendTextMessageAsync()
                     string pres = System.Text.Encoding.UTF8.GetString(payload).Trim();
 
                     chat.IsOnline = pres.StartsWith("ONLINE", StringComparison.OrdinalIgnoreCase);
+                    chat.ConnectionState = chat.IsOnline ? DeviceConnectionState.Connected : DeviceConnectionState.Disconnected;
 
                     break;
 
