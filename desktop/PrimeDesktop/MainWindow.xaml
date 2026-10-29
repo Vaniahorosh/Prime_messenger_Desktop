@@ -598,7 +598,7 @@
 
                                         <Border Background="{Binding IsFromMe, Converter={StaticResource MsgBubbleConverter}}"
 
-                                            CornerRadius="{Binding DataContext.BubbleCornerRadius, RelativeSource={RelativeSource AncestorType=Window}}" Padding="12,8" MaxWidth="520"
+                                            CornerRadius="{Binding DataContext.BubbleCornerRadius, RelativeSource={RelativeSource AncestorType=Window}}" Padding="{Binding BubblePadding}" MaxWidth="520"
 
                                             Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=Window}}"
 
@@ -885,6 +885,7 @@
 
                                             <!-- Message Text -->
                                             <TextBlock Text="{Binding DisplayText}" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="13" TextWrapping="Wrap"
+                                                       Margin="6,4,6,4"
                                                        Visibility="{Binding HasText, Converter={StaticResource BoolToVis}}"/>
 
 

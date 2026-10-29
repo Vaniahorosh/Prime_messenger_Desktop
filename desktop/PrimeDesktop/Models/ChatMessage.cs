@@ -2,6 +2,7 @@ using System;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
+using System.Windows;
 
 namespace PrimeDesktop.Models;
 
@@ -146,6 +147,7 @@ public class ChatMessage : INotifyPropertyChanged
                 OnPropertyChanged(nameof(VideoNotePath));
                 OnPropertyChanged(nameof(DisplayText));
                 OnPropertyChanged(nameof(HasText));
+                OnPropertyChanged(nameof(BubblePadding));
             }
         }
     }
@@ -167,6 +169,7 @@ public class ChatMessage : INotifyPropertyChanged
                 OnPropertyChanged(nameof(HasFileAttachmentCard));
                 OnPropertyChanged(nameof(DisplayText));
                 OnPropertyChanged(nameof(HasText));
+                OnPropertyChanged(nameof(BubblePadding));
             }
         }
     }
@@ -322,6 +325,11 @@ public class ChatMessage : INotifyPropertyChanged
 
     [JsonIgnore]
     public bool IsSingleVideo => IsVideo && !IsVideoNote && !IsCollage && !string.IsNullOrEmpty(FilePath) && System.IO.File.Exists(FilePath);
+
+    [JsonIgnore]
+    public Thickness BubblePadding => (IsSinglePhoto || IsSingleVideo || IsCollage)
+        ? new Thickness(3, 3, 3, 4)
+        : new Thickness(12, 8, 12, 8);
 
     [JsonIgnore]
     public string DisplayText

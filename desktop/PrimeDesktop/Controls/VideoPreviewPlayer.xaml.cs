@@ -27,6 +27,7 @@ namespace PrimeDesktop.Controls
 
         private readonly DispatcherTimer _timer;
         private double _loopDurationSeconds = 2.5;
+        private string _formattedTotal = "0:00";
 
         public string? Source
         {
@@ -58,7 +59,7 @@ namespace PrimeDesktop.Controls
 
             _timer = new DispatcherTimer(DispatcherPriority.Background)
             {
-                Interval = TimeSpan.FromMilliseconds(200)
+                Interval = TimeSpan.FromMilliseconds(100)
             };
             _timer.Tick += Timer_Tick;
 
@@ -91,6 +92,7 @@ namespace PrimeDesktop.Controls
         {
             if (d is VideoPreviewPlayer player && !string.IsNullOrWhiteSpace(player.Duration) && player.Duration != "0:00")
             {
+                player._formattedTotal = player.Duration;
                 player.TxtDuration.Text = player.Duration;
             }
         }
@@ -163,6 +165,34 @@ namespace PrimeDesktop.Controls
                 PART_Media.IsMuted = true;
                 PART_Media.Volume = 0;
 
+                // Adjust dimensions to aspect ratio (vertical vs horizontal)
+                if (PART_Media.NaturalVideoWidth > 0 && PART_Media.NaturalVideoHeight > 0)
+                {
+                    double aspect = (double)PART_Media.NaturalVideoWidth / PART_Media.NaturalVideoHeight;
+                    double targetW, targetH;
+                    if (aspect >= 1.2)
+                    {
+                        // Landscape / Horizontal
+                        targetW = 290;
+                        targetH = Math.Clamp(targetW / aspect, 140, 210);
+                    }
+                    else if (aspect <= 0.85)
+                    {
+                        // Portrait / Vertical
+                        targetH = 280;
+                        targetW = Math.Clamp(targetH * aspect, 160, 210);
+                    }
+                    else
+                    {
+                        // Square
+                        targetW = 230;
+                        targetH = Math.Clamp(targetW / aspect, 180, 240);
+                    }
+
+                    PART_RootBorder.Width = targetW;
+                    PART_RootBorder.Height = targetH;
+                }
+
                 if (PART_Media.NaturalDuration.HasTimeSpan)
                 {
                     double totalSec = PART_Media.NaturalDuration.TimeSpan.TotalSeconds;
@@ -174,16 +204,20 @@ namespace PrimeDesktop.Controls
                     else
                         _loopDurationSeconds = 2.8;
 
-                    if ((string.IsNullOrWhiteSpace(Duration) || Duration == "0:00") && totalSec > 0)
-                    {
-                        var ts = PART_Media.NaturalDuration.TimeSpan;
-                        TxtDuration.Text = $"{(int)ts.TotalMinutes}:{ts.Seconds:D2}";
-                    }
+                    var ts = PART_Media.NaturalDuration.TimeSpan;
+                    _formattedTotal = $"{(int)ts.TotalMinutes}:{ts.Seconds:D2}";
                 }
                 else
                 {
                     _loopDurationSeconds = 2.5;
                 }
+
+                if (!string.IsNullOrWhiteSpace(Duration) && Duration != "0:00")
+                {
+                    _formattedTotal = Duration;
+                }
+
+                TxtDuration.Text = $"0:00 / {_formattedTotal}";
 
                 PART_Media.Play();
                 _timer.Start();
@@ -225,11 +259,16 @@ namespace PrimeDesktop.Controls
                     return;
                 }
 
-                if (PART_Media.Position.TotalSeconds >= _loopDurationSeconds)
+                var pos = PART_Media.Position;
+                if (pos.TotalSeconds >= _loopDurationSeconds)
                 {
                     PART_Media.Position = TimeSpan.Zero;
                     PART_Media.Play();
+                    pos = TimeSpan.Zero;
                 }
+
+                string total = !string.IsNullOrWhiteSpace(Duration) && Duration != "0:00" ? Duration : _formattedTotal;
+                TxtDuration.Text = $"{(int)pos.TotalMinutes}:{pos.Seconds:D2} / {total}";
             }
             catch { }
         }

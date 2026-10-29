@@ -15,15 +15,17 @@
     </UserControl.Resources>
 
     <Border x:Name="PART_RootBorder"
-            CornerRadius="10"
+            CornerRadius="8"
             Background="#121824"
             BorderBrush="#30FFFFFF"
             BorderThickness="1"
             ClipToBounds="True"
-            MaxWidth="340"
-            MaxHeight="260"
-            MinWidth="180"
-            MinHeight="130"
+            Width="260"
+            Height="170"
+            MaxWidth="320"
+            MaxHeight="300"
+            MinWidth="160"
+            MinHeight="140"
             Cursor="Hand"
             MouseLeftButtonDown="RootBorder_MouseLeftButtonDown">
 
@@ -40,11 +42,11 @@
                           MediaFailed="Media_MediaFailed"/>
 
             <!-- Gradient bottom shadow to ensure duration text is always readable -->
-            <Border VerticalAlignment="Bottom" Height="50" IsHitTestVisible="False">
+            <Border VerticalAlignment="Bottom" Height="46" IsHitTestVisible="False">
                 <Border.Background>
                     <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
                         <GradientStop Color="#00000000" Offset="0"/>
-                        <GradientStop Color="#90000000" Offset="1"/>
+                        <GradientStop Color="#99000000" Offset="1"/>
                     </LinearGradientBrush>
                 </Border.Background>
             </Border>
@@ -66,21 +68,11 @@
                       VerticalAlignment="Center"/>
             </Border>
 
-            <!-- Top Left "GIF" / Preview Pill -->
-            <Border HorizontalAlignment="Left" VerticalAlignment="Top"
-                    Background="#75000000"
-                    CornerRadius="6"
-                    Padding="6,2"
-                    Margin="8,8,0,0"
-                    IsHitTestVisible="False">
-                <TextBlock Text="GIF" Foreground="#CCFFFFFF" FontSize="10" FontWeight="Bold"/>
-            </Border>
-
-            <!-- Bottom Right Duration Badge -->
+            <!-- Bottom Right Duration & Fragment Counter Badge -->
             <Border HorizontalAlignment="Right" VerticalAlignment="Bottom"
-                    Background="#80000000"
+                    Background="#85000000"
                     CornerRadius="6"
-                    Padding="6,2"
+                    Padding="6,3"
                     Margin="0,0,8,8"
                     IsHitTestVisible="False">
                 <TextBlock x:Name="TxtDuration"
