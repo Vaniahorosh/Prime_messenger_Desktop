@@ -33,7 +33,14 @@ public class ChatMessage : INotifyPropertyChanged
     public string Text
     {
         get => _text;
-        set => SetField(ref _text, value);
+        set
+        {
+            if (SetField(ref _text, value))
+            {
+                OnPropertyChanged(nameof(DisplayText));
+                OnPropertyChanged(nameof(HasText));
+            }
+        }
     }
 
     public bool IsDelivered
@@ -121,8 +128,48 @@ public class ChatMessage : INotifyPropertyChanged
     }
 
     // Attachments
-    public string? FilePath { get; set; }
-    public string? FileName { get; set; }
+    private string? _filePath;
+    public string? FilePath
+    {
+        get => _filePath;
+        set
+        {
+            if (SetField(ref _filePath, value))
+            {
+                OnPropertyChanged(nameof(EffectiveFileName));
+                OnPropertyChanged(nameof(HasAttachment));
+                OnPropertyChanged(nameof(IsPhoto));
+                OnPropertyChanged(nameof(IsSinglePhoto));
+                OnPropertyChanged(nameof(IsVideo));
+                OnPropertyChanged(nameof(IsSingleVideo));
+                OnPropertyChanged(nameof(HasFileAttachmentCard));
+                OnPropertyChanged(nameof(VideoNotePath));
+                OnPropertyChanged(nameof(DisplayText));
+                OnPropertyChanged(nameof(HasText));
+            }
+        }
+    }
+
+    private string? _fileName;
+    public string? FileName
+    {
+        get => _fileName;
+        set
+        {
+            if (SetField(ref _fileName, value))
+            {
+                OnPropertyChanged(nameof(EffectiveFileName));
+                OnPropertyChanged(nameof(HasAttachment));
+                OnPropertyChanged(nameof(IsPhoto));
+                OnPropertyChanged(nameof(IsSinglePhoto));
+                OnPropertyChanged(nameof(IsVideo));
+                OnPropertyChanged(nameof(IsSingleVideo));
+                OnPropertyChanged(nameof(HasFileAttachmentCard));
+                OnPropertyChanged(nameof(DisplayText));
+                OnPropertyChanged(nameof(HasText));
+            }
+        }
+    }
     public long FileSizeBytes { get; set; }
     public string Duration { get; set; } = "0:00";
     public List<string> CollagePaths { get; set; } = new();
@@ -274,7 +321,71 @@ public class ChatMessage : INotifyPropertyChanged
     public bool HasAttachment => !string.IsNullOrEmpty(FilePath) || !string.IsNullOrEmpty(FileName) || (CollagePaths != null && CollagePaths.Count > 0);
 
     [JsonIgnore]
-    public bool HasText => !string.IsNullOrWhiteSpace(Text);
+    public bool IsSingleVideo => IsVideo && !IsVideoNote && !IsCollage && !string.IsNullOrEmpty(FilePath) && System.IO.File.Exists(FilePath);
+
+    [JsonIgnore]
+    public string DisplayText
+    {
+        get
+        {
+            if (string.IsNullOrWhiteSpace(_text)) return string.Empty;
+            if (HasAttachment || IsVoice || IsVideoNote)
+            {
+                string t = _text.Trim();
+                if (IsRedundantAttachmentText(t))
+                    return string.Empty;
+            }
+            return _text;
+        }
+    }
+
+    private bool IsRedundantAttachmentText(string t)
+    {
+        if (string.IsNullOrWhiteSpace(t)) return true;
+
+        if (!string.IsNullOrEmpty(FileName) && string.Equals(t, FileName.Trim(), StringComparison.OrdinalIgnoreCase)) return true;
+        if (!string.IsNullOrEmpty(EffectiveFileName) && string.Equals(t, EffectiveFileName.Trim(), StringComparison.OrdinalIgnoreCase)) return true;
+        if (!string.IsNullOrEmpty(FilePath) && string.Equals(t, System.IO.Path.GetFileName(FilePath).Trim(), StringComparison.OrdinalIgnoreCase)) return true;
+
+        string lower = t.ToLowerInvariant();
+        if (lower == "📷 фото" || lower == "📷 фотография" || lower == "фото" || lower == "фотография" || lower == "photo" ||
+            lower == "🎥 видео" || lower == "видео" || lower == "video" ||
+            lower == "📎 файл" || lower == "файл" || lower == "file" || lower == "документ" ||
+            lower == "медиа" || lower == "media" ||
+            lower == "🎤 голосовое сообщение" || lower == "голосовое сообщение" || lower == "голосовое" ||
+            lower == "📹 видеосообщение" || lower == "видеосообщение" ||
+            lower == "👾 gif-анимация" || lower == "gif-анимация" || lower == "gif" ||
+            lower == "🎵 аудио" || lower == "🎵 музыка" || lower == "аудио" || lower == "музыка")
+        {
+            return true;
+        }
+
+        if (!string.IsNullOrEmpty(FileName))
+        {
+            string fn = FileName.Trim();
+            if (t.EndsWith(fn, StringComparison.OrdinalIgnoreCase))
+            {
+                string prefix = t.Substring(0, t.Length - fn.Length).Trim();
+                if (prefix == "📷" || prefix == "🎥" || prefix == "📎" || prefix == "🎵" || prefix == "📹" || prefix == "👾" || string.IsNullOrEmpty(prefix))
+                    return true;
+            }
+        }
+        if (!string.IsNullOrEmpty(EffectiveFileName))
+        {
+            string fn = EffectiveFileName.Trim();
+            if (t.EndsWith(fn, StringComparison.OrdinalIgnoreCase))
+            {
+                string prefix = t.Substring(0, t.Length - fn.Length).Trim();
+                if (prefix == "📷" || prefix == "🎥" || prefix == "📎" || prefix == "🎵" || prefix == "📹" || prefix == "👾" || string.IsNullOrEmpty(prefix))
+                    return true;
+            }
+        }
+
+        return false;
+    }
+
+    [JsonIgnore]
+    public bool HasText => !string.IsNullOrWhiteSpace(DisplayText);
 
     [JsonIgnore]
     public bool IsPhoto => Type == PacketType.Photo || (HasAttachment && !string.IsNullOrEmpty(EffectiveFileName) &&
@@ -321,7 +432,7 @@ public class ChatMessage : INotifyPropertyChanged
     public bool IsFile => !IsPhoto && !IsVideo && !IsVideoNote && !IsVoice && !IsMusic && (Type == PacketType.File || HasAttachment);
 
     [JsonIgnore]
-    public bool HasFileAttachmentCard => IsFile || IsVideo || IsMusic;
+    public bool HasFileAttachmentCard => IsFile || IsMusic || (IsVideo && !IsSingleVideo);
 
     public event PropertyChangedEventHandler? PropertyChanged;
     protected void OnPropertyChanged([CallerMemberName] string? name = null)

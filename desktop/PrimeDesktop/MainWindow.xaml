@@ -875,10 +875,16 @@
 
 
 
+                                            <!-- Single Video Looping Preview -->
+                                            <controls:VideoPreviewPlayer Source="{Binding FilePath}"
+                                                                        Duration="{Binding Duration}"
+                                                                        ClickCommand="{Binding DataContext.OpenPhotoViewerCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                        ClickCommandParameter="{Binding FilePath}"
+                                                                        Margin="0,0,0,6"
+                                                                        Visibility="{Binding IsSingleVideo, Converter={StaticResource BoolToVis}}"/>
+
                                             <!-- Message Text -->
-
-                                            <TextBlock Text="{Binding Text}" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="13" TextWrapping="Wrap"
-
+                                            <TextBlock Text="{Binding DisplayText}" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="13" TextWrapping="Wrap"
                                                        Visibility="{Binding HasText, Converter={StaticResource BoolToVis}}"/>
 
 
