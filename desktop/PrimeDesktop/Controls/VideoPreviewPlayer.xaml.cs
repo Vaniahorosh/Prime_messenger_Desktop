@@ -217,7 +217,7 @@ namespace PrimeDesktop.Controls
                     _formattedTotal = Duration;
                 }
 
-                TxtDuration.Text = $"0:00 / {_formattedTotal}";
+                TxtDuration.Text = "0:00";
 
                 PART_Media.Play();
                 _timer.Start();
@@ -267,8 +267,7 @@ namespace PrimeDesktop.Controls
                     pos = TimeSpan.Zero;
                 }
 
-                string total = !string.IsNullOrWhiteSpace(Duration) && Duration != "0:00" ? Duration : _formattedTotal;
-                TxtDuration.Text = $"{(int)pos.TotalMinutes}:{pos.Seconds:D2} / {total}";
+                TxtDuration.Text = $"{(int)pos.TotalMinutes}:{pos.Seconds:D2}";
             }
             catch { }
         }
