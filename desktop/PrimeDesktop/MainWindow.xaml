@@ -540,11 +540,21 @@
 
 
 
-                <!-- Messages Scroll Area -->
-
-                <ScrollViewer Grid.Row="1" x:Name="MessagesScrollViewer" VerticalScrollBarVisibility="Auto" Padding="16">
-
-                    <ItemsControl ItemsSource="{Binding SelectedChat.Messages}">
+                <!-- Messages Scroll Area with Hardware-Accelerated Virtualization -->
+                <ScrollViewer Grid.Row="1" x:Name="MessagesScrollViewer" VerticalScrollBarVisibility="Auto" Padding="16"
+                              CanContentScroll="True"
+                              VirtualizingPanel.IsVirtualizing="True"
+                              VirtualizingPanel.VirtualizationMode="Recycling"
+                              VirtualizingPanel.ScrollUnit="Pixel">
+                    <ItemsControl ItemsSource="{Binding SelectedChat.Messages}"
+                                  VirtualizingPanel.IsVirtualizing="True"
+                                  VirtualizingPanel.VirtualizationMode="Recycling"
+                                  VirtualizingPanel.ScrollUnit="Pixel">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <VirtualizingStackPanel />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
 
                         <ItemsControl.ItemTemplate>
 
