@@ -1,4 +1,5 @@
 using System;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
@@ -67,7 +68,105 @@ public class ChatMessage : INotifyPropertyChanged
         set => SetField(ref _isEdited, value);
     }
 
-    // Reaction support (0x0D TYPE_REACTION)
+    // Multi-reaction support: Map of authorLogin -> emoji
+    private Dictionary<string, string> _userReactions = new(StringComparer.OrdinalIgnoreCase);
+
+    public Dictionary<string, string> UserReactions
+    {
+        get => _userReactions;
+        set
+        {
+            _userReactions = value != null ? new Dictionary<string, string>(value, StringComparer.OrdinalIgnoreCase) : new(StringComparer.OrdinalIgnoreCase);
+            UpdateReactionGroups();
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(HasReactions));
+            OnPropertyChanged(nameof(HasReaction));
+        }
+    }
+
+    [JsonIgnore]
+    public ObservableCollection<ReactionGroup> ReactionGroups { get; } = new();
+
+    [JsonIgnore]
+    public bool HasReactions => ReactionGroups.Count > 0;
+
+    public void SetUserReaction(string author, string? emoji, string myDisplayName)
+    {
+        if (string.IsNullOrWhiteSpace(author))
+            author = !string.IsNullOrWhiteSpace(myDisplayName) ? myDisplayName : "me";
+
+        if (string.IsNullOrWhiteSpace(emoji) || "REMOVE".Equals(emoji, StringComparison.OrdinalIgnoreCase))
+        {
+            _userReactions.Remove(author);
+        }
+        else
+        {
+            _userReactions[author] = emoji;
+        }
+
+        UpdateReactionGroups(myDisplayName);
+    }
+
+    public string? GetMyReaction(string myDisplayName)
+    {
+        if (!string.IsNullOrWhiteSpace(myDisplayName) && _userReactions.TryGetValue(myDisplayName, out var rx))
+            return rx;
+        if (_userReactions.TryGetValue("me", out var myRx))
+            return myRx;
+        if (_userReactions.TryGetValue("my", out var myRx2))
+            return myRx2;
+        return null;
+    }
+
+    public void UpdateReactionGroups(string myDisplayName = "")
+    {
+        // Backward compatibility fallback
+        if (_userReactions.Count == 0 && !string.IsNullOrWhiteSpace(_reaction))
+        {
+            _userReactions[_reactionAuthor ?? "me"] = _reaction;
+        }
+
+        var groups = _userReactions
+            .GroupBy(kv => kv.Value)
+            .OrderByDescending(g => g.Count())
+            .ToList();
+
+        // Update legacy properties
+        _reaction = _userReactions.Values.FirstOrDefault();
+        _reactionAuthor = _userReactions.Keys.FirstOrDefault();
+
+        ReactionGroups.Clear();
+        foreach (var g in groups)
+        {
+            var group = new ReactionGroup
+            {
+                Emoji = g.Key,
+                Count = g.Count(),
+                IsSelectedByMe = g.Any(kv => IsAuthorMe(kv.Key, myDisplayName)),
+                Tooltip = string.Join(", ", g.Select(kv => kv.Key))
+            };
+            foreach (var author in g.Select(kv => kv.Key))
+            {
+                group.Authors.Add(author);
+            }
+            ReactionGroups.Add(group);
+        }
+
+        OnPropertyChanged(nameof(Reaction));
+        OnPropertyChanged(nameof(ReactionAuthor));
+        OnPropertyChanged(nameof(HasReaction));
+        OnPropertyChanged(nameof(HasReactions));
+    }
+
+    private static bool IsAuthorMe(string author, string myDisplayName)
+    {
+        if (string.IsNullOrWhiteSpace(author)) return true;
+        if (author.Equals("me", StringComparison.OrdinalIgnoreCase) || author.Equals("my", StringComparison.OrdinalIgnoreCase)) return true;
+        if (!string.IsNullOrWhiteSpace(myDisplayName) && author.Equals(myDisplayName, StringComparison.OrdinalIgnoreCase)) return true;
+        return false;
+    }
+
+    // Reaction support (0x0D TYPE_REACTION legacy accessors)
     public string? Reaction
     {
         get => _reaction;
@@ -87,7 +186,7 @@ public class ChatMessage : INotifyPropertyChanged
     }
 
     [JsonIgnore]
-    public bool HasReaction => !string.IsNullOrWhiteSpace(_reaction);
+    public bool HasReaction => HasReactions || !string.IsNullOrWhiteSpace(_reaction);
 
     // Video Notes (Кружки)
     public bool IsVideoNote

@@ -123,7 +123,7 @@ public class MainViewModel : ViewModelBase
                         _ = ConnectSelectedChatAsync();
                     }
 
-                    RefreshDateHeadersAndPreviews(_selectedChat);
+                    RefreshDateHeadersAndPreviews(_selectedChat, Settings?.MyDisplayName ?? "");
                 }
                 else
                 {
@@ -136,7 +136,7 @@ public class MainViewModel : ViewModelBase
 
     }
 
-    public static void RefreshDateHeadersAndPreviews(ChatItem? chat)
+    public static void RefreshDateHeadersAndPreviews(ChatItem? chat, string myDisplayName = "")
     {
         if (chat == null || chat.Messages == null) return;
         DateTime? lastDate = null;
@@ -156,10 +156,11 @@ public class MainViewModel : ViewModelBase
                 msg.DateHeaderText = string.Empty;
             }
             msg.TryLoadLinkPreview();
+            msg.UpdateReactionGroups(myDisplayName);
         }
     }
 
-    public static void PrepareMessage(ChatItem chat, ChatMessage msg)
+    public static void PrepareMessage(ChatItem chat, ChatMessage msg, string myDisplayName = "")
     {
         if (chat.Messages.Count == 0)
         {
@@ -181,6 +182,7 @@ public class MainViewModel : ViewModelBase
             }
         }
         msg.TryLoadLinkPreview();
+        msg.UpdateReactionGroups(myDisplayName);
     }
 
     public bool HasSelectedChat => SelectedChat != null;
@@ -2487,6 +2489,7 @@ public class MainViewModel : ViewModelBase
                                 }
                             }
                         }
+                        m.UpdateReactionGroups(Settings?.MyDisplayName ?? "Я");
                     }
                     // Filter out corrupt / error-named chats and obsolete system chat
                     if (IsStatusKeyword(c.DisplayName) || 
@@ -2675,43 +2678,32 @@ public class MainViewModel : ViewModelBase
     }
 
     public async Task SendReactionAsync(ChatMessage message, string? emoji)
-
     {
         if (SelectedChat == null || message == null) return;
 
-        // Toggle off if already placed
+        string myName = !string.IsNullOrWhiteSpace(Settings?.MyDisplayName) ? Settings.MyDisplayName : "Я";
+        string? currentMyRx = message.GetMyReaction(myName);
 
-        if (message.Reaction == emoji)
-
+        // Toggle off if clicking the same reaction
+        if (!string.IsNullOrEmpty(emoji) && string.Equals(currentMyRx, emoji, StringComparison.OrdinalIgnoreCase))
         {
             emoji = null;
-
         }
 
-        message.Reaction = emoji;
+        message.SetUserReaction(myName, emoji, myName);
+        _ = _storageService.SaveChatsAsync(_allChats);
 
-        message.ReactionAuthor = Settings.MyDisplayName;
-
-        byte[] payload = PrimePacket.BuildReactionPayload(message.Id, emoji, Settings.MyDisplayName);
-
+        byte[] payload = PrimePacket.BuildReactionPayload(message.Id, emoji, myName);
         try
-
         {
             string targetAddr = !string.IsNullOrWhiteSpace(SelectedChat.DeviceAddress) ? SelectedChat.DeviceAddress : SelectedChat.PeerId;
-
             await _bluetoothService.SendPacketAsync(targetAddr, PacketType.Reaction, payload);
-
             App.Log($"[Reaction] Sent reaction '{emoji}' for msg '{message.Id}' to '{targetAddr}'");
-
         }
-
         catch (Exception ex)
         {
             App.Log($"[Reaction ERROR] Failed to send reaction: {ex.Message}");
         }
-
-        await _storageService.SaveChatsAsync(_allChats);
-
     }
 
 public async Task SendTextMessageAsync()
@@ -4399,14 +4391,11 @@ public async Task SendTextMessageAsync()
                     }
 
                     if (targetMsg != null)
-
                     {
-                        targetMsg.Reaction = rxEmoji;
-
-                        targetMsg.ReactionAuthor = rxAuthor;
-
+                        string myName = !string.IsNullOrWhiteSpace(Settings?.MyDisplayName) ? Settings.MyDisplayName : "Я";
+                        targetMsg.SetUserReaction(rxAuthor, rxEmoji, myName);
+                        _ = _storageService.SaveChatsAsync(_allChats);
                         App.Log($"[Reaction] Updated message '{targetMsg.Id}' with reaction '{rxEmoji}' by '{rxAuthor}'");
-
                     }
 
                     break;

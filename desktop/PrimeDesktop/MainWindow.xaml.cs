@@ -42,6 +42,27 @@ public partial class MainWindow : Window
         {
             ChatEmojiPicker.EmojiSelected += ChatEmojiPicker_EmojiSelected;
         }
+        if (ExpandedReactionsView != null)
+        {
+            ExpandedReactionsView.ReactionSelected += (s, emoji) =>
+            {
+                if (ExpandedReactionsPopup != null) ExpandedReactionsPopup.IsOpen = false;
+                if (_activeReactionTargetMessage != null && DataContext is MainViewModel vm)
+                {
+                    _ = vm.SendReactionAsync(_activeReactionTargetMessage, emoji);
+                }
+            };
+            ExpandedReactionsView.OpenFullEmojiPickerRequested += (s, e) =>
+            {
+                if (ExpandedReactionsPopup != null) ExpandedReactionsPopup.IsOpen = false;
+                if (EmojiPickerPopup != null)
+                {
+                    _isEmojiPickerForReaction = true;
+                    EmojiPickerPopup.Placement = System.Windows.Controls.Primitives.PlacementMode.MousePoint;
+                    EmojiPickerPopup.IsOpen = true;
+                }
+            };
+        }
         if (MessagesScrollViewer != null)
         {
             MessagesScrollViewer.ScrollChanged += MessagesScrollViewer_ScrollChanged;
@@ -413,8 +434,23 @@ public partial class MainWindow : Window
         EmojiPickerPopup.IsOpen = !EmojiPickerPopup.IsOpen;
     }
 
+    private bool _isEmojiPickerForReaction = false;
+    private Models.ChatMessage? _activeReactionTargetMessage = null;
+
     private void ChatEmojiPicker_EmojiSelected(object? sender, string emoji)
     {
+        if (_isEmojiPickerForReaction)
+        {
+            _isEmojiPickerForReaction = false;
+            EmojiPickerPopup.IsOpen = false;
+            EmojiPickerPopup.Placement = System.Windows.Controls.Primitives.PlacementMode.Top;
+            if (_activeReactionTargetMessage != null && DataContext is MainViewModel vm)
+            {
+                _ = vm.SendReactionAsync(_activeReactionTargetMessage, emoji);
+            }
+            return;
+        }
+
         int caret = MsgInputTextBox.CaretIndex;
         string current = MsgInputTextBox.Text ?? string.Empty;
         if (caret < 0 || caret > current.Length) caret = current.Length;
@@ -479,6 +515,40 @@ public partial class MainWindow : Window
 
             var cm = FindVisualParent<System.Windows.Controls.ContextMenu>(fe);
             if (cm != null) cm.IsOpen = false;
+        }
+    }
+
+    private void BtnExpandReactions_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement fe)
+        {
+            _activeReactionTargetMessage = fe.Tag as Models.ChatMessage;
+            if (_activeReactionTargetMessage == null && DataContext is MainViewModel vm)
+            {
+                _activeReactionTargetMessage = vm.ContextMenuMessage;
+            }
+
+            var cm = FindVisualParent<System.Windows.Controls.ContextMenu>(fe);
+            if (cm != null) cm.IsOpen = false;
+
+            if (_activeReactionTargetMessage != null && ExpandedReactionsPopup != null && ExpandedReactionsView != null)
+            {
+                ExpandedReactionsView.ResetSearch();
+                ExpandedReactionsPopup.Placement = System.Windows.Controls.Primitives.PlacementMode.MousePoint;
+                ExpandedReactionsPopup.IsOpen = true;
+            }
+        }
+    }
+
+    private void ReactionChip_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement fe && fe.DataContext is Models.ReactionGroup rg && fe.Tag is Models.ChatMessage msg)
+        {
+            if (DataContext is MainViewModel vm)
+            {
+                string? emojiToSend = rg.IsSelectedByMe ? null : rg.Emoji;
+                _ = vm.SendReactionAsync(msg, emojiToSend);
+            }
         }
     }
 

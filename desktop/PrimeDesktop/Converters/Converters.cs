@@ -181,3 +181,43 @@ public class InitialsConverter : IValueConverter
 
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => throw new NotImplementedException();
 }
+
+
+public class ReactionSelectedBackgroundConverter : IValueConverter
+{
+    private static readonly System.Windows.Media.SolidColorBrush SelectedBrush = new(System.Windows.Media.Color.FromArgb(255, 30, 58, 95));
+    private static readonly System.Windows.Media.SolidColorBrush NormalBrush = new(System.Windows.Media.Color.FromArgb(255, 23, 33, 48));
+
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        return value is bool b && b ? SelectedBrush : NormalBrush;
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => throw new NotImplementedException();
+}
+
+public class ReactionSelectedBorderConverter : IValueConverter
+{
+    private static readonly System.Windows.Media.SolidColorBrush SelectedBrush = new(System.Windows.Media.Color.FromArgb(255, 56, 139, 253));
+    private static readonly System.Windows.Media.SolidColorBrush NormalBrush = new(System.Windows.Media.Color.FromArgb(255, 38, 54, 76));
+
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        return value is bool b && b ? SelectedBrush : NormalBrush;
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => throw new NotImplementedException();
+}
+
+public class ReactionCountBrushConverter : IValueConverter
+{
+    private static readonly System.Windows.Media.SolidColorBrush SelectedBrush = new(System.Windows.Media.Color.FromArgb(255, 88, 166, 255));
+    private static readonly System.Windows.Media.SolidColorBrush NormalBrush = new(System.Windows.Media.Color.FromArgb(255, 148, 163, 184));
+
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        return value is bool b && b ? SelectedBrush : NormalBrush;
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => throw new NotImplementedException();
+}

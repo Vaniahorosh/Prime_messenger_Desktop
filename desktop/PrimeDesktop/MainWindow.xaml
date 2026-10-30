@@ -59,6 +59,41 @@
         <conv:NonLockingImageConverter x:Key="NonLockingImgConverter"/>
         <conv:InitialsConverter x:Key="InitialsConverter"/>
 
+        <conv:ReactionSelectedBackgroundConverter x:Key="ReactionSelectedBgConverter"/>
+        <conv:ReactionSelectedBorderConverter x:Key="ReactionSelectedBorderConverter"/>
+        <conv:ReactionCountBrushConverter x:Key="ReactionCountBrushConverter"/>
+
+        <Style x:Key="ReactionChipButton" TargetType="Button">
+            <Setter Property="Background" Value="{Binding IsSelectedByMe, Converter={StaticResource ReactionSelectedBgConverter}}" />
+            <Setter Property="BorderBrush" Value="{Binding IsSelectedByMe, Converter={StaticResource ReactionSelectedBorderConverter}}" />
+            <Setter Property="BorderThickness" Value="1.5" />
+            <Setter Property="Padding" Value="7,3" />
+            <Setter Property="Margin" Value="0,0,5,4" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="ChipBorder"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="12"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="ChipBorder" Property="Opacity" Value="0.88"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="ChipBorder" Property="Opacity" Value="0.7"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </Window.Resources>
 
 
@@ -636,7 +671,7 @@
 
                                         <Border.ContextMenu>
                                             <ContextMenu Style="{StaticResource ModernContextMenu}">
-                                                <!-- Reaction Island (Top row of 6 emojis matching Android layout_message_context_menu.xml) -->
+                                                <!-- Reaction Island (Top row of 8 emojis + expand button) -->
                                                 <Border Background="#0C131D" BorderBrush="#1F2C3F" BorderThickness="1" CornerRadius="12" Padding="6,4" Margin="2,2,2,6">
                                                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                                                         <Button Content="👍" Style="{StaticResource ReactionEmojiButton}"
@@ -647,6 +682,10 @@
                                                                 Tag="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
                                                                 Command="{Binding PlacementTarget.Tag.SetReactionCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
                                                                 CommandParameter="❤️" Click="ReactionButton_Click"/>
+                                                        <Button Content="🔥" Style="{StaticResource ReactionEmojiButton}"
+                                                                Tag="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                                                Command="{Binding PlacementTarget.Tag.SetReactionCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                                                CommandParameter="🔥" Click="ReactionButton_Click"/>
                                                         <Button Content="😂" Style="{StaticResource ReactionEmojiButton}"
                                                                 Tag="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
                                                                 Command="{Binding PlacementTarget.Tag.SetReactionCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
@@ -659,10 +698,13 @@
                                                                 Tag="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
                                                                 Command="{Binding PlacementTarget.Tag.SetReactionCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
                                                                 CommandParameter="😢" Click="ReactionButton_Click"/>
-                                                        <Button Content="🙏" Style="{StaticResource ReactionEmojiButton}"
+                                                        <Button Content="🎉" Style="{StaticResource ReactionEmojiButton}"
                                                                 Tag="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
                                                                 Command="{Binding PlacementTarget.Tag.SetReactionCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
-                                                                CommandParameter="🙏" Click="ReactionButton_Click"/>
+                                                                CommandParameter="🎉" Click="ReactionButton_Click"/>
+                                                        <Button Content="➕" Style="{StaticResource ReactionEmojiButton}"
+                                                                Tag="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                                                Click="BtnExpandReactions_Click" ToolTip="Все реакции..."/>
                                                     </StackPanel>
                                                 </Border>
 
@@ -974,47 +1016,31 @@
 
 
 
-                                    <!-- Floating Reaction Pill: cleanly floats beneath the bubble -->
-
-                                    <Border HorizontalAlignment="{Binding IsFromMe, Converter={StaticResource MsgAlignConverter}}"
-
-                                            Margin="8,-10,8,2"
-
-                                            Background="#1E2738"
-
-                                            BorderBrush="{DynamicResource AccentBrush}"
-
-                                            BorderThickness="1.5"
-
-                                            CornerRadius="12"
-
-                                            Padding="6,2"
-
-                                            Cursor="Hand"
-
-                                            Visibility="{Binding HasReaction, Converter={StaticResource BoolToVis}}"
-
-                                            ToolTip="Нажмите, чтобы снять реакцию">
-
-                                        <Border.InputBindings>
-
-                                            <MouseBinding Gesture="LeftClick"
-
-                                                          Command="{Binding DataContext.ToggleReactionCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-
-                                                          CommandParameter="{Binding}"/>
-
-                                        </Border.InputBindings>
-
-                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-
-                                            <TextBlock Text="{Binding Reaction}" FontSize="14" VerticalAlignment="Center"/>
-
-                                            <TextBlock Text=" 1" FontSize="11" Foreground="{DynamicResource AccentBrush}" FontWeight="Bold" Margin="3,0,1,0" VerticalAlignment="Center"/>
-
-                                        </StackPanel>
-
-                                    </Border>
+                                    <!-- Floating Reaction Pills: multiple emoji chips with counts and user highlight -->
+                                    <ItemsControl ItemsSource="{Binding ReactionGroups}"
+                                                  HorizontalAlignment="{Binding IsFromMe, Converter={StaticResource MsgAlignConverter}}"
+                                                  Margin="6,-10,6,2"
+                                                  Visibility="{Binding HasReactions, Converter={StaticResource BoolToVis}}">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <WrapPanel Orientation="Horizontal"/>
+                                            </ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Button Style="{StaticResource ReactionChipButton}"
+                                                        Tag="{Binding RelativeSource={RelativeSource AncestorType=ItemsControl}, Path=DataContext}"
+                                                        Click="ReactionChip_Click"
+                                                        ToolTip="{Binding Tooltip}">
+                                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                        <TextBlock Text="{Binding Emoji}" FontSize="13" VerticalAlignment="Center"/>
+                                                        <TextBlock Text="{Binding Count}" FontSize="11" FontWeight="Bold" Margin="4,0,0,0" VerticalAlignment="Center"
+                                                                   Foreground="{Binding IsSelectedByMe, Converter={StaticResource ReactionCountBrushConverter}}"/>
+                                                    </StackPanel>
+                                                </Button>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
 
                                 </StackPanel>
 
@@ -1274,6 +1300,10 @@
                                 <Popup x:Name="EmojiPickerPopup" PlacementTarget="{Binding ElementName=BtnEmojiPickerTrigger}"
                                        Placement="Top" StaysOpen="False" AllowsTransparency="True" VerticalOffset="-6">
                                     <controls:EmojiPickerControl x:Name="ChatEmojiPicker" />
+                                </Popup>
+                                <Popup x:Name="ExpandedReactionsPopup"
+                                       Placement="MousePoint" StaysOpen="False" AllowsTransparency="True" VerticalOffset="-10">
+                                    <controls:ExpandedReactionsControl x:Name="ExpandedReactionsView" />
                                 </Popup>
                             </Grid>
 
