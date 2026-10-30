@@ -9,6 +9,14 @@
                 <ResourceDictionary Source="Resources/PrimeIcons.xaml"/>
             </ResourceDictionary.MergedDictionaries>
             <BooleanToVisibilityConverter x:Key="BoolToVisConverter"/>
+
+            <FontFamily x:Key="AppFontFamily">Segoe UI, Segoe UI Emoji, Apple Color Emoji, Noto Color Emoji</FontFamily>
+            <Style TargetType="{x:Type Control}">
+                <Setter Property="FontFamily" Value="{StaticResource AppFontFamily}"/>
+            </Style>
+            <Style TargetType="{x:Type TextBlock}">
+                <Setter Property="FontFamily" Value="{StaticResource AppFontFamily}"/>
+            </Style>
         </ResourceDictionary>
     </Application.Resources>
 </Application>

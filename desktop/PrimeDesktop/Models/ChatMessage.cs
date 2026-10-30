@@ -40,6 +40,10 @@ public class ChatMessage : INotifyPropertyChanged
             {
                 OnPropertyChanged(nameof(DisplayText));
                 OnPropertyChanged(nameof(HasText));
+                OnPropertyChanged(nameof(IsEmojiOnly));
+                OnPropertyChanged(nameof(MessageFontSize));
+                OnPropertyChanged(nameof(BubblePadding));
+                OnPropertyChanged(nameof(IsRich));
             }
         }
     }
@@ -327,9 +331,23 @@ public class ChatMessage : INotifyPropertyChanged
     public bool IsSingleVideo => IsVideo && !IsVideoNote && !IsCollage && !string.IsNullOrEmpty(FilePath) && System.IO.File.Exists(FilePath);
 
     [JsonIgnore]
-    public Thickness BubblePadding => (IsSinglePhoto || IsSingleVideo || IsCollage)
-        ? new Thickness(3, 3, 3, 4)
-        : new Thickness(12, 8, 12, 8);
+    public Thickness BubblePadding
+    {
+        get
+        {
+            if (IsSinglePhoto || IsSingleVideo || IsCollage)
+                return new Thickness(3, 3, 3, 4);
+            if (IsEmojiOnly)
+                return new Thickness(10, 6, 10, 6);
+            return new Thickness(12, 8, 12, 8);
+        }
+    }
+
+    [JsonIgnore]
+    public bool IsRich => !string.IsNullOrEmpty(_text) && _text.StartsWith("[RICH]", StringComparison.OrdinalIgnoreCase);
+
+    [JsonIgnore]
+    public string RichRawHtml => IsRich ? (_text.Length > 6 ? _text.Substring(6) : string.Empty) : string.Empty;
 
     [JsonIgnore]
     public string DisplayText
@@ -337,6 +355,10 @@ public class ChatMessage : INotifyPropertyChanged
         get
         {
             if (string.IsNullOrWhiteSpace(_text)) return string.Empty;
+            if (IsRich)
+            {
+                return CleanRichHtml(_text);
+            }
             if (HasAttachment || IsVoice || IsVideoNote)
             {
                 string t = _text.Trim();
@@ -344,6 +366,30 @@ public class ChatMessage : INotifyPropertyChanged
                     return string.Empty;
             }
             return _text;
+        }
+    }
+
+    public static string CleanRichHtml(string raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw)) return string.Empty;
+        string content = raw;
+        if (content.StartsWith("[RICH]", StringComparison.OrdinalIgnoreCase))
+        {
+            content = content.Length > 6 ? content.Substring(6) : string.Empty;
+        }
+
+        try
+        {
+            content = System.Text.RegularExpressions.Regex.Replace(content, @"<(br|p|div|h[1-6]|tr)\s*/?>", "\n", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            content = System.Text.RegularExpressions.Regex.Replace(content, @"</(td|th)>", "  |  ", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            content = System.Text.RegularExpressions.Regex.Replace(content, @"<[^>]+>", string.Empty);
+            content = System.Net.WebUtility.HtmlDecode(content);
+            content = System.Text.RegularExpressions.Regex.Replace(content, @"\n{3,}", "\n\n");
+            return content.Trim();
+        }
+        catch
+        {
+            return content.Trim();
         }
     }
 
@@ -394,6 +440,58 @@ public class ChatMessage : INotifyPropertyChanged
 
     [JsonIgnore]
     public bool HasText => !string.IsNullOrWhiteSpace(DisplayText);
+
+    [JsonIgnore]
+    public bool IsEmojiOnly => IsEmojiOnlyString(DisplayText, out _);
+
+    [JsonIgnore]
+    public double MessageFontSize
+    {
+        get
+        {
+            if (IsEmojiOnlyString(DisplayText, out int count))
+            {
+                return count switch
+                {
+                    1 => 36.0,
+                    2 => 30.0,
+                    _ => 26.0
+                };
+            }
+            return 13.0;
+        }
+    }
+
+    public static bool IsEmojiOnlyString(string text, out int count)
+    {
+        count = 0;
+        if (string.IsNullOrWhiteSpace(text)) return false;
+        string trimmed = text.Trim();
+        if (trimmed.Length == 0) return false;
+
+        var matches = Emoji.Wpf.EmojiData.MatchOne.Matches(trimmed);
+        if (matches.Count == 0 || matches.Count > 4) return false;
+
+        int totalMatchLength = 0;
+        foreach (System.Text.RegularExpressions.Match m in matches)
+        {
+            totalMatchLength += m.Length;
+        }
+
+        int nonWhitespace = 0;
+        for (int i = 0; i < trimmed.Length; i++)
+        {
+            if (!char.IsWhiteSpace(trimmed[i])) nonWhitespace++;
+        }
+
+        if (nonWhitespace == totalMatchLength)
+        {
+            count = matches.Count;
+            return true;
+        }
+
+        return false;
+    }
 
     [JsonIgnore]
     public bool IsPhoto => Type == PacketType.Photo || (HasAttachment && !string.IsNullOrEmpty(EffectiveFileName) &&

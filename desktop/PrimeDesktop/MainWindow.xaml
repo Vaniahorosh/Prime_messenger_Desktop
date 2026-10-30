@@ -913,6 +913,13 @@
 
                                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,4,0,0">
 
+                                                <!-- Rich Formatting Badge "Ф" matching Android -->
+                                                <Border Background="#1C2E4A" CornerRadius="4" Padding="3,1" Margin="0,0,5,0" VerticalAlignment="Center"
+                                                        ToolTip="Расширенное форматирование"
+                                                        Visibility="{Binding IsRich, Converter={StaticResource BoolToVis}}">
+                                                    <TextBlock Text="Ф" Foreground="{DynamicResource AccentBrush}" FontSize="9" FontWeight="Bold" HorizontalAlignment="Center"/>
+                                                </Border>
+
                                                 <TextBlock Text="изм." Foreground="{StaticResource TextMutedBrush}" FontSize="9" Margin="0,0,4,0" VerticalAlignment="Center"
 
                                                            Visibility="{Binding IsEdited, Converter={StaticResource BoolToVis}}"/>
