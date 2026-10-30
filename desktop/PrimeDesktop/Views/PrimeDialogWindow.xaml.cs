@@ -66,6 +66,37 @@ namespace PrimeDesktop.Views
             CardTranslate.BeginAnimation(TranslateTransform.YProperty, translateAnim);
         }
 
+                private bool _isClosing = false;
+        protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
+        {
+            if (!_isClosing)
+            {
+                e.Cancel = true;
+                _isClosing = true;
+                PlayExitAnimation(() => Close());
+                return;
+            }
+            base.OnClosing(e);
+        }
+
+        private void PlayExitAnimation(Action onCompleted)
+        {
+            var duration = TimeSpan.FromMilliseconds(160);
+            var cubicEase = new CubicEase { EasingMode = EasingMode.EaseIn };
+
+            var fadeAnim = new DoubleAnimation(1.0, 0.0, duration) { EasingFunction = cubicEase };
+            var scaleXAnim = new DoubleAnimation(1.0, 0.88, duration) { EasingFunction = cubicEase };
+            var scaleYAnim = new DoubleAnimation(1.0, 0.88, duration) { EasingFunction = cubicEase };
+            var translateAnim = new DoubleAnimation(0.0, 24.0, duration) { EasingFunction = cubicEase };
+
+            fadeAnim.Completed += (s, e) => onCompleted?.Invoke();
+
+            DialogCard.BeginAnimation(UIElement.OpacityProperty, fadeAnim);
+            CardScale.BeginAnimation(ScaleTransform.ScaleXProperty, scaleXAnim);
+            CardScale.BeginAnimation(ScaleTransform.ScaleYProperty, scaleYAnim);
+            CardTranslate.BeginAnimation(TranslateTransform.YProperty, translateAnim);
+        }
+
         private void BtnNegative_Click(object sender, RoutedEventArgs e)
         {
             DialogResultValue = false;

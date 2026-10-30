@@ -63,6 +63,7 @@ namespace PrimeDesktop.Views
             SizeChanged += Window_SizeChanged;
             Closed += Window_Closed;
 
+            PrimeAnimationService.HookBrandTransitions(this, PART_Backdrop);
             SetMediaList(initialPath, items);
         }
 

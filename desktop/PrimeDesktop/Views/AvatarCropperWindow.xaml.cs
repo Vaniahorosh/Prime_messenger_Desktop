@@ -4,6 +4,7 @@ using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using PrimeDesktop.Services;
 
 namespace PrimeDesktop.Views;
 
@@ -34,6 +35,7 @@ public partial class AvatarCropperWindow : Window
         _sourcePath = imagePath;
         Loaded += OnLoaded;
         SizeChanged += (s, e) => UpdateLayoutGeometry();
+        PrimeAnimationService.HookBrandTransitions(this, RootBorder, isDialog: true);
     }
 
     private void TitleBar_MouseDown(object sender, MouseButtonEventArgs e)

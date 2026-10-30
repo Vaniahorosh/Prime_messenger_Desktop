@@ -6,7 +6,7 @@
         WindowStartupLocation="CenterScreen"
         Background="#0B1017" Foreground="#F0F6FC">
 
-    <Grid>
+    <Grid x:Name="RootEditorGrid">
         <Grid.RowDefinitions>
             <RowDefinition Height="50"/> <!-- Header toolbar -->
             <RowDefinition Height="*"/>  <!-- Main editor area -->

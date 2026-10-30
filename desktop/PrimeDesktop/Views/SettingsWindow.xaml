@@ -129,7 +129,7 @@
         </Style>
     </Window.Resources>
 
-    <Grid>
+    <Grid x:Name="RootGrid">
         <Grid.RowDefinitions>
             <RowDefinition Height="36"/> <!-- Custom TitleBar -->
             <RowDefinition Height="*"/>  <!-- Main 2-Column Body -->

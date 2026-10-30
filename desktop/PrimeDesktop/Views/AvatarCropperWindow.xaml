@@ -8,7 +8,7 @@
         Background="Transparent"
         ResizeMode="NoResize">
 
-    <Border Background="#0F141C" BorderBrush="#223045" BorderThickness="1" CornerRadius="16">
+    <Border x:Name="RootBorder" Background="#0F141C" BorderBrush="#223045" BorderThickness="1" CornerRadius="16">
         <Border.Effect>
             <DropShadowEffect BlurRadius="30" ShadowDepth="4" Opacity="0.65" Color="#000000"/>
         </Border.Effect>

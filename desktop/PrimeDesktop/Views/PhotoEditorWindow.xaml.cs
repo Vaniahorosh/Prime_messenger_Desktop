@@ -6,6 +6,7 @@ using System.Windows.Ink;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using Microsoft.Win32;
+using PrimeDesktop.Services;
 
 namespace PrimeDesktop.Views;
 
@@ -24,6 +25,7 @@ public partial class PhotoEditorWindow : Window
         InitializeComponent();
         _sourcePath = imagePath;
         Loaded += OnWindowLoaded;
+        PrimeAnimationService.HookBrandTransitions(this, RootEditorGrid);
     }
 
     private void OnWindowLoaded(object sender, RoutedEventArgs e)

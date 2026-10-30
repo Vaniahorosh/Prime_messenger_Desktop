@@ -14,6 +14,8 @@ public partial class SettingsWindow : Window
         StateChanged += Window_StateChanged;
         Loaded += Window_Loaded;
         PreviewKeyDown += Window_PreviewKeyDown;
+
+        PrimeAnimationService.HookBrandTransitions(this, RootGrid);
     }
 
     private void Window_Loaded(object sender, RoutedEventArgs e)
