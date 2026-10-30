@@ -165,6 +165,21 @@ public class MainViewModel : ViewModelBase
 
     public bool HasInputText => !string.IsNullOrWhiteSpace(_inputMessageText);
 
+    private bool _isRichFormattingActive;
+    public bool IsRichFormattingActive
+    {
+        get => _isRichFormattingActive;
+        set
+        {
+            if (SetProperty(ref _isRichFormattingActive, value))
+            {
+                OnPropertyChanged(nameof(ShouldShowFormatButton));
+            }
+        }
+    }
+
+    public bool ShouldShowFormatButton => IsRichFormattingActive || (!string.IsNullOrEmpty(_inputMessageText) && _inputMessageText.Split('\n').Length > 3);
+
     public string InputMessageText
     {
         get => _inputMessageText;
@@ -173,6 +188,7 @@ public class MainViewModel : ViewModelBase
             if (SetProperty(ref _inputMessageText, value))
             {
                 OnPropertyChanged(nameof(HasInputText));
+                OnPropertyChanged(nameof(ShouldShowFormatButton));
                 if (!string.IsNullOrWhiteSpace(value))
                 {
                     NotifyTyping();
@@ -541,6 +557,8 @@ public class MainViewModel : ViewModelBase
     // Commands
 
     public ICommand SendMessageCommand { get; }
+    public ICommand ToggleRichFormattingCommand { get; }
+    public ICommand InsertRichFormatCommand { get; }
 
     public ICommand AttachFileCommand { get; }
 
@@ -1250,6 +1268,41 @@ public class MainViewModel : ViewModelBase
         };
 
         SendMessageCommand = new RelayCommand(async () => await SendTextMessageAsync(), () => HasSelectedChat && !string.IsNullOrWhiteSpace(InputMessageText));
+
+        ToggleRichFormattingCommand = new RelayCommand(() =>
+        {
+            IsRichFormattingActive = !IsRichFormattingActive;
+        });
+
+        InsertRichFormatCommand = new RelayCommand(paramObj =>
+        {
+            string param = paramObj as string ?? string.Empty;
+            if (string.IsNullOrEmpty(param)) return;
+            IsRichFormattingActive = true;
+            string cur = InputMessageText ?? string.Empty;
+            switch (param.ToUpperInvariant())
+            {
+                case "B":
+                    InputMessageText = string.IsNullOrEmpty(cur) ? "<b>Жирный текст</b>" : $"{cur} <b>жирный</b>";
+                    break;
+                case "I":
+                    InputMessageText = string.IsNullOrEmpty(cur) ? "<i>Курсив</i>" : $"{cur} <i>курсив</i>";
+                    break;
+                case "H":
+                    InputMessageText = string.IsNullOrEmpty(cur) ? "<h3>Заголовок</h3>" : $"{cur}\n<h3>Заголовок</h3>";
+                    break;
+                case "QUOTE":
+                    InputMessageText = string.IsNullOrEmpty(cur) ? "<blockquote>Цитата</blockquote>" : $"{cur}\n<blockquote>Цитата</blockquote>";
+                    break;
+                case "CODE":
+                    InputMessageText = string.IsNullOrEmpty(cur) ? "<code>Код</code>" : $"{cur} <code>код</code>";
+                    break;
+                case "TABLE":
+                    string tableTmpl = "\n<table border=\"1\">\n  <tr><th>Колонка 1</th><th>Колонка 2</th></tr>\n  <tr><td>Ячейка 1</td><td>Ячейка 2</td></tr>\n</table>\n";
+                    InputMessageText = cur + tableTmpl;
+                    break;
+            }
+        });
 
         AttachFileCommand = new RelayCommand(async () =>
         {
@@ -2619,6 +2672,14 @@ public async Task SendTextMessageAsync()
         if (targetChat == null || string.IsNullOrWhiteSpace(InputMessageText)) return;
 
         string text = InputMessageText.Trim();
+        if (IsRichFormattingActive || text.Contains("<b>") || text.Contains("<i>") || text.Contains("<h3>") || text.Contains("<table>") || text.Contains("<blockquote>"))
+        {
+            if (!text.StartsWith("[RICH]", StringComparison.OrdinalIgnoreCase))
+            {
+                text = "[RICH]" + text;
+            }
+        }
+        IsRichFormattingActive = false;
 
         InputMessageText = string.Empty;
 

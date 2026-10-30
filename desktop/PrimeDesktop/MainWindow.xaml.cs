@@ -38,6 +38,10 @@ public partial class MainWindow : Window
         StateChanged += MainWindow_StateChanged;
 
         TrayService = new SystemTrayService(this);
+        if (ChatEmojiPicker != null)
+        {
+            ChatEmojiPicker.EmojiSelected += ChatEmojiPicker_EmojiSelected;
+        }
         Loaded += (s, e) =>
         {
             App.Log("MainWindow Loaded");
@@ -346,6 +350,31 @@ public partial class MainWindow : Window
 
     private void MsgInputTextBox_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
     {
+        if (Keyboard.Modifiers.HasFlag(ModifierKeys.Control))
+        {
+            if (e.Key == Key.B)
+            {
+                ApplySelectionFormatting("<b>", "</b>");
+                e.Handled = true;
+                return;
+            }
+            if (e.Key == Key.I)
+            {
+                ApplySelectionFormatting("<i>", "</i>");
+                e.Handled = true;
+                return;
+            }
+            if (e.Key == Key.F && Keyboard.Modifiers.HasFlag(ModifierKeys.Shift))
+            {
+                if (DataContext is MainViewModel vm)
+                {
+                    vm.ToggleRichFormattingCommand.Execute(null);
+                }
+                e.Handled = true;
+                return;
+            }
+        }
+
         if (e.Key == Key.Enter)
         {
             if (Keyboard.Modifiers.HasFlag(ModifierKeys.Shift))
@@ -363,6 +392,41 @@ public partial class MainWindow : Window
                 }
                 e.Handled = true;
             }
+        }
+    }
+
+    private void BtnEmojiPickerTrigger_Click(object sender, RoutedEventArgs e)
+    {
+        EmojiPickerPopup.IsOpen = !EmojiPickerPopup.IsOpen;
+    }
+
+    private void ChatEmojiPicker_EmojiSelected(object? sender, string emoji)
+    {
+        int caret = MsgInputTextBox.CaretIndex;
+        string current = MsgInputTextBox.Text ?? string.Empty;
+        if (caret < 0 || caret > current.Length) caret = current.Length;
+        MsgInputTextBox.Text = current.Insert(caret, emoji);
+        MsgInputTextBox.CaretIndex = caret + emoji.Length;
+        MsgInputTextBox.Focus();
+        EmojiPickerPopup.IsOpen = false;
+    }
+
+    private void ApplySelectionFormatting(string openTag, string closeTag)
+    {
+        int start = MsgInputTextBox.SelectionStart;
+        int len = MsgInputTextBox.SelectionLength;
+        string selected = MsgInputTextBox.SelectedText;
+        if (string.IsNullOrEmpty(selected))
+        {
+            selected = "текст";
+        }
+        string replacement = $"{openTag}{selected}{closeTag}";
+        MsgInputTextBox.SelectedText = replacement;
+        MsgInputTextBox.SelectionStart = start + openTag.Length;
+        MsgInputTextBox.SelectionLength = selected.Length;
+        if (DataContext is MainViewModel vm)
+        {
+            vm.IsRichFormattingActive = true;
         }
     }
 

@@ -1043,7 +1043,35 @@
 
                         </Border>
 
-
+                        <!-- Rich Formatting Toolbar for Desktop (Toggleable) -->
+                        <Border Background="#141E2C" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1" CornerRadius="10,10,0,0" Padding="8,4" Margin="0,0,0,6"
+                                Visibility="{Binding IsRichFormattingActive, Converter={StaticResource BoolToVis}}">
+                            <DockPanel LastChildFill="False">
+                                <StackPanel Orientation="Horizontal" DockPanel.Dock="Left">
+                                    <Button Style="{StaticResource ModernButton}" Width="30" Height="26" Margin="1,0" ToolTip="Жирный (Ctrl+B)" Command="{Binding InsertRichFormatCommand}" CommandParameter="B">
+                                        <TextBlock Text="B" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="12"/>
+                                    </Button>
+                                    <Button Style="{StaticResource ModernButton}" Width="30" Height="26" Margin="1,0" ToolTip="Курсив (Ctrl+I)" Command="{Binding InsertRichFormatCommand}" CommandParameter="I">
+                                        <TextBlock Text="I" FontStyle="Italic" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="12"/>
+                                    </Button>
+                                    <Button Style="{StaticResource ModernButton}" Width="30" Height="26" Margin="1,0" ToolTip="Заголовок" Command="{Binding InsertRichFormatCommand}" CommandParameter="H">
+                                        <TextBlock Text="H" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" FontSize="12"/>
+                                    </Button>
+                                    <Button Style="{StaticResource ModernButton}" Width="30" Height="26" Margin="1,0" ToolTip="Цитата" Command="{Binding InsertRichFormatCommand}" CommandParameter="Quote">
+                                        <TextBlock Text="❝" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="12"/>
+                                    </Button>
+                                    <Button Style="{StaticResource ModernButton}" Width="30" Height="26" Margin="1,0" ToolTip="Код" Command="{Binding InsertRichFormatCommand}" CommandParameter="Code">
+                                        <TextBlock Text="&lt;/&gt;" FontFamily="Consolas" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10"/>
+                                    </Button>
+                                    <Button Style="{StaticResource ModernButton}" Width="30" Height="26" Margin="1,0" ToolTip="Таблица" Command="{Binding InsertRichFormatCommand}" CommandParameter="Table">
+                                        <TextBlock Text="⊞" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="13"/>
+                                    </Button>
+                                </StackPanel>
+                                <Button DockPanel.Dock="Right" Style="{StaticResource ModernButton}" Height="24" Padding="6,0" ToolTip="Закрыть панель форматирования" Command="{Binding ToggleRichFormattingCommand}">
+                                    <TextBlock Text="✕ Закрыть" Foreground="{DynamicResource TextMutedBrush}" FontSize="11"/>
+                                </Button>
+                            </DockPanel>
+                        </Border>
 
                         <!-- Input Controls Row -->
 
@@ -1157,20 +1185,42 @@
 
 
 
-                            <!-- Message Text Input -->
+                            <!-- Message Text Input with Integrated Emoji Button -->
+                            <Grid Grid.Column="1" VerticalAlignment="Center">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
 
-                            <TextBox Grid.Column="1" x:Name="MsgInputTextBox" Style="{StaticResource ModernTextBox}"
+                                <TextBox Grid.Column="0" x:Name="MsgInputTextBox" Style="{StaticResource ModernTextBox}"
+                                         Text="{Binding InputMessageText, UpdateSourceTrigger=PropertyChanged}"
+                                         PreviewKeyDown="MsgInputTextBox_PreviewKeyDown"
+                                         VerticalAlignment="Center" MinHeight="36" MaxHeight="100" TextWrapping="Wrap"/>
 
-                                     Text="{Binding InputMessageText, UpdateSourceTrigger=PropertyChanged}"
+                                <!-- Emoji Picker Trigger Button -->
+                                <Button Grid.Column="1" Style="{StaticResource ModernButton}" Width="32" Height="32" Padding="0" Margin="4,0,2,0"
+                                        ToolTip="Смайлики и эмодзи" x:Name="BtnEmojiPickerTrigger" Click="BtnEmojiPickerTrigger_Click"
+                                        VerticalAlignment="Center">
+                                    <TextBlock Text="😊" FontSize="15" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Button>
+                                <Popup x:Name="EmojiPickerPopup" PlacementTarget="{Binding ElementName=BtnEmojiPickerTrigger}"
+                                       Placement="Top" StaysOpen="False" AllowsTransparency="True" VerticalOffset="-6">
+                                    <controls:EmojiPickerControl x:Name="ChatEmojiPicker" />
+                                </Popup>
+                            </Grid>
 
-                                     PreviewKeyDown="MsgInputTextBox_PreviewKeyDown"
+                            <!-- Actions: Formatting Button ("Ф") + Voice & Send Buttons -->
+                            <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="6,0,0,0" VerticalAlignment="Center">
+                                <!-- Extended Formatting Button ("Ф") matching Android -->
+                                <Button Style="{StaticResource ModernButton}" Width="34" Height="36" Padding="0" Margin="0,0,6,0"
+                                        ToolTip="Расширенное форматирование (Ctrl+Shift+F)"
+                                        Command="{Binding ToggleRichFormattingCommand}"
+                                        Visibility="{Binding ShouldShowFormatButton, Converter={StaticResource BoolToVis}}">
+                                    <Border Background="{DynamicResource AccentBrush}" CornerRadius="8" Width="26" Height="26">
+                                        <TextBlock Text="Ф" Foreground="White" FontSize="13" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                </Button>
 
-                                     VerticalAlignment="Center" MinHeight="36" MaxHeight="100" TextWrapping="Wrap"/>
-
-
-
-                            <!-- Actions: Combined Voice & Send Button -->
-                            <Grid Grid.Column="2" Margin="8,0,0,0">
                                 <Button Style="{StaticResource ModernButton}" ToolTip="Голосовое сообщение"
                                         Command="{Binding ToggleVoiceRecordCommand}" Width="40" Height="36" Padding="0"
                                         Visibility="{Binding HasInputText, Converter={StaticResource InverseBoolToVis}}">
@@ -1188,7 +1238,7 @@
                                         Visibility="{Binding HasInputText, Converter={StaticResource BoolToVis}}">
                                     <Path Data="{StaticResource IconSend}" Fill="White" Width="16" Height="16" Stretch="Uniform"/>
                                 </Button>
-                            </Grid>
+                            </StackPanel>
 
                         </Grid>
 

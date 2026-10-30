@@ -380,8 +380,12 @@ public class ChatMessage : INotifyPropertyChanged
 
         try
         {
-            content = System.Text.RegularExpressions.Regex.Replace(content, @"<(br|p|div|h[1-6]|tr)\s*/?>", "\n", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-            content = System.Text.RegularExpressions.Regex.Replace(content, @"</(td|th)>", "  |  ", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            content = System.Text.RegularExpressions.Regex.Replace(content, @"<h[1-3][^>]*>(.*?)</h[1-3]>", "\n📌 $1\n", System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.Singleline);
+            content = System.Text.RegularExpressions.Regex.Replace(content, @"<h[4-6][^>]*>(.*?)</h[4-6]>", "\n🔹 $1\n", System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.Singleline);
+            content = System.Text.RegularExpressions.Regex.Replace(content, @"<blockquote[^>]*>(.*?)</blockquote>", "\n▍ $1\n", System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.Singleline);
+            content = System.Text.RegularExpressions.Regex.Replace(content, @"<li[^>]*>(.*?)</li>", "\n• $1", System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.Singleline);
+            content = System.Text.RegularExpressions.Regex.Replace(content, @"<(br|p|div|tr)\s*/?>", "\n", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            content = System.Text.RegularExpressions.Regex.Replace(content, @"</(td|th)>", "  │  ", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
             content = System.Text.RegularExpressions.Regex.Replace(content, @"<[^>]+>", string.Empty);
             content = System.Net.WebUtility.HtmlDecode(content);
             content = System.Text.RegularExpressions.Regex.Replace(content, @"\n{3,}", "\n\n");
