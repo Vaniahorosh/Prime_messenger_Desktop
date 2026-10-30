@@ -4,6 +4,7 @@ using System.IO;
 using System.Net.Http;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using HtmlAgilityPack;
 
 namespace PrimeDesktop.Services
 {
@@ -85,7 +86,7 @@ namespace PrimeDesktop.Services
                 }
                 else
                 {
-                    // 2. Generic OpenGraph HTML fetch
+                    // 2. Generic OpenGraph HTML fetch via HtmlAgilityPack
                     using var response = await _httpClient.GetAsync(uri, HttpCompletionOption.ResponseHeadersRead);
                     if (!response.IsSuccessStatusCode) return null;
 
@@ -97,13 +98,24 @@ namespace PrimeDesktop.Services
 
                     using var stream = await response.Content.ReadAsStreamAsync();
                     using var reader = new StreamReader(stream);
-                    char[] buffer = new char[80000];
+                    char[] buffer = new char[120000];
                     int read = await reader.ReadAsync(buffer, 0, buffer.Length);
                     string html = new string(buffer, 0, read);
 
-                    data.Title = ExtractMeta(html, "og:title") ?? ExtractTag(html, "title") ?? data.Domain;
-                    data.Description = ExtractMeta(html, "og:description") ?? ExtractMeta(html, "description") ?? string.Empty;
-                    data.ImageUrl = ExtractMeta(html, "og:image") ?? ExtractMeta(html, "twitter:image");
+                    var doc = new HtmlDocument();
+                    doc.LoadHtml(html);
+
+                    string? ogTitle = GetMetaContent(doc, "og:title", "twitter:title");
+                    string? pageTitle = null;
+                    var titleNode = doc.DocumentNode.SelectSingleNode("//head/title") ?? doc.DocumentNode.SelectSingleNode("//title");
+                    if (titleNode != null)
+                    {
+                        pageTitle = System.Net.WebUtility.HtmlDecode(titleNode.InnerText?.Trim());
+                    }
+
+                    data.Title = !string.IsNullOrWhiteSpace(ogTitle) ? ogTitle : (!string.IsNullOrWhiteSpace(pageTitle) ? pageTitle : data.Domain);
+                    data.Description = GetMetaContent(doc, "og:description", "description", "twitter:description") ?? string.Empty;
+                    data.ImageUrl = GetMetaContent(doc, "og:image", "twitter:image", "thumbnail");
 
                     if (!string.IsNullOrEmpty(data.ImageUrl) && !data.ImageUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase))
                     {
@@ -142,24 +154,21 @@ namespace PrimeDesktop.Services
             }
         }
 
-        private static string? ExtractMeta(string html, string property)
+        private static string? GetMetaContent(HtmlDocument doc, params string[] properties)
         {
-            var match = Regex.Match(html, $@"<meta\s+[^>]*(?:property|name)\s*=\s*[""']{Regex.Escape(property)}[""'][^>]*content\s*=\s*[""']([^""']+)[""']", RegexOptions.IgnoreCase);
-            if (match.Success) return System.Net.WebUtility.HtmlDecode(match.Groups[1].Value.Trim());
+            if (doc?.DocumentNode == null) return null;
 
-            var match2 = Regex.Match(html, $@"<meta\s+[^>]*content\s*=\s*[""']([^""']+)[""'][^>]*(?:property|name)\s*=\s*[""']{Regex.Escape(property)}[""']", RegexOptions.IgnoreCase);
-            if (match2.Success) return System.Net.WebUtility.HtmlDecode(match2.Groups[1].Value.Trim());
-
-            return null;
-        }
-
-        private static string? ExtractTag(string html, string tag)
-        {
-            var match = Regex.Match(html, $@"<{Regex.Escape(tag)}[^>]*>(.*?)</{Regex.Escape(tag)}>", RegexOptions.IgnoreCase | RegexOptions.Singleline);
-            if (match.Success)
+            foreach (var prop in properties)
             {
-                string val = Regex.Replace(match.Groups[1].Value, @"<[^>]+>", "").Trim();
-                return System.Net.WebUtility.HtmlDecode(val);
+                var node = doc.DocumentNode.SelectSingleNode($"//meta[translate(@property, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz')='{prop.ToLowerInvariant()}'] | //meta[translate(@name, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz')='{prop.ToLowerInvariant()}']");
+                if (node != null)
+                {
+                    string content = node.GetAttributeValue("content", "");
+                    if (!string.IsNullOrWhiteSpace(content))
+                    {
+                        return System.Net.WebUtility.HtmlDecode(content.Trim());
+                    }
+                }
             }
             return null;
         }

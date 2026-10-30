@@ -652,4 +652,30 @@ public partial class MainWindow : Window
         if (parentObject is T parent) return parent;
         return FindVisualParent<T>(parentObject);
     }
+
+    private void ChatArea_DragOver(object sender, DragEventArgs e)
+    {
+        if (e.Data.GetDataPresent(DataFormats.FileDrop))
+        {
+            e.Effects = DragDropEffects.Copy;
+            e.Handled = true;
+        }
+        else
+        {
+            e.Effects = DragDropEffects.None;
+        }
+    }
+
+    private void ChatArea_Drop(object sender, DragEventArgs e)
+    {
+        if (e.Data.GetDataPresent(DataFormats.FileDrop))
+        {
+            string[]? files = e.Data.GetData(DataFormats.FileDrop) as string[];
+            if (files != null && files.Length > 0 && DataContext is MainViewModel vm && vm.HasSelectedChat)
+            {
+                vm.StageFilePaths(files);
+                e.Handled = true;
+            }
+        }
+    }
 }

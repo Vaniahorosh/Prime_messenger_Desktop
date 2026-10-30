@@ -239,7 +239,9 @@ public class MainViewModel : ViewModelBase
             if (SetProperty(ref _inputMessageText, value))
             {
                 OnPropertyChanged(nameof(HasInputText));
+                OnPropertyChanged(nameof(CanSendMessage));
                 OnPropertyChanged(nameof(ShouldShowFormatButton));
+                (SendMessageCommand as RelayCommand)?.NotifyCanExecuteChanged();
                 if (!string.IsNullOrWhiteSpace(value))
                 {
                     NotifyTyping();
@@ -622,6 +624,32 @@ public class MainViewModel : ViewModelBase
         get => _isAttachmentTrayOpen;
         set => SetProperty(ref _isAttachmentTrayOpen, value);
     }
+
+    private PendingAttachment? _pendingAttachment;
+    public PendingAttachment? PendingAttachment
+    {
+        get => _pendingAttachment;
+        set
+        {
+            if (SetProperty(ref _pendingAttachment, value))
+            {
+                OnPropertyChanged(nameof(HasPendingAttachment));
+                OnPropertyChanged(nameof(CanSendMessage));
+                OnPropertyChanged(nameof(InputPlaceholderText));
+                (SendMessageCommand as RelayCommand)?.NotifyCanExecuteChanged();
+            }
+        }
+    }
+
+    public bool HasPendingAttachment => PendingAttachment != null;
+
+    public bool CanSendMessage => HasInputText || HasPendingAttachment;
+
+    public string InputPlaceholderText => HasPendingAttachment 
+        ? "Добавьте подпись к вложению..." 
+        : "Напишите сообщение...";
+
+    public ICommand CancelPendingAttachmentCommand { get; }
 
     public ICommand CancelReplyCommand { get; }
 
@@ -1318,7 +1346,7 @@ public class MainViewModel : ViewModelBase
             }
         };
 
-        SendMessageCommand = new RelayCommand(async () => await SendTextMessageAsync(), () => HasSelectedChat && !string.IsNullOrWhiteSpace(InputMessageText));
+        SendMessageCommand = new RelayCommand(async () => await SendTextMessageAsync(), () => HasSelectedChat && CanSendMessage);
 
         ToggleRichFormattingCommand = new RelayCommand(() =>
         {
@@ -1355,16 +1383,21 @@ public class MainViewModel : ViewModelBase
             }
         });
 
-        AttachFileCommand = new RelayCommand(async () =>
+        CancelPendingAttachmentCommand = new RelayCommand(() =>
+        {
+            PendingAttachment = null;
+        });
+
+        AttachFileCommand = new RelayCommand(() =>
         {
             IsAttachmentTrayOpen = false;
-            await SendAttachmentAsync(PacketType.File);
+            StageAttachment(PacketType.File);
         }, () => HasSelectedChat);
 
-        AttachPhotoCommand = new RelayCommand(async () =>
+        AttachPhotoCommand = new RelayCommand(() =>
         {
             IsAttachmentTrayOpen = false;
-            await SendAttachmentAsync(PacketType.Photo);
+            StageAttachment(PacketType.Photo);
         }, () => HasSelectedChat);
 
         AttachGifCommand = new RelayCommand(async () =>
@@ -2707,10 +2740,21 @@ public class MainViewModel : ViewModelBase
     }
 
 public async Task SendTextMessageAsync()
-
     {
         var targetChat = SelectedChat;
-        if (targetChat == null || string.IsNullOrWhiteSpace(InputMessageText)) return;
+        if (targetChat == null) return;
+
+        if (PendingAttachment != null)
+        {
+            var pending = PendingAttachment;
+            PendingAttachment = null;
+            string caption = (InputMessageText ?? "").Trim();
+            InputMessageText = string.Empty;
+            await SendPendingAttachmentAsync(targetChat, pending, caption);
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(InputMessageText)) return;
 
         string text = InputMessageText.Trim();
         if (IsRichFormattingActive || text.Contains("<b>") || text.Contains("<i>") || text.Contains("<h3>") || text.Contains("<table>") || text.Contains("<blockquote>"))
@@ -2942,7 +2986,7 @@ public async Task SendTextMessageAsync()
 
     }
 
-    public async Task SendAttachmentAsync(PacketType type)
+    public void StageAttachment(PacketType type)
     {
         var targetChat = SelectedChat;
         if (targetChat == null) return;
@@ -2953,7 +2997,7 @@ public async Task SendTextMessageAsync()
         if (type == PacketType.Photo)
         {
             dialog.Title = "Выберите изображение (одно или несколько для коллажа)";
-            dialog.Filter = "Изображения|*.png;*.jpg;*.jpeg;*.webp;*.bmp|Все файлы|*.*";
+            dialog.Filter = "Изображения|*.png;*.jpg;*.jpeg;*.webp;*.bmp;*.gif|Все файлы|*.*";
             dialog.Multiselect = true;
         }
         else
@@ -2969,7 +3013,101 @@ public async Task SendTextMessageAsync()
             return;
         }
 
-        SendMyActivityState(type == PacketType.Photo ? "SENDING_PHOTO" : "SENDING_FILE", true);
+        StageFilePaths(dialog.FileNames, type);
+    }
+
+    public void StageFilePaths(string[] fileNames, PacketType? forcedType = null)
+    {
+        if (fileNames == null || fileNames.Length == 0) return;
+
+        try
+        {
+            var validFiles = fileNames.Where(File.Exists).ToArray();
+            if (validFiles.Length == 0) return;
+
+            bool isAllImages = validFiles.All(f =>
+            {
+                string ext = Path.GetExtension(f).ToLowerInvariant();
+                return ext == ".jpg" || ext == ".jpeg" || ext == ".png" || ext == ".webp" || ext == ".bmp";
+            });
+
+            bool isPhoto = (forcedType == PacketType.Photo) || isAllImages;
+
+            if (isPhoto && validFiles.Length > 1)
+            {
+                // Multi-photo collage
+                long totalSize = 0;
+                foreach (var fn in validFiles)
+                {
+                    try { totalSize += new FileInfo(fn).Length; } catch { }
+                }
+
+                PendingAttachment = new PendingAttachment
+                {
+                    Type = PacketType.Photo,
+                    IsCollage = true,
+                    PrimaryFilePath = validFiles[0],
+                    FilePaths = validFiles.ToList(),
+                    Title = $"Коллаж ({validFiles.Length} фото)",
+                    Subtitle = PendingAttachment.FormatFileSize(totalSize),
+                    HasImageThumbnail = true
+                };
+            }
+            else if (isPhoto)
+            {
+                // Single photo
+                string path = validFiles[0];
+                long size = 0;
+                try { size = new FileInfo(path).Length; } catch { }
+
+                PendingAttachment = new PendingAttachment
+                {
+                    Type = PacketType.Photo,
+                    IsCollage = false,
+                    PrimaryFilePath = path,
+                    FilePaths = new List<string> { path },
+                    Title = Path.GetFileName(path),
+                    Subtitle = PendingAttachment.FormatFileSize(size),
+                    HasImageThumbnail = true
+                };
+            }
+            else
+            {
+                // Document or file
+                string path = validFiles[0];
+                long size = 0;
+                try { size = new FileInfo(path).Length; } catch { }
+
+                PendingAttachment = new PendingAttachment
+                {
+                    Type = PacketType.File,
+                    IsCollage = false,
+                    PrimaryFilePath = path,
+                    FilePaths = validFiles.ToList(),
+                    Title = Path.GetFileName(path),
+                    Subtitle = PendingAttachment.FormatFileSize(size),
+                    HasImageThumbnail = false,
+                    Icon = "📎"
+                };
+            }
+
+            StatusMessage = "Вложение выбрано. Добавьте подпись и нажмите Отправить.";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Ошибка подготовки вложения: {ex.Message}";
+        }
+        finally
+        {
+            SendMyActivityState("IDLE", true);
+        }
+    }
+
+    public async Task SendPendingAttachmentAsync(ChatItem targetChat, PendingAttachment pending, string caption)
+    {
+        if (targetChat == null || pending == null) return;
+
+        SendMyActivityState(pending.Type == PacketType.Photo ? "SENDING_PHOTO" : "SENDING_FILE", true);
 
         string targetAddr = !string.IsNullOrWhiteSpace(targetChat.DeviceAddress) ? targetChat.DeviceAddress : targetChat.PeerId;
 
@@ -2980,106 +3118,151 @@ public async Task SendTextMessageAsync()
             await _bluetoothService.ConnectAsync(targetAddr);
         }
 
-        // Multi-photo / collage
-        if (type == PacketType.Photo && dialog.FileNames.Length > 1)
+        try
         {
-            var items = new List<(byte[] data, string ext, bool isVideo)>();
-            var collagePaths = new List<string>();
-            foreach (var fn in dialog.FileNames)
+            if (pending.IsCollage && pending.FilePaths.Count > 1)
             {
-                byte[] data = await File.ReadAllBytesAsync(fn);
-                string ext = Path.GetExtension(fn).TrimStart('.');
-                items.Add((data, ext, false));
-                collagePaths.Add(fn);
-            }
+                // Process each collage image via ImageProcessingService
+                var items = new List<(byte[] data, string ext, bool isVideo)>();
+                var collagePaths = new List<string>();
 
-            var message = new ChatMessage
-            {
-                Sender = Settings.MyDisplayName,
-                Text = "",
-                FilePath = collagePaths.FirstOrDefault(),
-                CollagePaths = collagePaths,
-                Type = PacketType.Photo,
-                IsFromMe = true,
-                FormattedTime = DateTime.Now.ToString("HH:mm")
-            };
+                foreach (var fn in pending.FilePaths)
+                {
+                    if (!File.Exists(fn)) continue;
+                    byte[] optimized = await ImageProcessingService.OptimizeImageForTransferAsync(fn, 2048, 82);
+                    items.Add((optimized, "jpg", false));
+                    collagePaths.Add(fn);
+                }
 
-            PrepareMessage(targetChat, message);
-            targetChat.Messages.Add(message);
-        SoundEffectService.PlaySent(Settings);
-            targetChat.LastMessage = "📷 Коллаж";
-            targetChat.LastMessageTime = message.FormattedTime;
+                if (items.Count == 0) return;
 
-            try
-            {
-                byte[] payload = PrimePacket.BuildCollagePayload(message.Id, items, "");
-                await _bluetoothService.SendPacketAsync(targetAddr, PacketType.Photo, payload);
-                message.IsDelivered = true;
+                var message = new ChatMessage
+                {
+                    Sender = Settings.MyDisplayName,
+                    Text = caption,
+                    FilePath = collagePaths.FirstOrDefault(),
+                    CollagePaths = collagePaths,
+                    Type = PacketType.Photo,
+                    IsFromMe = true,
+                    FormattedTime = DateTime.Now.ToString("HH:mm")
+                };
+
+                PrepareMessage(targetChat, message);
+                targetChat.Messages.Add(message);
+                SoundEffectService.PlaySent(Settings);
+                targetChat.LastMessage = !string.IsNullOrWhiteSpace(caption) ? $"📷 {caption}" : "📷 Коллаж";
+                targetChat.LastMessageTime = message.FormattedTime;
+
+                try
+                {
+                    byte[] payload = PrimePacket.BuildCollagePayload(message.Id, items, caption);
+                    await _bluetoothService.SendPacketAsync(targetAddr, PacketType.Photo, payload);
+                    message.IsDelivered = true;
+                }
+                catch (Exception ex)
+                {
+                    StatusMessage = $"Ошибка отправки коллажа: {ex.Message}";
+                }
             }
-            catch (Exception ex)
+            else if (pending.Type == PacketType.Photo)
             {
-                StatusMessage = $"Collage send failed: {ex.Message}";
+                // Single photo with optional caption
+                string? filePath = pending.PrimaryFilePath;
+                if (string.IsNullOrEmpty(filePath) || !File.Exists(filePath)) return;
+
+                byte[] optimizedBytes = await ImageProcessingService.OptimizeImageForTransferAsync(filePath, 2048, 85);
+                string fileName = Path.GetFileName(filePath) ?? "photo.jpg";
+
+                var singleMsg = new ChatMessage
+                {
+                    Sender = Settings.MyDisplayName,
+                    Text = caption,
+                    FilePath = filePath,
+                    FileName = fileName,
+                    FileSizeBytes = optimizedBytes.Length,
+                    Type = PacketType.Photo,
+                    IsFromMe = true,
+                    FormattedTime = DateTime.Now.ToString("HH:mm")
+                };
+
+                PrepareMessage(targetChat, singleMsg);
+                targetChat.Messages.Add(singleMsg);
+                SoundEffectService.PlaySent(Settings);
+                targetChat.LastMessage = !string.IsNullOrWhiteSpace(caption) ? $"📷 {caption}" : "📷 Фотография";
+                targetChat.LastMessageTime = singleMsg.FormattedTime;
+
+                try
+                {
+                    byte[] payload = PrimePacket.BuildPhotoPayload(singleMsg.Id, optimizedBytes, caption);
+                    await _bluetoothService.SendPacketAsync(targetAddr, PacketType.Photo, payload);
+                    singleMsg.IsDelivered = true;
+                }
+                catch (Exception ex)
+                {
+                    StatusMessage = $"Ошибка отправки фото: {ex.Message}";
+                }
             }
-            finally
+            else
             {
-                SendMyActivityState("IDLE", true);
+                // Document or file with optional caption
+                string? filePath = pending.PrimaryFilePath;
+                if (string.IsNullOrEmpty(filePath) || !File.Exists(filePath)) return;
+
+                string fileName = Path.GetFileName(filePath) ?? "file";
+                byte[] fileBytes = await File.ReadAllBytesAsync(filePath);
+
+                string lowerSingle = fileName.ToLowerInvariant();
+                bool isVidSingle = lowerSingle.EndsWith(".mp4") || lowerSingle.EndsWith(".mkv") || lowerSingle.EndsWith(".mov") || lowerSingle.EndsWith(".avi") || lowerSingle.EndsWith(".webm");
+                bool isVideoNote = isVidSingle && (lowerSingle.StartsWith("vn_") || lowerSingle.StartsWith("rec_circle_") || lowerSingle.StartsWith("rec_videonote_"));
+
+                var singleMsg = new ChatMessage
+                {
+                    Sender = Settings.MyDisplayName,
+                    Text = caption,
+                    FilePath = filePath,
+                    FileName = fileName,
+                    FileSizeBytes = fileBytes.Length,
+                    Type = PacketType.File,
+                    IsVideoNote = isVideoNote,
+                    VideoNoteRadiusPercent = Settings.VideoNoteRadiusPercent,
+                    IsFromMe = true,
+                    FormattedTime = DateTime.Now.ToString("HH:mm")
+                };
+
+                PrepareMessage(targetChat, singleMsg);
+                targetChat.Messages.Add(singleMsg);
+                SoundEffectService.PlaySent(Settings);
+                if (!string.IsNullOrWhiteSpace(caption)) targetChat.LastMessage = $"📎 {caption}";
+                else if (isVideoNote) targetChat.LastMessage = "📹 Видеосообщение";
+                else if (isVidSingle) targetChat.LastMessage = $"🎥 {fileName}";
+                else targetChat.LastMessage = $"📎 {fileName}";
+                targetChat.LastMessageTime = singleMsg.FormattedTime;
+
+                try
+                {
+                    string effectiveCaption = isVideoNote ? $"VIDEO_NOTE:{Settings.VideoNoteRadiusPercent}" : caption;
+                    byte[] payload = PrimePacket.BuildFilePayload(singleMsg.Id, fileName, fileBytes, "00:00", false, effectiveCaption);
+                    await _bluetoothService.SendPacketAsync(targetAddr, PacketType.File, payload);
+                    singleMsg.IsDelivered = true;
+                }
+                catch (Exception ex)
+                {
+                    StatusMessage = $"Ошибка отправки файла: {ex.Message}";
+                }
             }
 
             await _storageService.SaveChatsAsync(_allChats);
-            return;
-        }
-
-        // Single file or single photo
-        string filePath = dialog.FileName;
-        string fileName = Path.GetFileName(filePath);
-        byte[] fileBytes = await File.ReadAllBytesAsync(filePath);
-
-        string lowerSingle = fileName.ToLowerInvariant();
-        bool isVidSingle = lowerSingle.EndsWith(".mp4") || lowerSingle.EndsWith(".mkv") || lowerSingle.EndsWith(".mov") || lowerSingle.EndsWith(".avi") || lowerSingle.EndsWith(".webm");
-        bool isVideoNote = isVidSingle && (lowerSingle.StartsWith("vn_") || lowerSingle.StartsWith("rec_circle_") || lowerSingle.StartsWith("rec_videonote_"));
-
-        var singleMsg = new ChatMessage
-        {
-            Sender = Settings.MyDisplayName,
-            Text = fileName,
-            FilePath = filePath,
-            FileName = fileName,
-            FileSizeBytes = fileBytes.Length,
-            Type = type,
-            IsVideoNote = isVideoNote,
-            VideoNoteRadiusPercent = Settings.VideoNoteRadiusPercent,
-            IsFromMe = true,
-            FormattedTime = DateTime.Now.ToString("HH:mm")
-        };
-
-        PrepareMessage(targetChat, singleMsg);
-        targetChat.Messages.Add(singleMsg);
-        SoundEffectService.PlaySent(Settings);
-        if (type == PacketType.Photo) targetChat.LastMessage = "📷 Фотография";
-        else if (isVideoNote) targetChat.LastMessage = "📹 Видеосообщение";
-        else if (isVidSingle) targetChat.LastMessage = $"🎥 {fileName}";
-        else targetChat.LastMessage = $"📎 {fileName}";
-        targetChat.LastMessageTime = singleMsg.FormattedTime;
-
-        try
-        {
-            byte[] payload = (type == PacketType.Photo)
-                ? PrimePacket.BuildPhotoPayload(singleMsg.Id, fileBytes, "")
-                : PrimePacket.BuildFilePayload(singleMsg.Id, fileName, fileBytes, "00:00", false, isVideoNote ? $"VIDEO_NOTE:{Settings.VideoNoteRadiusPercent}" : string.Empty);
-
-            await _bluetoothService.SendPacketAsync(targetAddr, type, payload);
-            singleMsg.IsDelivered = true;
-        }
-        catch (Exception ex)
-        {
-            StatusMessage = $"Attachment send failed: {ex.Message}";
         }
         finally
         {
             SendMyActivityState("IDLE", true);
         }
+    }
 
-        await _storageService.SaveChatsAsync(_allChats);
+    public Task SendAttachmentAsync(PacketType type)
+    {
+        StageAttachment(type);
+        return Task.CompletedTask;
     }
 
     public async Task SendGifAttachmentAsync()
@@ -4209,7 +4392,7 @@ public async Task SendTextMessageAsync()
                     {
                         Id = fMsgId,
                         Sender = chat.DisplayName,
-                        Text = fName,
+                        Text = !string.IsNullOrWhiteSpace(fCaption) ? fCaption : fName,
                         FilePath = fPath,
                         FileName = fName,
                         FileSizeBytes = fBytes.Length,
@@ -4225,6 +4408,7 @@ public async Task SendTextMessageAsync()
                     chat.Messages.Add(incomingFileMsg);
                     if (isVoiceMsg) chat.LastMessage = "🎤 Голосовое сообщение";
                     else if (isVideoNote) chat.LastMessage = "📹 Видеосообщение";
+                    else if (!string.IsNullOrWhiteSpace(fCaption)) chat.LastMessage = $"📎 {fCaption}";
                     else if (isVideoFile) chat.LastMessage = $"🎥 {fName}";
                     else if (isPhotoMsg) chat.LastMessage = $"📷 {fName}";
                     else if (isAudioMsg) chat.LastMessage = $"🎵 {fName}";

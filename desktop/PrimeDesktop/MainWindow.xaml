@@ -577,6 +577,7 @@
 
                 <!-- Messages Scroll Area with Hardware-Accelerated Virtualization -->
                 <ScrollViewer Grid.Row="1" x:Name="MessagesScrollViewer" VerticalScrollBarVisibility="Auto" Padding="16"
+                              AllowDrop="True" Drop="ChatArea_Drop" DragOver="ChatArea_DragOver"
                               CanContentScroll="True"
                               VirtualizingPanel.IsVirtualizing="True"
                               VirtualizingPanel.VirtualizationMode="Recycling"
@@ -1137,6 +1138,36 @@
 
                         </Border>
 
+                        <!-- Staged Pending Attachment Banner (Matches mobile preview with caption) -->
+                        <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1" CornerRadius="8" Padding="10,8" Margin="0,0,0,8"
+                                Visibility="{Binding HasPendingAttachment, Converter={StaticResource BoolToVis}}">
+                            <DockPanel>
+                                <Button Content="✕" Style="{StaticResource ModernButton}" Command="{Binding CancelPendingAttachmentCommand}" DockPanel.Dock="Right" Width="26" Height="26" Padding="0" ToolTip="Отменить вложение"/>
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <!-- Thumbnail preview if image / collage -->
+                                    <Border Width="44" Height="44" CornerRadius="6" Margin="0,0,10,0" Background="#1A2230" ClipToBounds="True">
+                                        <Grid>
+                                            <!-- If photo or collage, show image thumbnail -->
+                                            <Image Source="{Binding PendingAttachment.PrimaryFilePath}" Stretch="UniformToFill"
+                                                   Visibility="{Binding PendingAttachment.HasImageThumbnail, Converter={StaticResource BoolToVis}}"/>
+                                            <!-- If file, show file icon -->
+                                            <TextBlock Text="{Binding PendingAttachment.Icon}" FontSize="20" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                       Visibility="{Binding PendingAttachment.HasImageThumbnail, Converter={StaticResource InverseBoolToVis}}"/>
+                                            <!-- If collage badge -->
+                                            <Border Background="#CC000000" CornerRadius="4" Padding="4,1" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="2"
+                                                    Visibility="{Binding PendingAttachment.IsCollage, Converter={StaticResource BoolToVis}}">
+                                                <TextBlock Text="{Binding PendingAttachment.FilePaths.Count, StringFormat='{}✕{0}'}" Foreground="White" FontSize="9" FontWeight="Bold"/>
+                                            </Border>
+                                        </Grid>
+                                    </Border>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding PendingAttachment.Title}" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="12" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" MaxWidth="320"/>
+                                        <TextBlock Text="{Binding PendingAttachment.Subtitle}" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </DockPanel>
+                        </Border>
+
                         <!-- Rich Formatting Toolbar for Desktop (Toggleable) -->
                         <Border Background="#141E2C" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1" CornerRadius="10,10,0,0" Padding="8,4" Margin="0,0,0,6"
                                 Visibility="{Binding IsRichFormattingActive, Converter={StaticResource BoolToVis}}">
@@ -1286,10 +1317,17 @@
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
 
-                                <TextBox Grid.Column="0" x:Name="MsgInputTextBox" Style="{StaticResource ModernTextBox}"
-                                         Text="{Binding InputMessageText, UpdateSourceTrigger=PropertyChanged}"
-                                         PreviewKeyDown="MsgInputTextBox_PreviewKeyDown"
-                                         VerticalAlignment="Center" MinHeight="36" MaxHeight="100" TextWrapping="Wrap"/>
+                                <Grid Grid.Column="0" VerticalAlignment="Center">
+                                    <TextBox x:Name="MsgInputTextBox" Style="{StaticResource ModernTextBox}"
+                                             Text="{Binding InputMessageText, UpdateSourceTrigger=PropertyChanged}"
+                                             PreviewKeyDown="MsgInputTextBox_PreviewKeyDown"
+                                             VerticalAlignment="Center" MinHeight="36" MaxHeight="100" TextWrapping="Wrap"/>
+                                    <TextBlock Text="{Binding InputPlaceholderText}"
+                                               Foreground="{DynamicResource TextMutedBrush}"
+                                               FontSize="13" Margin="10,0,0,0"
+                                               VerticalAlignment="Center" IsHitTestVisible="False"
+                                               Visibility="{Binding HasInputText, Converter={StaticResource InverseBoolToVis}}"/>
+                                </Grid>
 
                                 <!-- Emoji Picker Trigger Button -->
                                 <Button Grid.Column="1" Style="{StaticResource ModernButton}" Width="32" Height="32" Padding="0" Margin="4,0,2,0"
@@ -1321,7 +1359,7 @@
 
                                 <Button Style="{StaticResource ModernButton}" ToolTip="Голосовое сообщение"
                                         Command="{Binding ToggleVoiceRecordCommand}" Width="40" Height="36" Padding="0"
-                                        Visibility="{Binding HasInputText, Converter={StaticResource InverseBoolToVis}}">
+                                        Visibility="{Binding CanSendMessage, Converter={StaticResource InverseBoolToVis}}">
                                     <Grid>
                                         <Path Data="{StaticResource IconMic}" Fill="{DynamicResource TextSecondaryBrush}" Width="15" Height="15" Stretch="Uniform"
                                               Visibility="{Binding IsRecordingVoice, Converter={StaticResource InverseBoolToVis}}"
@@ -1333,7 +1371,7 @@
                                 </Button>
                                 <Button Style="{StaticResource AccentButton}" ToolTip="Отправить (Enter)"
                                         Command="{Binding SendMessageCommand}" Width="40" Height="36" Padding="0"
-                                        Visibility="{Binding HasInputText, Converter={StaticResource BoolToVis}}">
+                                        Visibility="{Binding CanSendMessage, Converter={StaticResource BoolToVis}}">
                                     <Path Data="{StaticResource IconSend}" Fill="White" Width="16" Height="16" Stretch="Uniform"/>
                                 </Button>
                             </StackPanel>

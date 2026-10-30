@@ -30,4 +30,6 @@ public class RelayCommand : ICommand
     }
 
     public void RaiseCanExecuteChanged() => CommandManager.InvalidateRequerySuggested();
+
+    public void NotifyCanExecuteChanged() => CommandManager.InvalidateRequerySuggested();
 }
