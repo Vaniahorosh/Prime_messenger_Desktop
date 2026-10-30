@@ -560,7 +560,17 @@
 
                             <DataTemplate>
 
-                                <Grid Margin="0,4" HorizontalAlignment="{Binding IsFromMe, Converter={StaticResource MsgAlignConverter}}">
+                                <StackPanel HorizontalAlignment="Stretch">
+
+                                    <!-- Centered Date Header Pill matching Android layout_date_header -->
+                                    <Border HorizontalAlignment="Center" Margin="0,8,0,6"
+                                            Background="#182230" BorderBrush="#26364A" BorderThickness="1"
+                                            CornerRadius="12" Padding="12,4"
+                                            Visibility="{Binding ShowDateHeader, Converter={StaticResource BoolToVis}}">
+                                        <TextBlock Text="{Binding DateHeaderText}" Foreground="{StaticResource TextMutedBrush}" FontSize="11" FontWeight="SemiBold"/>
+                                    </Border>
+
+                                    <Grid Margin="0,2" HorizontalAlignment="{Binding IsFromMe, Converter={StaticResource MsgAlignConverter}}">
 
                                     <Grid.RenderTransform>
 
@@ -893,10 +903,38 @@
                                                                         Margin="0,0,0,6"
                                                                         Visibility="{Binding IsSingleVideo, Converter={StaticResource BoolToVis}}"/>
 
-                                            <!-- Message Text -->
-                                            <TextBlock Text="{Binding DisplayText}" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="13" TextWrapping="Wrap"
-                                                       Margin="6,4,6,4"
-                                                       Visibility="{Binding HasText, Converter={StaticResource BoolToVis}}"/>
+                                            <!-- Message Text with Rich Formatting & Clickable Links -->
+                                            <controls:FormattedMessageTextBlock RawText="{Binding DisplayText}"
+                                                                                Foreground="{DynamicResource TextPrimaryBrush}"
+                                                                                FontSize="{Binding MessageFontSize}"
+                                                                                TextWrapping="Wrap"
+                                                                                Margin="6,4,6,4"
+                                                                                Visibility="{Binding HasText, Converter={StaticResource BoolToVis}}"/>
+
+                                            <!-- OpenGraph Link Preview Card matching Android layout_link_preview -->
+                                            <Border Background="#16202E" BorderBrush="#2C3D56" BorderThickness="1" CornerRadius="8"
+                                                    Padding="8" Margin="4,2,4,4" Cursor="Hand"
+                                                    Visibility="{Binding HasLinkPreview, Converter={StaticResource BoolToVis}}"
+                                                    MouseLeftButtonUp="LinkPreviewCard_MouseLeftButtonUp"
+                                                    Tag="{Binding LinkPreview.Url}">
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <Border Grid.Column="0" Width="48" Height="48" CornerRadius="6" ClipToBounds="True"
+                                                            Margin="0,0,10,0" Background="#0F1622"
+                                                            Visibility="{Binding LinkPreview.HasImage, Converter={StaticResource BoolToVis}}">
+                                                        <Image Source="{Binding LinkPreview.LocalImagePath}" Stretch="UniformToFill" RenderOptions.BitmapScalingMode="HighQuality"/>
+                                                    </Border>
+                                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                                        <TextBlock Text="{Binding LinkPreview.Domain}" Foreground="{DynamicResource AccentBrush}" FontSize="10" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                                        <TextBlock Text="{Binding LinkPreview.Title}" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="12" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" Margin="0,2,0,0"/>
+                                                        <TextBlock Text="{Binding LinkPreview.Description}" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10" TextTrimming="CharacterEllipsis" Margin="0,2,0,0"
+                                                                   Visibility="{Binding LinkPreview.HasDescription, Converter={StaticResource BoolToVis}}"/>
+                                                    </StackPanel>
+                                                </Grid>
+                                            </Border>
 
 
 
@@ -982,6 +1020,8 @@
 
                                 </Grid>
 
+                                </StackPanel>
+
                             </DataTemplate>
 
                         </ItemsControl.ItemTemplate>
@@ -989,6 +1029,34 @@
                     </ItemsControl>
 
                 </ScrollViewer>
+
+                <!-- Floating Scroll-To-Bottom FAB Button matching Android btnScrollToBottom -->
+                <Button Grid.Row="1" x:Name="BtnScrollToBottom"
+                        Width="40" Height="40"
+                        HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                        Margin="0,0,24,20"
+                        Cursor="Hand"
+                        Click="BtnScrollToBottom_Click"
+                        Visibility="Collapsed"
+                        ToolTip="Прокрутить вниз">
+                    <Button.Template>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="Bd" Background="#24344D" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1.5"
+                                    CornerRadius="20">
+                                <Border.Effect>
+                                    <DropShadowEffect BlurRadius="8" ShadowDepth="2" Direction="270" Opacity="0.4"/>
+                                </Border.Effect>
+                                <Path Data="{StaticResource IconChevronDown}" Fill="{DynamicResource AccentBrush}"
+                                      Width="16" Height="16" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="Bd" Property="Background" Value="#2F4465"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Button.Template>
+                </Button>
 
                 <!-- Row 2: Reply Bar & Message Input Area -->
 

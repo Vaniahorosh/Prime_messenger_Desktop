@@ -44,6 +44,7 @@ public class ChatMessage : INotifyPropertyChanged
                 OnPropertyChanged(nameof(MessageFontSize));
                 OnPropertyChanged(nameof(BubblePadding));
                 OnPropertyChanged(nameof(IsRich));
+                TryLoadLinkPreview();
             }
         }
     }
@@ -340,6 +341,93 @@ public class ChatMessage : INotifyPropertyChanged
             if (IsEmojiOnly)
                 return new Thickness(10, 6, 10, 6);
             return new Thickness(12, 8, 12, 8);
+        }
+    }
+
+    [JsonIgnore]
+    private PrimeDesktop.Services.LinkPreviewData? _linkPreview;
+
+    [JsonIgnore]
+    public PrimeDesktop.Services.LinkPreviewData? LinkPreview
+    {
+        get => _linkPreview;
+        set
+        {
+            if (SetField(ref _linkPreview, value))
+            {
+                OnPropertyChanged(nameof(HasLinkPreview));
+            }
+        }
+    }
+
+    [JsonIgnore]
+    public bool HasLinkPreview => LinkPreview != null && !string.IsNullOrWhiteSpace(LinkPreview.Title);
+
+    [JsonIgnore]
+    private bool _showDateHeader;
+
+    [JsonIgnore]
+    public bool ShowDateHeader
+    {
+        get => _showDateHeader;
+        set => SetField(ref _showDateHeader, value);
+    }
+
+    [JsonIgnore]
+    public DateTime DateTimeLocal
+    {
+        get
+        {
+            try
+            {
+                long ts = Timestamp;
+                if (ts <= 0) return DateTime.Now;
+                if (ts < 100000000000L) ts *= 1000L;
+                return DateTimeOffset.FromUnixTimeMilliseconds(ts).LocalDateTime;
+            }
+            catch
+            {
+                return DateTime.Now;
+            }
+        }
+    }
+
+    [JsonIgnore]
+    private string _dateHeaderText = string.Empty;
+
+    [JsonIgnore]
+    public string DateHeaderText
+    {
+        get => _dateHeaderText;
+        set => SetField(ref _dateHeaderText, value);
+    }
+
+    public static string FormatDateHeader(DateTime date)
+    {
+        DateTime today = DateTime.Today;
+        if (date.Date == today) return "Сегодня";
+        if (date.Date == today.AddDays(-1)) return "Вчера";
+        if (date.Year == today.Year)
+            return date.ToString("d MMMM", new System.Globalization.CultureInfo("ru-RU"));
+        return date.ToString("d MMMM yyyy", new System.Globalization.CultureInfo("ru-RU"));
+    }
+
+    public void TryLoadLinkPreview()
+    {
+        string? url = PrimeDesktop.Services.LinkPreviewService.ExtractFirstUrl(_text);
+        if (!string.IsNullOrEmpty(url))
+        {
+            _ = System.Threading.Tasks.Task.Run(async () =>
+            {
+                var preview = await PrimeDesktop.Services.LinkPreviewService.FetchPreviewAsync(url);
+                if (preview != null)
+                {
+                    System.Windows.Application.Current?.Dispatcher?.Invoke(() =>
+                    {
+                        LinkPreview = preview;
+                    });
+                }
+            });
         }
     }
 

@@ -42,6 +42,10 @@ public partial class MainWindow : Window
         {
             ChatEmojiPicker.EmojiSelected += ChatEmojiPicker_EmojiSelected;
         }
+        if (MessagesScrollViewer != null)
+        {
+            MessagesScrollViewer.ScrollChanged += MessagesScrollViewer_ScrollChanged;
+        }
         Loaded += (s, e) =>
         {
             App.Log("MainWindow Loaded");
@@ -74,7 +78,16 @@ public partial class MainWindow : Window
                     {
                         AnimateSearch(vm.IsSearchActive);
                     }
+                    else if (args.PropertyName == nameof(MainViewModel.SelectedChat))
+                    {
+                        OnSelectedChatChanged(vm.SelectedChat);
+                    }
                 };
+
+                if (vm.SelectedChat != null)
+                {
+                    OnSelectedChatChanged(vm.SelectedChat);
+                }
             }
         };
 
@@ -484,6 +497,81 @@ public partial class MainWindow : Window
         if (DataContext is MainViewModel vm && e.NewSize.Width > 0)
         {
             vm.UpdateDrawerGridColumns(e.NewSize.Width);
+        }
+    }
+
+    private System.Collections.Specialized.NotifyCollectionChangedEventHandler? _messagesChangedHandler;
+    private Models.ChatItem? _currentlyTrackedChat;
+
+    private void OnSelectedChatChanged(Models.ChatItem? newChat)
+    {
+        if (_currentlyTrackedChat != null && _messagesChangedHandler != null)
+        {
+            _currentlyTrackedChat.Messages.CollectionChanged -= _messagesChangedHandler;
+        }
+
+        _currentlyTrackedChat = newChat;
+
+        if (_currentlyTrackedChat != null)
+        {
+            _messagesChangedHandler = (s, e) =>
+            {
+                if (e.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Add)
+                {
+                    Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Loaded, () =>
+                    {
+                        if (MessagesScrollViewer == null) return;
+                        double dist = MessagesScrollViewer.ScrollableHeight - MessagesScrollViewer.VerticalOffset;
+                        bool isFromMe = false;
+                        if (e.NewItems != null && e.NewItems.Count > 0 && e.NewItems[0] is Models.ChatMessage cm)
+                        {
+                            isFromMe = cm.IsFromMe;
+                        }
+
+                        if (dist < 150 || isFromMe)
+                        {
+                            MessagesScrollViewer.ScrollToBottom();
+                        }
+                    });
+                }
+            };
+            _currentlyTrackedChat.Messages.CollectionChanged += _messagesChangedHandler;
+
+            Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Loaded, () =>
+            {
+                MessagesScrollViewer?.ScrollToBottom();
+            });
+        }
+    }
+
+    private void MessagesScrollViewer_ScrollChanged(object sender, System.Windows.Controls.ScrollChangedEventArgs e)
+    {
+        if (BtnScrollToBottom == null || MessagesScrollViewer == null) return;
+        double distanceFromBottom = MessagesScrollViewer.ScrollableHeight - MessagesScrollViewer.VerticalOffset;
+        BtnScrollToBottom.Visibility = distanceFromBottom > 120 ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    private void BtnScrollToBottom_Click(object sender, RoutedEventArgs e)
+    {
+        MessagesScrollViewer?.ScrollToBottom();
+    }
+
+    private void LinkPreviewCard_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is FrameworkElement fe && fe.Tag is string url && !string.IsNullOrWhiteSpace(url))
+        {
+            try
+            {
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = url,
+                    UseShellExecute = true
+                });
+            }
+            catch (Exception ex)
+            {
+                App.Log($"[LinkPreview] Failed to open URL: {ex.Message}");
+            }
         }
     }
 

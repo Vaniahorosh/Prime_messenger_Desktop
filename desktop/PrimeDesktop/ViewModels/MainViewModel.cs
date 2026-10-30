@@ -122,6 +122,8 @@ public class MainViewModel : ViewModelBase
                     {
                         _ = ConnectSelectedChatAsync();
                     }
+
+                    RefreshDateHeadersAndPreviews(_selectedChat);
                 }
                 else
                 {
@@ -132,6 +134,53 @@ public class MainViewModel : ViewModelBase
             }
         }
 
+    }
+
+    public static void RefreshDateHeadersAndPreviews(ChatItem? chat)
+    {
+        if (chat == null || chat.Messages == null) return;
+        DateTime? lastDate = null;
+        for (int i = 0; i < chat.Messages.Count; i++)
+        {
+            var msg = chat.Messages[i];
+            DateTime msgDate = msg.DateTimeLocal.Date;
+            if (lastDate == null || msgDate != lastDate.Value)
+            {
+                msg.ShowDateHeader = true;
+                msg.DateHeaderText = ChatMessage.FormatDateHeader(msg.DateTimeLocal);
+                lastDate = msgDate;
+            }
+            else
+            {
+                msg.ShowDateHeader = false;
+                msg.DateHeaderText = string.Empty;
+            }
+            msg.TryLoadLinkPreview();
+        }
+    }
+
+    public static void PrepareMessage(ChatItem chat, ChatMessage msg)
+    {
+        if (chat.Messages.Count == 0)
+        {
+            msg.ShowDateHeader = true;
+            msg.DateHeaderText = ChatMessage.FormatDateHeader(msg.DateTimeLocal);
+        }
+        else
+        {
+            var prevMsg = chat.Messages[chat.Messages.Count - 1];
+            if (prevMsg.DateTimeLocal.Date != msg.DateTimeLocal.Date)
+            {
+                msg.ShowDateHeader = true;
+                msg.DateHeaderText = ChatMessage.FormatDateHeader(msg.DateTimeLocal);
+            }
+            else
+            {
+                msg.ShowDateHeader = false;
+                msg.DateHeaderText = string.Empty;
+            }
+        }
+        msg.TryLoadLinkPreview();
     }
 
     public bool HasSelectedChat => SelectedChat != null;
@@ -2741,6 +2790,7 @@ public async Task SendTextMessageAsync()
 
         };
 
+        PrepareMessage(targetChat, message);
         targetChat.Messages.Add(message);
         SoundEffectService.PlaySent(Settings);
 
@@ -2809,6 +2859,7 @@ public async Task SendTextMessageAsync()
 
         };
 
+        PrepareMessage(targetChat, msg);
         targetChat.Messages.Add(msg);
 
         targetChat.LastMessage = $"🎤 Голосовое сообщение ({duration})";
@@ -2870,6 +2921,7 @@ public async Task SendTextMessageAsync()
 
         };
 
+        PrepareMessage(targetChat, message);
         targetChat.Messages.Add(message);
         SoundEffectService.PlaySent(Settings);
 
@@ -2960,6 +3012,7 @@ public async Task SendTextMessageAsync()
                 FormattedTime = DateTime.Now.ToString("HH:mm")
             };
 
+            PrepareMessage(targetChat, message);
             targetChat.Messages.Add(message);
         SoundEffectService.PlaySent(Settings);
             targetChat.LastMessage = "📷 Коллаж";
@@ -3007,6 +3060,7 @@ public async Task SendTextMessageAsync()
             FormattedTime = DateTime.Now.ToString("HH:mm")
         };
 
+        PrepareMessage(targetChat, singleMsg);
         targetChat.Messages.Add(singleMsg);
         SoundEffectService.PlaySent(Settings);
         if (type == PacketType.Photo) targetChat.LastMessage = "📷 Фотография";
@@ -3081,6 +3135,7 @@ public async Task SendTextMessageAsync()
             FormattedTime = DateTime.Now.ToString("HH:mm")
         };
 
+        PrepareMessage(targetChat, singleMsg);
         targetChat.Messages.Add(singleMsg);
         targetChat.LastMessage = "👾 GIF-анимация";
         targetChat.LastMessageTime = singleMsg.FormattedTime;
@@ -3999,6 +4054,7 @@ public async Task SendTextMessageAsync()
 
                     };
 
+                    PrepareMessage(chat, msg);
                     chat.Messages.Add(msg);
 
                     chat.LastMessage = text;
@@ -4077,6 +4133,7 @@ public async Task SendTextMessageAsync()
                         chat.LastMessage = string.IsNullOrWhiteSpace(photoResult.Caption) ? "📷 Фотография" : $"📷 {photoResult.Caption}";
                     }
 
+                    PrepareMessage(chat, photoMsg);
                     chat.Messages.Add(photoMsg);
                     chat.LastMessageTime = photoMsg.FormattedTime;
                     if (SelectedChat != chat) chat.UnreadCount++;
@@ -4172,6 +4229,7 @@ public async Task SendTextMessageAsync()
                         FormattedTime = DateTime.Now.ToString("HH:mm")
                     };
 
+                    PrepareMessage(chat, incomingFileMsg);
                     chat.Messages.Add(incomingFileMsg);
                     if (isVoiceMsg) chat.LastMessage = "🎤 Голосовое сообщение";
                     else if (isVideoNote) chat.LastMessage = "📹 Видеосообщение";
@@ -4310,6 +4368,7 @@ public async Task SendTextMessageAsync()
 
                     };
 
+                    PrepareMessage(chat, voiceMsg);
                     chat.Messages.Add(voiceMsg);
 
                     chat.LastMessage = "🎤 Голосовое сообщение";
