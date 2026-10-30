@@ -198,6 +198,9 @@ public class CompanionBridgeService : IPrimeNetworkService
         if (_clients.TryGetValue(ip, out var clientIp) && clientIp.Connected)
             return true;
 
+        if (_clients.Count == 1 && _clients.Values.First().Connected)
+            return true;
+
         return false;
     }
 
@@ -225,7 +228,10 @@ public class CompanionBridgeService : IPrimeNetworkService
     public string ResolveHardwareAddress(string peerIdOrAddress)
     {
         if (string.IsNullOrWhiteSpace(peerIdOrAddress)) return string.Empty;
-        return _peerToIp.TryGetValue(peerIdOrAddress, out var ip) ? ip : peerIdOrAddress;
+        string res = _peerToIp.TryGetValue(peerIdOrAddress, out var ip) ? ip : peerIdOrAddress;
+        if (res.StartsWith("ip_", StringComparison.OrdinalIgnoreCase))
+            res = res.Substring(3);
+        return res;
     }
 
     public string ResolvePeerId(string hardwareAddressOrPeerId)
@@ -239,6 +245,7 @@ public class CompanionBridgeService : IPrimeNetworkService
     public async Task<bool> ConnectAsync(string peerIdOrIp)
     {
         string targetIp = ResolveHardwareAddress(peerIdOrIp);
+        if (string.IsNullOrWhiteSpace(targetIp)) return false;
         string peerId = GetOrCreatePeerId(targetIp);
 
         try
@@ -354,6 +361,18 @@ public class CompanionBridgeService : IPrimeNetworkService
         if (stream == null && _streams.Count == 1)
         {
             stream = _streams.Values.FirstOrDefault();
+        }
+
+        if (stream == null && !string.IsNullOrWhiteSpace(ip) && (ip.Contains('.') || !ip.StartsWith("peer_")))
+        {
+            bool connected = await ConnectAsync(ip);
+            if (connected)
+            {
+                if (!_streams.TryGetValue(peerId, out stream))
+                {
+                    _streams.TryGetValue(ip, out stream);
+                }
+            }
         }
 
         if (stream == null)

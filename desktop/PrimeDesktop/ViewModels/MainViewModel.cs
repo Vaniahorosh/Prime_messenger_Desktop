@@ -116,9 +116,8 @@ public class MainViewModel : ViewModelBase
 
                     _ = _storageService.SaveChatsAsync(_allChats);
 
-                    if (Settings != null && Settings.AutoConnectBluetooth && _selectedChat.IsBluetoothDevice && 
-                        !_selectedChat.IsOnline && _selectedChat.ConnectionState != DeviceConnectionState.Connecting &&
-                        !_selectedChat.PeerId.StartsWith("peer_prime"))
+                    if (!_selectedChat.IsOnline && _selectedChat.ConnectionState != DeviceConnectionState.Connecting &&
+                        !_selectedChat.PeerId.Equals("peer_prime_support", StringComparison.OrdinalIgnoreCase))
                     {
                         _ = ConnectSelectedChatAsync();
                     }
@@ -2883,7 +2882,7 @@ public async Task SendTextMessageAsync()
         try
         {
             string targetAddr = !string.IsNullOrWhiteSpace(targetChat.DeviceAddress) ? targetChat.DeviceAddress : targetChat.PeerId;
-            if (targetChat.IsBluetoothDevice && !targetChat.IsOnline && !targetChat.PeerId.StartsWith("peer_prime"))
+            if (!targetChat.IsOnline && !targetChat.PeerId.Equals("peer_prime_support", StringComparison.OrdinalIgnoreCase))
             {
                 StatusMessage = $"Подключение к {targetChat.DisplayName}...";
                 await ConnectDeviceNetworkAsync(targetAddr);
@@ -3147,7 +3146,7 @@ public async Task SendTextMessageAsync()
         string targetAddr = !string.IsNullOrWhiteSpace(targetChat.DeviceAddress) ? targetChat.DeviceAddress : targetChat.PeerId;
 
         // Auto-connect if disconnected
-        if (targetChat.IsBluetoothDevice && !targetChat.IsOnline && !targetChat.PeerId.StartsWith("peer_prime"))
+        if (!targetChat.IsOnline && !targetChat.PeerId.Equals("peer_prime_support", StringComparison.OrdinalIgnoreCase))
         {
             StatusMessage = $"Подключение к {targetChat.DisplayName}...";
             await ConnectDeviceNetworkAsync(targetAddr);
@@ -3323,7 +3322,7 @@ public async Task SendTextMessageAsync()
         SendMyActivityState("SENDING_PHOTO", true);
 
         string targetAddr = !string.IsNullOrWhiteSpace(targetChat.DeviceAddress) ? targetChat.DeviceAddress : targetChat.PeerId;
-        if (targetChat.IsBluetoothDevice && !targetChat.IsOnline && !targetChat.PeerId.StartsWith("peer_prime"))
+        if (!targetChat.IsOnline && !targetChat.PeerId.Equals("peer_prime_support", StringComparison.OrdinalIgnoreCase))
         {
             StatusMessage = $"Подключение к {targetChat.DisplayName}...";
             await ConnectDeviceNetworkAsync(targetAddr);
@@ -3936,29 +3935,27 @@ public async Task SendTextMessageAsync()
     {
         if (string.IsNullOrWhiteSpace(targetAddressOrPeer)) return;
 
-        if (_companionService.IsConnected(targetAddressOrPeer))
-        {
-            await _companionService.SendPacketAsync(targetAddressOrPeer, type, payload);
-            return;
-        }
-
-        if (_bluetoothService.IsConnected(targetAddressOrPeer))
-        {
-            await _bluetoothService.SendPacketAsync(targetAddressOrPeer, type, payload);
-            return;
-        }
-
         var chat = FindChatByAddressOrPeer(targetAddressOrPeer);
         bool isWifi = (chat != null && !chat.IsBluetoothDevice) ||
                       targetAddressOrPeer.Contains('.') ||
-                      targetAddressOrPeer.StartsWith("ip_", StringComparison.OrdinalIgnoreCase);
+                      targetAddressOrPeer.StartsWith("ip_", StringComparison.OrdinalIgnoreCase) ||
+                      targetAddressOrPeer.Equals("PrimeDesktop", StringComparison.OrdinalIgnoreCase);
 
         if (isWifi)
         {
+            if (!_companionService.IsConnected(targetAddressOrPeer))
+            {
+                string connectAddr = !string.IsNullOrWhiteSpace(chat?.DeviceAddress) ? chat.DeviceAddress : targetAddressOrPeer;
+                await _companionService.ConnectAsync(connectAddr);
+            }
             await _companionService.SendPacketAsync(targetAddressOrPeer, type, payload);
         }
         else
         {
+            if (!_bluetoothService.IsConnected(targetAddressOrPeer))
+            {
+                await _bluetoothService.ConnectAsync(targetAddressOrPeer);
+            }
             await _bluetoothService.SendPacketAsync(targetAddressOrPeer, type, payload);
         }
     }
@@ -3969,11 +3966,13 @@ public async Task SendTextMessageAsync()
         var chat = FindChatByAddressOrPeer(targetAddressOrPeer);
         bool isWifi = (chat != null && !chat.IsBluetoothDevice) ||
                       targetAddressOrPeer.Contains('.') ||
-                      targetAddressOrPeer.StartsWith("ip_", StringComparison.OrdinalIgnoreCase);
+                      targetAddressOrPeer.StartsWith("ip_", StringComparison.OrdinalIgnoreCase) ||
+                      targetAddressOrPeer.Equals("PrimeDesktop", StringComparison.OrdinalIgnoreCase);
 
         if (isWifi)
         {
-            await _companionService.ConnectAsync(targetAddressOrPeer);
+            string connectAddr = !string.IsNullOrWhiteSpace(chat?.DeviceAddress) ? chat.DeviceAddress : targetAddressOrPeer;
+            await _companionService.ConnectAsync(connectAddr);
         }
         else
         {
