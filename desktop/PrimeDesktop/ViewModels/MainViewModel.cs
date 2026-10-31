@@ -2486,6 +2486,19 @@ public class MainViewModel : ViewModelBase
 
     }
 
+    private static void RunOnUIThread(Action action)
+    {
+        var dispatcher = Application.Current?.Dispatcher;
+        if (dispatcher == null || dispatcher.CheckAccess())
+        {
+            action();
+        }
+        else
+        {
+            dispatcher.Invoke(action);
+        }
+    }
+
     private async Task InitializeAsync()
     {
         try
@@ -2493,7 +2506,7 @@ public class MainViewModel : ViewModelBase
             App.Log("[Init] Starting InitializeAsync...");
             Settings = await _storageService.LoadSettingsAsync();
 
-            Application.Current?.Dispatcher?.Invoke(() =>
+            RunOnUIThread(() =>
             {
                 ThemeManager.InitializeTheme(Settings.ThemeMode, Settings.AccentColorHex);
             });
@@ -2501,7 +2514,7 @@ public class MainViewModel : ViewModelBase
             var chats = await _storageService.LoadChatsAsync();
             App.Log($"[Init] Loaded {chats.Count} chats from storage.");
 
-            Application.Current?.Dispatcher?.Invoke(() =>
+            RunOnUIThread(() =>
             {
                 var cleanChats = new List<ChatItem>();
                 foreach (var c in chats)
@@ -2640,7 +2653,7 @@ public class MainViewModel : ViewModelBase
             // Automatically discover paired Bluetooth devices and add them to chats if not present (instant, no radio blocking)
             var paired = await _bluetoothService.DiscoverDevicesAsync(includeUnpaired: false);
             App.Log($"[Init] Discovered {paired.Count} paired devices.");
-            Application.Current?.Dispatcher?.Invoke(() =>
+            RunOnUIThread(() =>
             {
                 foreach (var dev in paired)
                 {
@@ -3457,7 +3470,7 @@ public async Task SendTextMessageAsync()
             });
         }
 
-        App.Current?.Dispatcher?.Invoke(() =>
+        RunOnUIThread(() =>
         {
             _myActivityIdleTimer?.Stop();
             if (state != "IDLE")
@@ -4914,7 +4927,7 @@ public async Task SendTextMessageAsync()
 
     private void OnNetworkError(string source, string message)
     {
-        Application.Current?.Dispatcher?.Invoke(() =>
+        RunOnUIThread(() =>
         {
             var chat = FindChatByAddressOrPeer(source);
             string sender = chat != null && !DeviceAnonymizer.IsHardwareIdentifier(chat.DisplayName)
