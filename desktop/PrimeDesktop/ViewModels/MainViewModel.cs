@@ -1,5 +1,5 @@
 using System;
-
+using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
 
 using System.IO;
@@ -2893,7 +2893,9 @@ public async Task SendTextMessageAsync()
         }
         catch (Exception ex)
         {
-            StatusMessage = $"Sending failed: {ex.Message}";
+            App.Log($"[Send] Failed to send message to '{targetChat.DisplayName}', queuing in outbox: {ex.Message}");
+            QueueOutboxPacket(targetChat.Id, PacketType.Text, payload, message);
+            StatusMessage = "Ожидание соединения для отправки сообщения...";
         }
 
         await _storageService.SaveChatsAsync(_allChats);
@@ -2936,24 +2938,20 @@ public async Task SendTextMessageAsync()
 
         targetChat.LastMessageTime = msg.FormattedTime;
 
+        byte[]? payload = null;
         try
-
         {
-            
             string vFileName = System.IO.Path.GetFileName(filePath);
-            byte[] payload = PrimePacket.BuildFilePayload(msg.Id, vFileName, fileBytes, duration, isVoice: true);
+            payload = PrimePacket.BuildFilePayload(msg.Id, vFileName, fileBytes, duration, isVoice: true);
             string targetAddr = !string.IsNullOrWhiteSpace(targetChat.DeviceAddress) ? targetChat.DeviceAddress : targetChat.PeerId;
             await SendNetworkPacketAsync(targetAddr, PacketType.File, payload);
-
             msg.IsDelivered = true;
-
         }
-
         catch (Exception ex)
-
         {
-            StatusMessage = $"Ошибка отправки аудио: {ex.Message}";
-
+            App.Log($"[Send] Failed to send voice message, queuing in outbox: {ex.Message}");
+            if (payload != null) QueueOutboxPacket(targetChat.Id, PacketType.File, payload, msg);
+            StatusMessage = "Ожидание соединения для отправки голосового сообщения...";
         }
 
         await _storageService.SaveChatsAsync(_allChats);
@@ -3239,15 +3237,18 @@ public async Task SendTextMessageAsync()
                 targetChat.LastMessage = !string.IsNullOrWhiteSpace(caption) ? $"📷 {caption}" : "📷 Коллаж";
                 targetChat.LastMessageTime = message.FormattedTime;
 
+                byte[]? payload = null;
                 try
                 {
-                    byte[] payload = PrimePacket.BuildCollagePayload(message.Id, items, caption);
+                    payload = PrimePacket.BuildCollagePayload(message.Id, items, caption);
                     await SendNetworkPacketAsync(targetAddr, PacketType.Photo, payload);
                     message.IsDelivered = true;
                 }
                 catch (Exception ex)
                 {
-                    StatusMessage = $"Ошибка отправки коллажа: {ex.Message}";
+                    App.Log($"[Send] Failed to send collage, queuing in outbox: {ex.Message}");
+                    if (payload != null) QueueOutboxPacket(targetChat.Id, PacketType.Photo, payload, message);
+                    StatusMessage = "Ожидание соединения для отправки коллажа...";
                 }
             }
             else if (pending.Type == PacketType.Photo)
@@ -3277,15 +3278,18 @@ public async Task SendTextMessageAsync()
                 targetChat.LastMessage = !string.IsNullOrWhiteSpace(caption) ? $"📷 {caption}" : "📷 Фотография";
                 targetChat.LastMessageTime = singleMsg.FormattedTime;
 
+                byte[]? payload = null;
                 try
                 {
-                    byte[] payload = PrimePacket.BuildPhotoPayload(singleMsg.Id, optimizedBytes, caption);
+                    payload = PrimePacket.BuildPhotoPayload(singleMsg.Id, optimizedBytes, caption);
                     await SendNetworkPacketAsync(targetAddr, PacketType.Photo, payload);
                     singleMsg.IsDelivered = true;
                 }
                 catch (Exception ex)
                 {
-                    StatusMessage = $"Ошибка отправки фото: {ex.Message}";
+                    App.Log($"[Send] Failed to send photo, queuing in outbox: {ex.Message}");
+                    if (payload != null) QueueOutboxPacket(targetChat.Id, PacketType.Photo, payload, singleMsg);
+                    StatusMessage = "Ожидание соединения для отправки фото...";
                 }
             }
             else
@@ -3324,16 +3328,19 @@ public async Task SendTextMessageAsync()
                 else targetChat.LastMessage = $"📎 {fileName}";
                 targetChat.LastMessageTime = singleMsg.FormattedTime;
 
+                byte[]? payload = null;
                 try
                 {
                     string effectiveCaption = isVideoNote ? $"VIDEO_NOTE:{Settings.VideoNoteRadiusPercent}" : caption;
-                    byte[] payload = PrimePacket.BuildFilePayload(singleMsg.Id, fileName, fileBytes, "00:00", false, effectiveCaption);
+                    payload = PrimePacket.BuildFilePayload(singleMsg.Id, fileName, fileBytes, "00:00", false, effectiveCaption);
                     await SendNetworkPacketAsync(targetAddr, PacketType.File, payload);
                     singleMsg.IsDelivered = true;
                 }
                 catch (Exception ex)
                 {
-                    StatusMessage = $"Ошибка отправки файла: {ex.Message}";
+                    App.Log($"[Send] Failed to send attachment, queuing in outbox: {ex.Message}");
+                    if (payload != null) QueueOutboxPacket(targetChat.Id, PacketType.File, payload, singleMsg);
+                    StatusMessage = "Ожидание соединения для отправки файла...";
                 }
             }
 
@@ -4120,6 +4127,10 @@ public async Task SendTextMessageAsync()
 
             chat.ConnectionState = state;
             chat.IsOnline = (state == DeviceConnectionState.Connected);
+            if (chat.IsOnline)
+            {
+                _ = FlushOutboxAsync(chat);
+            }
 
             // NEVER overwrite DisplayName with status messages like 'Ошибка подключения'
             if (!string.IsNullOrWhiteSpace(name) && !IsStatusKeyword(name) && !IsGenericDeviceName(name))
@@ -4913,5 +4924,54 @@ public async Task SendTextMessageAsync()
             StatusMessage = $"{sender}: {cleanMsg}";
         });
     }
+
+    #region Outbox Auto-Delivery Queue
+
+    private class QueuedOutboxItem
+    {
+        public PacketType Type { get; set; }
+        public byte[] Payload { get; set; } = Array.Empty<byte>();
+        public ChatMessage? Message { get; set; }
+    }
+
+    private readonly ConcurrentDictionary<string, ConcurrentQueue<QueuedOutboxItem>> _pendingOutbox = new(StringComparer.OrdinalIgnoreCase);
+
+    public void QueueOutboxPacket(string targetAddressOrPeer, PacketType type, byte[] payload, ChatMessage? message)
+    {
+        var chat = FindChatByAddressOrPeer(targetAddressOrPeer);
+        string key = chat?.Id ?? targetAddressOrPeer;
+        var queue = _pendingOutbox.GetOrAdd(key, _ => new ConcurrentQueue<QueuedOutboxItem>());
+        queue.Enqueue(new QueuedOutboxItem { Type = type, Payload = payload, Message = message });
+    }
+
+    private async Task FlushOutboxAsync(ChatItem chat)
+    {
+        if (chat == null || !chat.IsOnline) return;
+        string key = chat.Id;
+        if (_pendingOutbox.TryGetValue(key, out var queue) && !queue.IsEmpty)
+        {
+            string targetAddr = !string.IsNullOrWhiteSpace(chat.DeviceAddress) ? chat.DeviceAddress : chat.PeerId;
+            while (queue.TryDequeue(out var item))
+            {
+                try
+                {
+                    await SendNetworkPacketAsync(targetAddr, item.Type, item.Payload);
+                    if (item.Message != null)
+                    {
+                        item.Message.IsDelivered = true;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    App.Log($"[Outbox] Failed to send queued packet to '{chat.DisplayName}': {ex.Message}");
+                    queue.Enqueue(item);
+                    break;
+                }
+            }
+            await _storageService.SaveChatsAsync(_allChats);
+        }
+    }
+
+    #endregion
 }
 
