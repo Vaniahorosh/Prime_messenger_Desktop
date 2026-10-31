@@ -1,8 +1,12 @@
 using System;
+using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Interop;
+using System.Windows.Media.Imaging;
+using PrimeDesktop.Models;
 using PrimeDesktop.Services;
 using PrimeDesktop.ViewModels;
 using Application = System.Windows.Application;
@@ -38,6 +42,10 @@ public partial class MainWindow : Window
         StateChanged += MainWindow_StateChanged;
 
         TrayService = new SystemTrayService(this);
+        if (MsgInputTextBox != null)
+        {
+            DataObject.AddPastingHandler(MsgInputTextBox, OnMsgInputTextBoxPasting);
+        }
         if (ChatEmojiPicker != null)
         {
             ChatEmojiPicker.EmojiSelected += ChatEmojiPicker_EmojiSelected;
@@ -114,6 +122,20 @@ public partial class MainWindow : Window
 
         PreviewKeyDown += (s, e) =>
         {
+            if (Keyboard.Modifiers.HasFlag(ModifierKeys.Control) && e.Key == Key.V)
+            {
+                var focused = FocusManager.GetFocusedElement(this);
+                if (focused != MsgInputTextBox && focused is not System.Windows.Controls.TextBox)
+                {
+                    if (TryPasteMediaFromClipboard())
+                    {
+                        MsgInputTextBox?.Focus();
+                        e.Handled = true;
+                        return;
+                    }
+                }
+            }
+
             if (e.Key == Key.Escape)
             {
                 if (DataContext is MainViewModel vm)
@@ -386,6 +408,14 @@ public partial class MainWindow : Window
     {
         if (Keyboard.Modifiers.HasFlag(ModifierKeys.Control))
         {
+            if (e.Key == Key.V)
+            {
+                if (TryPasteMediaFromClipboard())
+                {
+                    e.Handled = true;
+                    return;
+                }
+            }
             if (e.Key == Key.B)
             {
                 ApplySelectionFormatting("<b>", "</b>");
@@ -677,5 +707,90 @@ public partial class MainWindow : Window
                 e.Handled = true;
             }
         }
+    }
+
+    private void OnMsgInputTextBoxPasting(object sender, DataObjectPastingEventArgs e)
+    {
+        if (TryPasteMediaFromClipboard())
+        {
+            e.CancelCommand();
+            e.Handled = true;
+        }
+    }
+
+    private bool TryPasteMediaFromClipboard()
+    {
+        if (DataContext is not MainViewModel vm || !vm.HasSelectedChat)
+            return false;
+
+        try
+        {
+            IDataObject? dataObj = null;
+            try { dataObj = Clipboard.GetDataObject(); } catch { }
+
+            // 1. Files copied in Windows Explorer (Ctrl+C on file)
+            if (Clipboard.ContainsFileDropList())
+            {
+                var fileDrop = Clipboard.GetFileDropList();
+                if (fileDrop != null && fileDrop.Count > 0)
+                {
+                    var files = fileDrop.Cast<string>().Where(File.Exists).ToArray();
+                    if (files.Length > 0)
+                    {
+                        vm.StageFilePaths(files);
+                        MsgInputTextBox?.Focus();
+                        return true;
+                    }
+                }
+            }
+            else if (dataObj != null && dataObj.GetDataPresent(DataFormats.FileDrop))
+            {
+                if (dataObj.GetData(DataFormats.FileDrop) is string[] files && files.Length > 0)
+                {
+                    var valid = files.Where(File.Exists).ToArray();
+                    if (valid.Length > 0)
+                    {
+                        vm.StageFilePaths(valid);
+                        MsgInputTextBox?.Focus();
+                        return true;
+                    }
+                }
+            }
+
+            // 2. Image (Snipping tool, PrintScreen, copied web picture, bitmap in clipboard)
+            if (Clipboard.ContainsImage() || (dataObj != null && dataObj.GetDataPresent(DataFormats.Bitmap)))
+            {
+                BitmapSource? image = null;
+                try { image = Clipboard.GetImage(); } catch { }
+                if (image == null && dataObj != null && dataObj.GetDataPresent(DataFormats.Bitmap))
+                {
+                    image = dataObj.GetData(DataFormats.Bitmap) as BitmapSource;
+                }
+
+                if (image != null)
+                {
+                    string tempDir = Path.Combine(Path.GetTempPath(), "PrimeDesktop", "Clipboard");
+                    Directory.CreateDirectory(tempDir);
+                    string tempFile = Path.Combine(tempDir, $"Screenshot_{DateTime.Now:yyyyMMdd_HHmmss}_{Guid.NewGuid():N}.png");
+
+                    using (var fileStream = new FileStream(tempFile, FileMode.Create, FileAccess.Write, FileShare.None))
+                    {
+                        var encoder = new PngBitmapEncoder();
+                        encoder.Frames.Add(BitmapFrame.Create(image));
+                        encoder.Save(fileStream);
+                    }
+
+                    vm.StageFilePaths(new[] { tempFile }, PacketType.Photo);
+                    MsgInputTextBox?.Focus();
+                    return true;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            App.Log($"[Clipboard] Failed to paste media from clipboard: {ex.Message}");
+        }
+
+        return false;
     }
 }

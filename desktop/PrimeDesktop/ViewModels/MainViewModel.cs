@@ -3067,6 +3067,39 @@ public async Task SendTextMessageAsync()
 
             bool isPhoto = (forcedType == PacketType.Photo) || isAllImages;
 
+            if (isPhoto && PendingAttachment != null && PendingAttachment.Type == PacketType.Photo)
+            {
+                // Combine into collage if an image/collage is already staged
+                var combined = new List<string>(PendingAttachment.FilePaths);
+                foreach (var vf in validFiles)
+                {
+                    if (!combined.Contains(vf, StringComparer.OrdinalIgnoreCase))
+                    {
+                        combined.Add(vf);
+                    }
+                }
+
+                long totalSize = 0;
+                foreach (var fn in combined)
+                {
+                    try { totalSize += new FileInfo(fn).Length; } catch { }
+                }
+
+                PendingAttachment = new PendingAttachment
+                {
+                    Type = PacketType.Photo,
+                    IsCollage = combined.Count > 1,
+                    PrimaryFilePath = combined[0],
+                    FilePaths = combined,
+                    Title = combined.Count > 1 ? $"Коллаж ({combined.Count} фото)" : FormatAttachmentTitle(combined[0]),
+                    Subtitle = PendingAttachment.FormatFileSize(totalSize),
+                    HasImageThumbnail = true
+                };
+
+                StatusMessage = $"Вложение обновлено: {combined.Count} фото. Добавьте подпись и нажмите Отправить.";
+                return;
+            }
+
             if (isPhoto && validFiles.Length > 1)
             {
                 // Multi-photo collage
@@ -3100,7 +3133,7 @@ public async Task SendTextMessageAsync()
                     IsCollage = false,
                     PrimaryFilePath = path,
                     FilePaths = new List<string> { path },
-                    Title = Path.GetFileName(path),
+                    Title = FormatAttachmentTitle(path),
                     Subtitle = PendingAttachment.FormatFileSize(size),
                     HasImageThumbnail = true
                 };
@@ -3135,6 +3168,25 @@ public async Task SendTextMessageAsync()
         {
             SendMyActivityState("IDLE", true);
         }
+    }
+
+    private static string FormatAttachmentTitle(string path)
+    {
+        string fileName = Path.GetFileName(path);
+        if (fileName.StartsWith("Screenshot_", StringComparison.OrdinalIgnoreCase))
+        {
+            var parts = fileName.Split('_');
+            if (parts.Length >= 3 && parts[2].Length >= 6)
+            {
+                string timeStr = parts[2].Substring(0, 6);
+                if (timeStr.Length == 6)
+                {
+                    return $"Скриншот {timeStr.Substring(0, 2)}:{timeStr.Substring(2, 2)}:{timeStr.Substring(4, 2)}";
+                }
+            }
+            return "Скриншот экрана";
+        }
+        return fileName;
     }
 
     public async Task SendPendingAttachmentAsync(ChatItem targetChat, PendingAttachment pending, string caption)
