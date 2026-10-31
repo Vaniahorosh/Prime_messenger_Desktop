@@ -2637,8 +2637,8 @@ public class MainViewModel : ViewModelBase
                 App.Log($"[Init] Companion Wi-Fi server failed to start: {ex.Message}");
             }
 
-            // Automatically discover paired Bluetooth devices and add them to chats if not present
-            var paired = await _bluetoothService.DiscoverDevicesAsync();
+            // Automatically discover paired Bluetooth devices and add them to chats if not present (instant, no radio blocking)
+            var paired = await _bluetoothService.DiscoverDevicesAsync(includeUnpaired: false);
             App.Log($"[Init] Discovered {paired.Count} paired devices.");
             Application.Current?.Dispatcher?.Invoke(() =>
             {

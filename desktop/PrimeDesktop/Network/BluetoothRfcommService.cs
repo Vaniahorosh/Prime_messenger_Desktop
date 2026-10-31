@@ -613,14 +613,16 @@ public class BluetoothRfcommService : IPrimeNetworkService
         }
     }
 
-    public async Task<List<ChatItem>> DiscoverDevicesAsync()
+    public Task<List<ChatItem>> DiscoverDevicesAsync() => DiscoverDevicesAsync(includeUnpaired: true);
+
+    public async Task<List<ChatItem>> DiscoverDevicesAsync(bool includeUnpaired)
     {
         var result = new List<ChatItem>();
         var seenMacs = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         try
         {
-            // 1. Paired devices
+            // 1. Paired devices (instant, from Windows paired list)
             string pairedSelector = BluetoothDevice.GetDeviceSelectorFromPairingState(true);
             var pairedDevices = await DeviceInformation.FindAllAsync(pairedSelector);
             foreach (var dev in pairedDevices)
@@ -628,19 +630,34 @@ public class BluetoothRfcommService : IPrimeNetworkService
                 await ProcessDiscoveredDeviceAsync(dev, result, seenMacs);
             }
 
-            // 2. Unpaired nearby devices (inquiry)
-            try
+            // 2. Unpaired nearby devices (inquiry - only if requested, e.g. during manual user scan)
+            if (includeUnpaired)
             {
-                string unpairedSelector = BluetoothDevice.GetDeviceSelectorFromPairingState(false);
-                var unpairedDevices = await DeviceInformation.FindAllAsync(unpairedSelector);
-                foreach (var dev in unpairedDevices)
+                try
                 {
-                    await ProcessDiscoveredDeviceAsync(dev, result, seenMacs);
+                    string unpairedSelector = BluetoothDevice.GetDeviceSelectorFromPairingState(false);
+                    var unpairedOp = DeviceInformation.FindAllAsync(unpairedSelector);
+                    var timeoutTask = Task.Delay(5000);
+                    var completedTask = await Task.WhenAny(unpairedOp.AsTask(), timeoutTask);
+
+                    if (completedTask != timeoutTask)
+                    {
+                        var unpairedDevices = await unpairedOp;
+                        foreach (var dev in unpairedDevices)
+                        {
+                            await ProcessDiscoveredDeviceAsync(dev, result, seenMacs);
+                        }
+                    }
+                    else
+                    {
+                        unpairedOp.Cancel();
+                        App.Log("[Bluetooth] Unpaired device inquiry timed out after 5s.");
+                    }
                 }
-            }
-            catch (Exception ex)
-            {
-                App.Log($"[Bluetooth] Unpaired device discovery warning: {ex.Message}");
+                catch (Exception ex)
+                {
+                    App.Log($"[Bluetooth] Unpaired device discovery warning: {ex.Message}");
+                }
             }
         }
         catch (Exception ex)
