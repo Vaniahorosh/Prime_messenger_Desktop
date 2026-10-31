@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Windows.Devices.Bluetooth;
 using Windows.Devices.Bluetooth.Rfcomm;
 using Windows.Devices.Enumeration;
+using Windows.Devices.Radios;
 using Windows.Networking.Sockets;
 using Windows.Storage.Streams;
 using PrimeDesktop.Models;
@@ -135,8 +136,51 @@ public class BluetoothRfcommService : IPrimeNetworkService
         return loc.GetHashCode() >= rem.GetHashCode();
     }
 
+    private Radio? _bluetoothRadio;
+    private bool _isRadioMonitoringStarted;
+
+    private async Task EnsureRadioMonitoringAsync()
+    {
+        if (_isRadioMonitoringStarted) return;
+        _isRadioMonitoringStarted = true;
+
+        try
+        {
+            var adapter = await BluetoothAdapter.GetDefaultAsync();
+            if (adapter != null)
+            {
+                _bluetoothRadio = await adapter.GetRadioAsync();
+                if (_bluetoothRadio != null)
+                {
+                    _bluetoothRadio.StateChanged += (s, e) =>
+                    {
+                        App.Log($"[Bluetooth] Radio StateChanged: {_bluetoothRadio.State}");
+                        if (_bluetoothRadio.State == RadioState.On)
+                        {
+                            if (_serverListener == null)
+                            {
+                                App.Log("[Bluetooth] Radio turned on, starting RFCOMM server...");
+                                _ = StartServerAsync();
+                            }
+                        }
+                        else if (_bluetoothRadio.State == RadioState.Off)
+                        {
+                            App.Log("[Bluetooth] Radio turned off by user, stopping RFCOMM server...");
+                            _ = StopServerAsync();
+                        }
+                    };
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            App.Log($"[Bluetooth] EnsureRadioMonitoringAsync error: {ex.Message}");
+        }
+    }
+
     public async Task StartServerAsync()
     {
+        _ = EnsureRadioMonitoringAsync();
         try
         {
             _rfcommProvider = await RfcommServiceProvider.CreateAsync(RfcommServiceId.FromUuid(PrimeServiceUuid));
@@ -286,6 +330,22 @@ public class BluetoothRfcommService : IPrimeNetworkService
                 _hardwareAddressToPeer[rawAddress] = peerId;
             }
 
+            // Automatic pairing if not already paired
+            if (device.DeviceInformation?.Pairing != null &&
+                !device.DeviceInformation.Pairing.IsPaired &&
+                device.DeviceInformation.Pairing.CanPair)
+            {
+                App.Log($"[Bluetooth] Device '{rawAddress}' is not paired. Requesting pairing...");
+                ConnectionStateChanged?.Invoke(peerId, DeviceConnectionState.Connecting, "Сопряжение с устройством...");
+                var pairResult = await device.DeviceInformation.Pairing.PairAsync(DevicePairingProtectionLevel.None);
+                App.Log($"[Bluetooth] Pairing result for '{rawAddress}': {pairResult.Status}");
+                if (pairResult.Status != DevicePairingResultStatus.Paired && pairResult.Status != DevicePairingResultStatus.AlreadyPaired)
+                {
+                    ConnectionStateChanged?.Invoke(peerId, DeviceConnectionState.Disconnected, "Ошибка сопряжения");
+                    return false;
+                }
+            }
+
             // Role arbitration matching Android BluetoothConnectionManager
             if (!forceClient && !IsClientInitiator(MyDisplayName, device.Name))
             {
@@ -306,11 +366,19 @@ public class BluetoothRfcommService : IPrimeNetworkService
                 App.Log($"[Bluetooth] 3.5s timeout expired, proceeding as client initiator...");
             }
 
-            // CRITICAL FIX: Query RFCOMM services with Uncached mode first to avoid stale cached RFCOMM channels
+            // Query RFCOMM services with Uncached mode first to avoid stale cached RFCOMM channels
             App.Log($"[Bluetooth] Querying RFCOMM services for '{rawAddress}' (Uncached)...");
             var rfcommServices = await device.GetRfcommServicesForIdAsync(
                 RfcommServiceId.FromUuid(PrimeServiceUuid),
                 BluetoothCacheMode.Uncached);
+
+            if (rfcommServices.Services.Count == 0)
+            {
+                await Task.Delay(600);
+                rfcommServices = await device.GetRfcommServicesForIdAsync(
+                    RfcommServiceId.FromUuid(PrimeServiceUuid),
+                    BluetoothCacheMode.Uncached);
+            }
 
             if (rfcommServices.Services.Count == 0)
             {
@@ -502,60 +570,31 @@ public class BluetoothRfcommService : IPrimeNetworkService
     public async Task<List<ChatItem>> DiscoverDevicesAsync()
     {
         var result = new List<ChatItem>();
+        var seenMacs = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
         try
         {
-            string selector = BluetoothDevice.GetDeviceSelector();
-            var devices = await DeviceInformation.FindAllAsync(selector);
-
-            foreach (var dev in devices)
+            // 1. Paired devices
+            string pairedSelector = BluetoothDevice.GetDeviceSelectorFromPairingState(true);
+            var pairedDevices = await DeviceInformation.FindAllAsync(pairedSelector);
+            foreach (var dev in pairedDevices)
             {
-                if (DeviceAnonymizer.IsDisallowedPeripherals(dev.Name))
+                await ProcessDiscoveredDeviceAsync(dev, result, seenMacs);
+            }
+
+            // 2. Unpaired nearby devices (inquiry)
+            try
+            {
+                string unpairedSelector = BluetoothDevice.GetDeviceSelectorFromPairingState(false);
+                var unpairedDevices = await DeviceInformation.FindAllAsync(unpairedSelector);
+                foreach (var dev in unpairedDevices)
                 {
-                    continue;
+                    await ProcessDiscoveredDeviceAsync(dev, result, seenMacs);
                 }
-
-                BluetoothDevice? btDev = null;
-                try
-                {
-                    btDev = await BluetoothDevice.FromIdAsync(dev.Id);
-                    if (btDev != null)
-                    {
-                        var cod = btDev.ClassOfDevice;
-                        if (cod != null)
-                        {
-                            var major = cod.MajorClass;
-                            if (major == BluetoothMajorClass.AudioVideo ||
-                                major == BluetoothMajorClass.Wearable ||
-                                major == BluetoothMajorClass.Peripheral ||
-                                major == BluetoothMajorClass.Imaging ||
-                                major == BluetoothMajorClass.Toy ||
-                                major == BluetoothMajorClass.Health)
-                            {
-                                continue;
-                            }
-                        }
-                    }
-                }
-                catch { }
-
-                string normMac = btDev != null
-                    ? NormalizeMacAddress(btDev.BluetoothAddress.ToString("X12"))
-                    : NormalizeMacAddress(dev.Id);
-
-                string peerId = GetOrCreatePeerId(normMac);
-                string cleanName = DeviceAnonymizer.SanitizeDisplayName(dev.Name, normMac);
-                string cleanUser = DeviceAnonymizer.SanitizeUsername(null, normMac);
-
-                result.Add(new ChatItem
-                {
-                    Id = peerId,
-                    PeerId = peerId,
-                    DeviceAddress = normMac,
-                    DisplayName = cleanName,
-                    Username = cleanUser,
-                    IsBluetoothDevice = true,
-                    ConnectionState = DeviceConnectionState.Disconnected
-                });
+            }
+            catch (Exception ex)
+            {
+                App.Log($"[Bluetooth] Unpaired device discovery warning: {ex.Message}");
             }
         }
         catch (Exception ex)
@@ -563,6 +602,62 @@ public class BluetoothRfcommService : IPrimeNetworkService
             ErrorOccurred?.Invoke("Discovery", $"Device scan failed: {ex.Message}");
         }
         return result;
+    }
+
+    private async Task ProcessDiscoveredDeviceAsync(DeviceInformation dev, List<ChatItem> result, HashSet<string> seenMacs)
+    {
+        if (string.IsNullOrWhiteSpace(dev.Name) || DeviceAnonymizer.IsDisallowedPeripherals(dev.Name))
+        {
+            return;
+        }
+
+        BluetoothDevice? btDev = null;
+        try
+        {
+            btDev = await BluetoothDevice.FromIdAsync(dev.Id);
+            if (btDev != null)
+            {
+                var cod = btDev.ClassOfDevice;
+                if (cod != null)
+                {
+                    var major = cod.MajorClass;
+                    if (major == BluetoothMajorClass.AudioVideo ||
+                        major == BluetoothMajorClass.Wearable ||
+                        major == BluetoothMajorClass.Peripheral ||
+                        major == BluetoothMajorClass.Imaging ||
+                        major == BluetoothMajorClass.Toy ||
+                        major == BluetoothMajorClass.Health)
+                    {
+                        return;
+                    }
+                }
+            }
+        }
+        catch { }
+
+        string normMac = btDev != null
+            ? NormalizeMacAddress(btDev.BluetoothAddress.ToString("X12"))
+            : NormalizeMacAddress(dev.Id);
+
+        if (string.IsNullOrEmpty(normMac) || !seenMacs.Add(normMac))
+        {
+            return;
+        }
+
+        string peerId = GetOrCreatePeerId(normMac);
+        string cleanName = DeviceAnonymizer.SanitizeDisplayName(dev.Name, normMac);
+        string cleanUser = DeviceAnonymizer.SanitizeUsername(null, normMac);
+
+        result.Add(new ChatItem
+        {
+            Id = peerId,
+            PeerId = peerId,
+            DeviceAddress = normMac,
+            DisplayName = cleanName,
+            Username = cleanUser,
+            IsBluetoothDevice = true,
+            ConnectionState = DeviceConnectionState.Disconnected
+        });
     }
 
     private void StartReading(string peerId, string rawAddress, Stream inStream)
