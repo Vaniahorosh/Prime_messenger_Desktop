@@ -668,7 +668,7 @@ namespace PrimeSetup
                 if (key != null)
                 {
                     key.SetValue("DisplayName", "Prime Desktop");
-                    key.SetValue("DisplayVersion", "0.1 Desk");
+                    key.SetValue("DisplayVersion", "0.2 Desk");
                     key.SetValue("Publisher", "Prime Team");
                     key.SetValue("InstallLocation", TargetDir);
                     key.SetValue("DisplayIcon", $"{exePath},0");
@@ -806,7 +806,7 @@ namespace PrimeSetup
 
             _installedVersion = installedVer;
 
-            string installerVer = "0.1 Desk";
+            string installerVer = "0.2 Desk";
             try
             {
                 var asm = Assembly.GetExecutingAssembly();

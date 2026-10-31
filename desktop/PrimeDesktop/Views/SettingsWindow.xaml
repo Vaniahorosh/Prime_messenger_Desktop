@@ -149,7 +149,7 @@
                 <Image Source="../Assets/prime_logo_app.png" Width="20" Height="20" Margin="0,0,8,0" RenderOptions.BitmapScalingMode="HighQuality"/>
                 <TextBlock Text="Настройки Prime Messenger" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="12" FontWeight="SemiBold"/>
                 <Border Background="{DynamicResource AccentSoftBrush}" CornerRadius="6" Padding="6,2" Margin="10,0,0,0">
-                    <TextBlock Text="v0.1 Desk" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"/>
+                    <TextBlock Text="v0.2 Desk" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"/>
                 </Border>
             </StackPanel>
 
@@ -667,7 +667,7 @@
                                                         Style="{StaticResource ModernButton}" DockPanel.Dock="Right" Padding="10,5" FontSize="11"/>
                                                 <StackPanel VerticalAlignment="Center">
                                                     <TextBlock Text="Сообщить о проблеме" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"/>
-                                                    <TextBlock Text="Prime Messenger v0.1 Desk" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                                    <TextBlock Text="Prime Messenger v0.2 Desk" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}"/>
                                                 </StackPanel>
                                             </DockPanel>
                                         </Border>
