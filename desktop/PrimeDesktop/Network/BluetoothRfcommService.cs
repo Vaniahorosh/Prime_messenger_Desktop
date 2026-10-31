@@ -47,6 +47,7 @@ public class BluetoothRfcommService : IPrimeNetworkService
     // Auto-retry state matching Android BluetoothConnectionManager
     private readonly ConcurrentDictionary<string, int> _retryCounts = new();
     private readonly ConcurrentDictionary<string, bool> _manuallyDisconnected = new();
+    private readonly ConcurrentDictionary<string, SemaphoreSlim> _connectLocks = new();
 
     public string MyDisplayName { get; set; } = Environment.MachineName;
     public string MyUsername { get; set; } = "prime_desktop";
@@ -133,7 +134,17 @@ public class BluetoothRfcommService : IPrimeNetworkService
         string rem = remoteName.Trim().ToUpperInvariant();
         int comp = string.Compare(loc, rem, StringComparison.Ordinal);
         if (comp != 0) return comp > 0;
-        return loc.GetHashCode() >= rem.GetHashCode();
+        return JavaStringHashCode(loc) >= JavaStringHashCode(rem);
+    }
+
+    private static int JavaStringHashCode(string s)
+    {
+        int h = 0;
+        for (int i = 0; i < s.Length; i++)
+        {
+            h = unchecked(31 * h + s[i]);
+        }
+        return h;
     }
 
     private Radio? _bluetoothRadio;
@@ -245,8 +256,17 @@ public class BluetoothRfcommService : IPrimeNetworkService
         _manuallyDisconnected.TryRemove(peerId, out _);
         _retryCounts.TryRemove(rawAddress, out _);
 
+        // If an active stream already exists, keep the active connection and ignore redundant incoming socket
+        if (_activeSockets.TryGetValue(rawAddress, out var existingSocket) && _activeStreams.ContainsKey(rawAddress))
+        {
+            App.Log($"[Bluetooth] ConnectionReceived: active connection already exists for '{rawAddress}', keeping active and closing redundant incoming socket.");
+            try { socket.Dispose(); } catch { }
+            ConnectionStateChanged?.Invoke(peerId, DeviceConnectionState.Connected, friendlyName);
+            return;
+        }
+
         // Clean up any stale active socket for this device
-        if (_activeSockets.TryGetValue(rawAddress, out var existingSocket))
+        if (existingSocket != null)
         {
             App.Log($"[Bluetooth] Disconnecting previous stale socket for '{rawAddress}'");
             DisconnectInternal(rawAddress);
@@ -279,7 +299,7 @@ public class BluetoothRfcommService : IPrimeNetworkService
             }
         });
 
-        StartReading(peerId, rawAddress, inStream);
+        StartReading(peerId, rawAddress, inStream, socket);
     }
 
     public Task<bool> ConnectAsync(string peerIdOrAddress) => ConnectAsync(peerIdOrAddress, forceClient: false);
@@ -299,8 +319,21 @@ public class BluetoothRfcommService : IPrimeNetworkService
             return true;
         }
 
+        var connectLock = _connectLocks.GetOrAdd(rawAddress, _ => new SemaphoreSlim(1, 1));
+        if (!await connectLock.WaitAsync(0))
+        {
+            App.Log($"[Bluetooth] ConnectAsync: Connection already in progress for '{rawAddress}', skipping redundant call.");
+            return false;
+        }
+
         try
         {
+            if (_activeSockets.ContainsKey(rawAddress) && _activeStreams.ContainsKey(rawAddress))
+            {
+                App.Log($"[Bluetooth] ConnectAsync: Connected while waiting for lock to '{rawAddress}'");
+                return true;
+            }
+
             ConnectionStateChanged?.Invoke(peerId, DeviceConnectionState.Connecting, "Установка связи...");
 
             BluetoothDevice? device = null;
@@ -396,10 +429,11 @@ public class BluetoothRfcommService : IPrimeNetworkService
                 return false;
             }
 
-            // Clean up any stale active socket before creating a new one
-            if (_activeSockets.TryGetValue(rawAddress, out var existingSocket))
+            // If already connected during SDP discovery, keep active connection
+            if (_activeSockets.ContainsKey(rawAddress) && _activeStreams.ContainsKey(rawAddress))
             {
-                DisconnectInternal(rawAddress);
+                App.Log($"[Bluetooth] ConnectAsync: connection already active for '{rawAddress}', skipping duplicate socket connection.");
+                return true;
             }
 
             var service = rfcommServices.Services[0];
@@ -407,6 +441,14 @@ public class BluetoothRfcommService : IPrimeNetworkService
             var socket = new StreamSocket();
             await socket.ConnectAsync(service.ConnectionHostName, service.ConnectionServiceName, SocketProtectionLevel.BluetoothEncryptionAllowNullAuthentication);
             App.Log($"[Bluetooth] StreamSocket connected successfully!");
+
+            // If an incoming connection completed while ConnectAsync was awaiting, keep incoming
+            if (_activeSockets.ContainsKey(rawAddress) && _activeStreams.ContainsKey(rawAddress))
+            {
+                App.Log($"[Bluetooth] ConnectAsync: incoming connection arrived while connecting to '{rawAddress}', closing duplicate outgoing socket.");
+                try { socket.Dispose(); } catch { }
+                return true;
+            }
 
             string addressKey = rawAddress;
             _peerToHardwareAddress[peerId] = addressKey;
@@ -430,7 +472,7 @@ public class BluetoothRfcommService : IPrimeNetworkService
             await SendPacketAsync(peerId, PacketType.Text, handshake);
             await SendPacketAsync(peerId, PacketType.Presence, System.Text.Encoding.UTF8.GetBytes("ONLINE"));
 
-            StartReading(peerId, addressKey, inStream);
+            StartReading(peerId, addressKey, inStream, socket);
             return true;
         }
         catch (Exception ex)
@@ -438,6 +480,10 @@ public class BluetoothRfcommService : IPrimeNetworkService
             ConnectionStateChanged?.Invoke(peerId, DeviceConnectionState.Disconnected, "Ошибка подключения");
             ErrorOccurred?.Invoke(peerId, $"Bluetooth connection error: {ex.Message}");
             return false;
+        }
+        finally
+        {
+            connectLock.Release();
         }
     }
 
@@ -660,7 +706,7 @@ public class BluetoothRfcommService : IPrimeNetworkService
         });
     }
 
-    private void StartReading(string peerId, string rawAddress, Stream inStream)
+    private void StartReading(string peerId, string rawAddress, Stream inStream, StreamSocket socket)
     {
         var cts = new CancellationTokenSource();
         _readCancellation[rawAddress] = cts;
@@ -704,12 +750,20 @@ public class BluetoothRfcommService : IPrimeNetworkService
             }
             finally
             {
-                App.Log($"[Bluetooth] Read loop finished for '{rawAddress}', closing connection");
-                DisconnectInternal(rawAddress);
-                ConnectionStateChanged?.Invoke(peerId, DeviceConnectionState.Disconnected, "не в сети");
+                App.Log($"[Bluetooth] Read loop finished for '{rawAddress}', checking active socket...");
+                if (_activeSockets.TryGetValue(rawAddress, out var curSocket) && curSocket == socket)
+                {
+                    App.Log($"[Bluetooth] Active socket disconnected, closing connection for '{rawAddress}'");
+                    DisconnectInternal(rawAddress);
+                    ConnectionStateChanged?.Invoke(peerId, DeviceConnectionState.Disconnected, "не в сети");
 
-                // Auto-retry connection if connection dropped unexpectedly
-                _ = TriggerAutoRetryAsync(peerId, rawAddress);
+                    // Auto-retry connection only if connection dropped unexpectedly
+                    _ = TriggerAutoRetryAsync(peerId, rawAddress);
+                }
+                else
+                {
+                    App.Log($"[Bluetooth] Read loop ended for superseded socket for '{rawAddress}', leaving active connection intact.");
+                }
             }
         }, cts.Token);
     }
@@ -717,6 +771,9 @@ public class BluetoothRfcommService : IPrimeNetworkService
     private async Task TriggerAutoRetryAsync(string peerId, string rawAddress)
     {
         if (_manuallyDisconnected.ContainsKey(rawAddress) || _manuallyDisconnected.ContainsKey(peerId))
+            return;
+
+        if (_activeSockets.ContainsKey(rawAddress) && _activeStreams.ContainsKey(rawAddress))
             return;
 
         int count = _retryCounts.AddOrUpdate(rawAddress, 1, (_, c) => c + 1);
@@ -728,14 +785,16 @@ public class BluetoothRfcommService : IPrimeNetworkService
 
         int delayMs = count switch
         {
-            1 => 1000,
-            2 => 2000,
-            3 => 4000,
-            _ => 8000
+            1 => 2500,
+            2 => 5000,
+            3 => 8000,
+            _ => 15000
         };
 
         await Task.Delay(delayMs);
-        if (!_activeSockets.ContainsKey(rawAddress) && !_manuallyDisconnected.ContainsKey(rawAddress))
+        if (!_activeSockets.ContainsKey(rawAddress) &&
+            !_manuallyDisconnected.ContainsKey(rawAddress) &&
+            !_manuallyDisconnected.ContainsKey(peerId))
         {
             _ = ConnectAsync(peerId);
         }
