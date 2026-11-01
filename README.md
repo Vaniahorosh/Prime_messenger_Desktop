@@ -58,6 +58,9 @@ Prime_messenger_Desktop/
 
 ## 🛠 Сборка из исходников
 
+> [!TIP]
+> Подробная инструкция по первичному развёртыванию на новом ноутбуке или ПК: **[SETUP_LAPTOP.md](SETUP_LAPTOP.md)**.
+
 ### Требования
 * Windows 10 (версия 19041+) или Windows 11
 * [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
