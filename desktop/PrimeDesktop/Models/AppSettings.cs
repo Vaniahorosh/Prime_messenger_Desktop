@@ -35,10 +35,12 @@ public class AppSettings : INotifyPropertyChanged
     private int _companionPort = 8989;
     private bool _autoConnectBluetooth = true;
     private string _searchEngine = "Google";
-    private bool _useInternalBrowser = false;
+    private bool _useInternalBrowser = true;
     private bool _browserEnableJs = true;
     private bool _browserEnableCookies = true;
     private bool _browserDesktopMode = false;
+    private string? _browserToolbarLayout;
+    private bool _browserAddressBarInTabRow = false;
     private int _videoNoteRadiusPercent = 50;
     private int _thanksHeartCount = 0;
     private bool _hasShownTrayNotification = false;
@@ -46,6 +48,7 @@ public class AppSettings : INotifyPropertyChanged
     private double _photoViewerWidth = 0;
     private double _photoViewerHeight = 0;
     private bool _photoViewerWasMaximized = true;
+    private List<string> _frequentReactions = new() { "👍", "❤️", "🔥", "😂", "🥰", "😮", "😢", "🙏", "👏", "🎉", "💯", "😍", "🤔", "🤝", "🫡", "😎", "🥳", "🚀", "👀" };
 
     public string MyUsername
     {
@@ -236,6 +239,18 @@ public class AppSettings : INotifyPropertyChanged
         set => SetField(ref _browserDesktopMode, value);
     }
 
+    public string? BrowserToolbarLayout
+    {
+        get => _browserToolbarLayout;
+        set => SetField(ref _browserToolbarLayout, value);
+    }
+
+    public bool BrowserAddressBarInTabRow
+    {
+        get => _browserAddressBarInTabRow;
+        set => SetField(ref _browserAddressBarInTabRow, value);
+    }
+
     public int VideoNoteRadiusPercent
     {
         get => _videoNoteRadiusPercent;
@@ -270,6 +285,12 @@ public class AppSettings : INotifyPropertyChanged
     {
         get => _photoViewerWasMaximized;
         set => SetField(ref _photoViewerWasMaximized, value);
+    }
+
+        public List<string> FrequentReactions
+    {
+        get => _frequentReactions ??= new() { "👍", "❤️", "🔥", "😂", "🥰", "😮", "😢", "🙏", "👏", "🎉", "💯", "😍", "🤔", "🤝", "🫡", "😎", "🥳", "🚀", "👀" };
+        set => SetField(ref _frequentReactions, value ?? new());
     }
 
     public List<string> ForgottenDevices

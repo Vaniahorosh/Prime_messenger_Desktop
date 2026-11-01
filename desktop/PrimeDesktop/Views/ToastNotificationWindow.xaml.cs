@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Windows;
 using System.Windows.Input;
@@ -7,6 +7,7 @@ using System.Windows.Media.Animation;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using PrimeDesktop.Models;
+using PrimeDesktop.Services;
 
 namespace PrimeDesktop.Views
 {
@@ -68,6 +69,7 @@ namespace PrimeDesktop.Views
 
         private void ToastNotificationWindow_Loaded(object sender, RoutedEventArgs e)
         {
+            ThemeManager.ApplyWindowDwm(this);
             // Position above taskbar in bottom-right corner
             var workArea = SystemParameters.WorkArea;
             Left = workArea.Right - Width - 16;

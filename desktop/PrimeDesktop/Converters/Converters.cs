@@ -119,7 +119,7 @@ public class EqualityToVisibilityConverter : IValueConverter
         bool matches = false;
         if (value != null && parameter != null)
         {
-            matches = value.ToString() == parameter.ToString();
+            matches = string.Equals(value.ToString()?.Trim(), parameter.ToString()?.Trim(), StringComparison.OrdinalIgnoreCase);
         }
         if (Invert) matches = !matches;
         return matches ? Visibility.Visible : Visibility.Collapsed;
@@ -185,12 +185,14 @@ public class InitialsConverter : IValueConverter
 
 public class ReactionSelectedBackgroundConverter : IValueConverter
 {
-    private static readonly System.Windows.Media.SolidColorBrush SelectedBrush = new(System.Windows.Media.Color.FromArgb(255, 30, 58, 95));
-    private static readonly System.Windows.Media.SolidColorBrush NormalBrush = new(System.Windows.Media.Color.FromArgb(255, 23, 33, 48));
+    private static readonly System.Windows.Media.SolidColorBrush DefaultSelectedBrush = new(System.Windows.Media.Color.FromArgb(255, 29, 61, 106));
+    private static readonly System.Windows.Media.SolidColorBrush NormalBrush = new(System.Windows.Media.Color.FromArgb(255, 20, 28, 40));
 
     public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
     {
-        return value is bool b && b ? SelectedBrush : NormalBrush;
+        bool isSel = value is bool b && b;
+        if (!isSel) return NormalBrush;
+        return System.Windows.Application.Current?.Resources["AccentSoftBrush"] as System.Windows.Media.Brush ?? DefaultSelectedBrush;
     }
 
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => throw new NotImplementedException();
@@ -198,12 +200,14 @@ public class ReactionSelectedBackgroundConverter : IValueConverter
 
 public class ReactionSelectedBorderConverter : IValueConverter
 {
-    private static readonly System.Windows.Media.SolidColorBrush SelectedBrush = new(System.Windows.Media.Color.FromArgb(255, 56, 139, 253));
-    private static readonly System.Windows.Media.SolidColorBrush NormalBrush = new(System.Windows.Media.Color.FromArgb(255, 38, 54, 76));
+    private static readonly System.Windows.Media.SolidColorBrush DefaultSelectedBrush = new(System.Windows.Media.Color.FromArgb(255, 59, 130, 246));
+    private static readonly System.Windows.Media.SolidColorBrush NormalBrush = new(System.Windows.Media.Color.FromArgb(255, 36, 50, 70));
 
     public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
     {
-        return value is bool b && b ? SelectedBrush : NormalBrush;
+        bool isSel = value is bool b && b;
+        if (!isSel) return NormalBrush;
+        return System.Windows.Application.Current?.Resources["AccentBorderBrush"] as System.Windows.Media.Brush ?? DefaultSelectedBrush;
     }
 
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => throw new NotImplementedException();
@@ -211,12 +215,14 @@ public class ReactionSelectedBorderConverter : IValueConverter
 
 public class ReactionCountBrushConverter : IValueConverter
 {
-    private static readonly System.Windows.Media.SolidColorBrush SelectedBrush = new(System.Windows.Media.Color.FromArgb(255, 88, 166, 255));
+    private static readonly System.Windows.Media.SolidColorBrush DefaultSelectedBrush = new(System.Windows.Media.Color.FromArgb(255, 96, 165, 250));
     private static readonly System.Windows.Media.SolidColorBrush NormalBrush = new(System.Windows.Media.Color.FromArgb(255, 148, 163, 184));
 
     public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
     {
-        return value is bool b && b ? SelectedBrush : NormalBrush;
+        bool isSel = value is bool b && b;
+        if (!isSel) return NormalBrush;
+        return System.Windows.Application.Current?.Resources["AccentBrush"] as System.Windows.Media.Brush ?? DefaultSelectedBrush;
     }
 
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => throw new NotImplementedException();

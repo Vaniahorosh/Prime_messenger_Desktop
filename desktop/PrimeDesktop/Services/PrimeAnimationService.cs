@@ -7,25 +7,25 @@ using System.Windows.Media.Animation;
 namespace PrimeDesktop.Services;
 
 /// <summary>
-/// Central animation service providing signature Prime open/close animations,
-/// easing curves, and transitions across all desktop windows and screens.
+/// Central animation service providing native Windows Fluent Design window transitions,
+/// deceleration easing curves, and smooth dialog animations across all desktop windows.
 /// </summary>
 public static class PrimeAnimationService
 {
-    // Signature Animation Curves matching Android Prime UI
+    // Native Windows 11 Fluent Design Easing Curves (Decelerate on entrance, accelerate on exit)
     public static readonly IEasingFunction EntranceStandardEase = new CubicEase { EasingMode = EasingMode.EaseOut };
-    public static readonly IEasingFunction EntranceSpringEase = new BackEase { EasingMode = EasingMode.EaseOut, Amplitude = 0.32 };
+    public static readonly IEasingFunction EntranceDialogEase = new CubicEase { EasingMode = EasingMode.EaseOut };
     public static readonly IEasingFunction ExitStandardEase = new CubicEase { EasingMode = EasingMode.EaseIn };
-    public static readonly IEasingFunction ExitCardEase = new CubicEase { EasingMode = EasingMode.EaseIn };
+    public static readonly IEasingFunction ExitDialogEase = new CubicEase { EasingMode = EasingMode.EaseIn };
 
-    public static readonly TimeSpan DurationStandardEntrance = TimeSpan.FromMilliseconds(240);
-    public static readonly TimeSpan DurationDialogEntrance = TimeSpan.FromMilliseconds(300);
-    public static readonly TimeSpan DurationStandardExit = TimeSpan.FromMilliseconds(170);
-    public static readonly TimeSpan DurationDialogExit = TimeSpan.FromMilliseconds(160);
+    public static readonly TimeSpan DurationStandardEntrance = TimeSpan.FromMilliseconds(200);
+    public static readonly TimeSpan DurationDialogEntrance = TimeSpan.FromMilliseconds(220);
+    public static readonly TimeSpan DurationStandardExit = TimeSpan.FromMilliseconds(130);
+    public static readonly TimeSpan DurationDialogExit = TimeSpan.FromMilliseconds(130);
 
     /// <summary>
-    /// Hooks signature Prime opening and closing animations onto a Window and its root content element.
-    /// Handles entrance on Loaded/Show, and intercepts Closing to play exit animation before actual destruction.
+    /// Hooks native Windows Fluent opening and closing animations onto a Window and its root content element.
+    /// Handles entrance on Loaded, and intercepts Closing to play exit animation before actual destruction.
     /// </summary>
     public static void HookBrandTransitions(Window window, FrameworkElement? rootElement = null, bool isDialog = false)
     {
@@ -57,45 +57,16 @@ public static class PrimeAnimationService
             rootElement.RenderTransform = group;
         }
 
-        // On window loaded, play entrance animation
+        // On window loaded, apply DWM frame and play Windows Fluent entrance animation
         window.Loaded += (s, e) =>
         {
             ThemeManager.ApplyWindowDwm(window);
+            WindowUtils.EnableNativeWindowAnimations(window);
             WindowUtils.EnableWindowMinMaxHook(window);
             PlayWindowEntrance(rootElement, scaleTransform, translateTransform, isDialog);
         };
 
-        // Intercept closing to play exit animation
-        bool isExiting = false;
-        bool? pendingDialogResult = null;
 
-        window.Closing += (s, e) =>
-        {
-            if (isExiting) return;
-
-            pendingDialogResult = window.DialogResult;
-            e.Cancel = true;
-            isExiting = true;
-
-            PlayWindowExit(rootElement, scaleTransform, translateTransform, () =>
-            {
-                try
-                {
-                    if (pendingDialogResult.HasValue)
-                    {
-                        window.DialogResult = pendingDialogResult.Value;
-                    }
-                    else
-                    {
-                        window.Close();
-                    }
-                }
-                catch
-                {
-                    window.Close();
-                }
-            }, isDialog);
-        };
     }
 
     public static void PlayWindowEntrance(
@@ -108,15 +79,15 @@ public static class PrimeAnimationService
         if (rootElement == null) return;
 
         var duration = isDialog ? DurationDialogEntrance : DurationStandardEntrance;
-        var scaleEase = isDialog ? EntranceSpringEase : EntranceStandardEase;
-        var fadeEase = EntranceStandardEase;
+        var ease = isDialog ? EntranceDialogEase : EntranceStandardEase;
 
-        double fromScale = isDialog ? 0.84 : 0.95;
-        double fromY = isDialog ? 35.0 : 16.0;
+        // Windows Fluent standard: subtle scale 0.96 -> 1.0, subtle vertical float 12px -> 0
+        double fromScale = isDialog ? 0.95 : 0.97;
+        double fromY = isDialog ? 16.0 : 10.0;
 
         // 1. Fade In
         rootElement.Opacity = 0.0;
-        var fadeAnim = new DoubleAnimation(0.0, 1.0, duration) { EasingFunction = fadeEase };
+        var fadeAnim = new DoubleAnimation(0.0, 1.0, duration) { EasingFunction = ease };
         if (onCompleted != null)
         {
             fadeAnim.Completed += (s, e) => onCompleted();
@@ -126,8 +97,8 @@ public static class PrimeAnimationService
         // 2. Scale In
         if (scaleTransform != null)
         {
-            var scaleXAnim = new DoubleAnimation(fromScale, 1.0, duration) { EasingFunction = scaleEase };
-            var scaleYAnim = new DoubleAnimation(fromScale, 1.0, duration) { EasingFunction = scaleEase };
+            var scaleXAnim = new DoubleAnimation(fromScale, 1.0, duration) { EasingFunction = ease };
+            var scaleYAnim = new DoubleAnimation(fromScale, 1.0, duration) { EasingFunction = ease };
             scaleTransform.BeginAnimation(ScaleTransform.ScaleXProperty, scaleXAnim);
             scaleTransform.BeginAnimation(ScaleTransform.ScaleYProperty, scaleYAnim);
         }
@@ -135,7 +106,7 @@ public static class PrimeAnimationService
         // 3. Translate In
         if (translateTransform != null)
         {
-            var transYAnim = new DoubleAnimation(fromY, 0.0, duration) { EasingFunction = EntranceStandardEase };
+            var transYAnim = new DoubleAnimation(fromY, 0.0, duration) { EasingFunction = ease };
             translateTransform.BeginAnimation(TranslateTransform.YProperty, transYAnim);
         }
     }
@@ -154,10 +125,10 @@ public static class PrimeAnimationService
         }
 
         var duration = isDialog ? DurationDialogExit : DurationStandardExit;
-        var ease = isDialog ? ExitCardEase : ExitStandardEase;
+        var ease = isDialog ? ExitDialogEase : ExitStandardEase;
 
-        double toScale = isDialog ? 0.88 : 0.96;
-        double toY = isDialog ? 24.0 : 12.0;
+        double toScale = isDialog ? 0.97 : 0.98;
+        double toY = isDialog ? 10.0 : 8.0;
 
         // 1. Fade Out
         var fadeAnim = new DoubleAnimation(1.0, 0.0, duration) { EasingFunction = ease };

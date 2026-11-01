@@ -205,9 +205,20 @@ namespace PrimeDesktop.Controls
             {
                 try
                 {
-                    Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
+                    var vm = Application.Current?.MainWindow?.DataContext as ViewModels.MainViewModel;
+                    if (vm?.Settings?.UseInternalBrowser == true)
+                    {
+                        Services.WindowManager.OpenBrowser(url, vm);
+                    }
+                    else
+                    {
+                        Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
+                    }
                 }
-                catch { }
+                catch
+                {
+                    try { Process.Start(new ProcessStartInfo(url) { UseShellExecute = true }); } catch { }
+                }
             };
 
             return link;

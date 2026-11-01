@@ -16,6 +16,48 @@ public static class ThemeManager
     private static string _currentMode = "system";
     private static string _currentAccentHex = "#4D9FFF";
 
+    public static event Action<string>? SystemAccentColorChanged;
+
+    /// <summary>
+    /// Detects the native Windows System Accent Color from Registry / DWM / SystemParameters.
+    /// Returns a hex color string like "#461135".
+    /// </summary>
+    public static string GetWindowsSystemAccentHex()
+    {
+        try
+        {
+            // 1. DWM AccentColor (DWORD ABGR: 0xAABBGGRR)
+            using var dwmKey = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\DWM");
+            var val = dwmKey?.GetValue("AccentColor");
+            if (val is int dwmInt)
+            {
+                byte r = (byte)(dwmInt & 0xFF);
+                byte g = (byte)((dwmInt >> 8) & 0xFF);
+                byte b = (byte)((dwmInt >> 16) & 0xFF);
+                return $"#{r:X2}{g:X2}{b:X2}";
+            }
+
+            // 2. Explorer AccentColorMenu
+            using var expKey = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Accent");
+            var expVal = expKey?.GetValue("AccentColorMenu");
+            if (expVal is int expInt)
+            {
+                byte r = (byte)(expInt & 0xFF);
+                byte g = (byte)((expInt >> 8) & 0xFF);
+                byte b = (byte)((expInt >> 16) & 0xFF);
+                return $"#{r:X2}{g:X2}{b:X2}";
+            }
+
+            // 3. Fallback to WPF SystemParameters.WindowGlassColor
+            var glass = SystemParameters.WindowGlassColor;
+            return $"#{glass.R:X2}{glass.G:X2}{glass.B:X2}";
+        }
+        catch
+        {
+            return "#0078D4"; // Default Windows Fluent Blue fallback
+        }
+    }
+
     public static bool GetSystemIsDark()
     {
         try
@@ -54,6 +96,9 @@ public static class ThemeManager
                     {
                         Application.Current?.Dispatcher.Invoke(() =>
                         {
+                            var newSysAccent = GetWindowsSystemAccentHex();
+                            SystemAccentColorChanged?.Invoke(newSysAccent);
+
                             if (_currentMode == "system")
                             {
                                 ApplyTheme("system", _currentAccentHex);
@@ -86,10 +131,9 @@ public static class ThemeManager
             res["CardHoverBrush"] = new SolidColorBrush(Color.FromRgb(0x22, 0x2F, 0x44));
             res["BorderBrush"] = new SolidColorBrush(Color.FromRgb(0x22, 0x30, 0x45));
             res["SurfaceBrush"] = new SolidColorBrush(Color.FromRgb(0x15, 0x1E, 0x2B));
-            res["TextPrimaryBrush"] = new SolidColorBrush(Color.FromRgb(0xF0, 0xF6, 0xFC));
+            res["TextPrimaryBrush"] = new SolidColorBrush(Color.FromRgb(0xF0, 0xF6, 0xF8));
             res["TextSecondaryBrush"] = new SolidColorBrush(Color.FromRgb(0x8B, 0x94, 0x9E));
             res["TextMutedBrush"] = new SolidColorBrush(Color.FromRgb(0x6E, 0x76, 0x81));
-            res["SentBubbleBrush"] = new SolidColorBrush(Color.FromRgb(0x15, 0x4B, 0x87));
             res["ReceivedBubbleBrush"] = new SolidColorBrush(Color.FromRgb(0x1C, 0x25, 0x36));
         }
         else
@@ -104,7 +148,6 @@ public static class ThemeManager
             res["TextPrimaryBrush"] = new SolidColorBrush(Color.FromRgb(0x11, 0x18, 0x27));
             res["TextSecondaryBrush"] = new SolidColorBrush(Color.FromRgb(0x4B, 0x55, 0x63));
             res["TextMutedBrush"] = new SolidColorBrush(Color.FromRgb(0x9C, 0xA3, 0xAF));
-            res["SentBubbleBrush"] = new SolidColorBrush(Color.FromRgb(0x15, 0x4B, 0x87));
             res["ReceivedBubbleBrush"] = new SolidColorBrush(Color.FromRgb(0xFF, 0xFF, 0xFF));
         }
 
@@ -118,7 +161,10 @@ public static class ThemeManager
         {
             foreach (Window win in Application.Current.Windows)
             {
-                ApplyWindowDwm(win, isDark);
+                if (win.IsLoaded && PresentationSource.FromVisual(win) != null)
+                {
+                    ApplyWindowDwm(win, isDark);
+                }
             }
         }
     }
@@ -132,20 +178,68 @@ public static class ThemeManager
             var res = Application.Current?.Resources;
             if (res == null) return;
 
-            res["AccentColor"] = color;
-            res["AccentBrush"] = new SolidColorBrush(color);
+            var accentBrush = new SolidColorBrush(color);
+            var badgeBrush = new SolidColorBrush(color);
+
+            // Compute Sent Message Bubble Brush:
+            // In dark mode: saturated, deeper shade of the accent color for great contrast with white text
+            // In light mode: vibrant accent color
+            bool isDark = ResolveEffectiveDark(_currentMode);
+            Color sentBubbleColor;
+            if (isDark)
+            {
+                byte r = (byte)(color.R * 0.45 + 10);
+                byte g = (byte)(color.G * 0.45 + 15);
+                byte b = (byte)(color.B * 0.45 + 25);
+                sentBubbleColor = Color.FromRgb(r, g, b);
+            }
+            else
+            {
+                byte r = (byte)Math.Min(255, color.R * 0.85 + 25);
+                byte g = (byte)Math.Min(255, color.G * 0.85 + 25);
+                byte b = (byte)Math.Min(255, color.B * 0.85 + 25);
+                sentBubbleColor = Color.FromRgb(r, g, b);
+            }
+            var sentBubbleBrush = new SolidColorBrush(sentBubbleColor);
 
             // Light hover / translucent shade (25% opacity)
             var hoverColor = Color.FromArgb(64, color.R, color.G, color.B);
-            res["AccentHoverBrush"] = new SolidColorBrush(hoverColor);
+            var hoverBrush = new SolidColorBrush(hoverColor);
 
-            // Soft chip shade (15% opacity)
-            var softColor = Color.FromArgb(38, color.R, color.G, color.B);
-            res["AccentSoftBrush"] = new SolidColorBrush(softColor);
+            // Soft chip shade (18% opacity)
+            var softColor = Color.FromArgb(46, color.R, color.G, color.B);
+            var softBrush = new SolidColorBrush(softColor);
 
-            // Border shade (40% opacity)
-            var borderColor = Color.FromArgb(102, color.R, color.G, color.B);
-            res["AccentBorderBrush"] = new SolidColorBrush(borderColor);
+            // Border shade (45% opacity)
+            var borderColor = Color.FromArgb(115, color.R, color.G, color.B);
+            var borderBrush = new SolidColorBrush(borderColor);
+
+            // 1. Update Application Resources
+            res["AccentColor"] = color;
+            res["AccentBrush"] = accentBrush;
+            res["BadgeBrush"] = badgeBrush;
+            res["SentBubbleBrush"] = sentBubbleBrush;
+            res["AccentHoverBrush"] = hoverBrush;
+            res["AccentSoftBrush"] = softBrush;
+            res["AccentBorderBrush"] = borderBrush;
+
+            // 2. Also inject into each open window's resources for instant DynamicResource re-evaluation
+            if (Application.Current?.Windows != null)
+            {
+                foreach (Window win in Application.Current.Windows)
+                {
+                    if (win.IsLoaded && PresentationSource.FromVisual(win) != null)
+                    {
+                        win.Resources["AccentColor"] = color;
+                        win.Resources["AccentBrush"] = new SolidColorBrush(color);
+                        win.Resources["BadgeBrush"] = new SolidColorBrush(color);
+                        win.Resources["SentBubbleBrush"] = new SolidColorBrush(sentBubbleColor);
+                        win.Resources["AccentHoverBrush"] = new SolidColorBrush(hoverColor);
+                        win.Resources["AccentSoftBrush"] = new SolidColorBrush(softColor);
+                        win.Resources["AccentBorderBrush"] = new SolidColorBrush(borderColor);
+                    }
+                }
+            }
         }
         catch { }
     }

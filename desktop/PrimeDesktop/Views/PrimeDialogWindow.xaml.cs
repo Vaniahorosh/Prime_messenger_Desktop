@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
@@ -29,13 +29,8 @@ namespace PrimeDesktop.Views
 
         private void PlayEntranceAnimation()
         {
-            // Dynamic Spring/Overshoot Animation matching Android PrimeBlurDialog
-            var duration = TimeSpan.FromMilliseconds(320);
-            var overshootEase = new BackEase
-            {
-                EasingMode = EasingMode.EaseOut,
-                Amplitude = 0.35 // Overshoot bounce factor matching Android OvershootInterpolator(1.2f)
-            };
+            // Windows 11 Fluent ContentDialog Entrance Animation (Decelerate curve, subtle scale 0.95 -> 1.0)
+            var duration = TimeSpan.FromMilliseconds(200);
             var cubicEase = new CubicEase { EasingMode = EasingMode.EaseOut };
 
             // 1. Fade In Opacity
@@ -44,18 +39,18 @@ namespace PrimeDesktop.Views
                 EasingFunction = cubicEase
             };
 
-            // 2. Scale Up from 0.82 to 1.0 with overshoot
-            var scaleXAnim = new DoubleAnimation(0.82, 1.0, duration)
+            // 2. Scale Up from 0.95 to 1.0
+            var scaleXAnim = new DoubleAnimation(0.95, 1.0, duration)
             {
-                EasingFunction = overshootEase
+                EasingFunction = cubicEase
             };
-            var scaleYAnim = new DoubleAnimation(0.82, 1.0, duration)
+            var scaleYAnim = new DoubleAnimation(0.95, 1.0, duration)
             {
-                EasingFunction = overshootEase
+                EasingFunction = cubicEase
             };
 
-            // 3. Translation from Y=40 down to Y=0
-            var translateAnim = new DoubleAnimation(40.0, 0.0, duration)
+            // 3. Translation from Y=16 down to Y=0
+            var translateAnim = new DoubleAnimation(16.0, 0.0, duration)
             {
                 EasingFunction = cubicEase
             };
@@ -81,13 +76,14 @@ namespace PrimeDesktop.Views
 
         private void PlayExitAnimation(Action onCompleted)
         {
-            var duration = TimeSpan.FromMilliseconds(160);
+            // Windows 11 Fluent ContentDialog Exit Animation (Accelerate curve, subtle scale 1.0 -> 0.97)
+            var duration = TimeSpan.FromMilliseconds(130);
             var cubicEase = new CubicEase { EasingMode = EasingMode.EaseIn };
 
             var fadeAnim = new DoubleAnimation(1.0, 0.0, duration) { EasingFunction = cubicEase };
-            var scaleXAnim = new DoubleAnimation(1.0, 0.88, duration) { EasingFunction = cubicEase };
-            var scaleYAnim = new DoubleAnimation(1.0, 0.88, duration) { EasingFunction = cubicEase };
-            var translateAnim = new DoubleAnimation(0.0, 24.0, duration) { EasingFunction = cubicEase };
+            var scaleXAnim = new DoubleAnimation(1.0, 0.97, duration) { EasingFunction = cubicEase };
+            var scaleYAnim = new DoubleAnimation(1.0, 0.97, duration) { EasingFunction = cubicEase };
+            var translateAnim = new DoubleAnimation(0.0, 10.0, duration) { EasingFunction = cubicEase };
 
             fadeAnim.Completed += (s, e) => onCompleted?.Invoke();
 

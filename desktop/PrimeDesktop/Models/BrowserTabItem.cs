@@ -1,0 +1,70 @@
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Runtime.CompilerServices;
+using System.Windows.Media;
+using Microsoft.Web.WebView2.Wpf;
+
+namespace PrimeDesktop.Models;
+
+public class BrowserTabItem : INotifyPropertyChanged
+{
+    private string _title = "Новая вкладка";
+    private string _url = "about:blank";
+    private bool _isLoading;
+    private ImageSource? _favicon;
+    private bool _isSecure = true;
+    private bool _isActive;
+
+    public string Id { get; } = Guid.NewGuid().ToString("N");
+
+    public string Title
+    {
+        get => _title;
+        set => SetProperty(ref _title, value);
+    }
+
+    public string Url
+    {
+        get => _url;
+        set => SetProperty(ref _url, value);
+    }
+
+    public bool IsLoading
+    {
+        get => _isLoading;
+        set => SetProperty(ref _isLoading, value);
+    }
+
+    public ImageSource? Favicon
+    {
+        get => _favicon;
+        set => SetProperty(ref _favicon, value);
+    }
+
+    public bool IsSecure
+    {
+        get => _isSecure;
+        set => SetProperty(ref _isSecure, value);
+    }
+
+    public bool IsActive
+    {
+        get => _isActive;
+        set => SetProperty(ref _isActive, value);
+    }
+
+    public WebView2? WebView { get; set; }
+
+    public event PropertyChangedEventHandler? PropertyChanged;
+    protected void OnPropertyChanged([CallerMemberName] string? name = null) =>
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+
+    protected bool SetProperty<T>(ref T storage, T value, [CallerMemberName] string? name = null)
+    {
+        if (EqualityComparer<T>.Default.Equals(storage, value)) return false;
+        storage = value;
+        OnPropertyChanged(name);
+        return true;
+    }
+}

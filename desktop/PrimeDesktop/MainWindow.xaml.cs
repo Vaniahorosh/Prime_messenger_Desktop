@@ -50,27 +50,24 @@ public partial class MainWindow : Window
         {
             ChatEmojiPicker.EmojiSelected += ChatEmojiPicker_EmojiSelected;
         }
+
         if (ExpandedReactionsView != null)
         {
-            ExpandedReactionsView.ReactionSelected += (s, emoji) =>
+            ExpandedReactionsView.ReactionSelected += async (s, emoji) =>
             {
-                if (ExpandedReactionsPopup != null) ExpandedReactionsPopup.IsOpen = false;
-                if (_activeReactionTargetMessage != null && DataContext is MainViewModel vm)
+                if (ReactionsFullPopup != null) ReactionsFullPopup.IsOpen = false;
+                var target = _reactionsTargetMessage;
+                if (target == null && DataContext is MainViewModel vmMsg)
                 {
-                    _ = vm.SendReactionAsync(_activeReactionTargetMessage, emoji);
+                    target = vmMsg.ContextMenuMessage;
                 }
-            };
-            ExpandedReactionsView.OpenFullEmojiPickerRequested += (s, e) =>
-            {
-                if (ExpandedReactionsPopup != null) ExpandedReactionsPopup.IsOpen = false;
-                if (EmojiPickerPopup != null)
+                if (target != null && DataContext is MainViewModel vm)
                 {
-                    _isEmojiPickerForReaction = true;
-                    EmojiPickerPopup.Placement = System.Windows.Controls.Primitives.PlacementMode.MousePoint;
-                    EmojiPickerPopup.IsOpen = true;
+                    await vm.SendReactionAsync(target, emoji);
                 }
             };
         }
+
         if (MessagesScrollViewer != null)
         {
             MessagesScrollViewer.ScrollChanged += MessagesScrollViewer_ScrollChanged;
@@ -520,6 +517,34 @@ public partial class MainWindow : Window
         }
     }
 
+    private Models.ChatMessage? _reactionsTargetMessage;
+
+    private void BtnOpenMoreReactions_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement fe)
+        {
+            Models.ChatMessage? msg = fe.Tag as Models.ChatMessage;
+            if (msg == null && DataContext is MainViewModel vmMsg)
+            {
+                msg = vmMsg.ContextMenuMessage;
+            }
+
+            _reactionsTargetMessage = msg;
+
+            var cm = FindVisualParent<System.Windows.Controls.ContextMenu>(fe);
+            if (cm != null) cm.IsOpen = false;
+
+            if (ExpandedReactionsView != null)
+            {
+                ExpandedReactionsView.ResetSearch();
+            }
+            if (ReactionsFullPopup != null)
+            {
+                ReactionsFullPopup.IsOpen = true;
+            }
+        }
+    }
+
     private void ReactionButton_Click(object sender, RoutedEventArgs e)
     {
         if (sender is FrameworkElement fe)
@@ -548,25 +573,12 @@ public partial class MainWindow : Window
         }
     }
 
-    private void BtnExpandReactions_Click(object sender, RoutedEventArgs e)
+    private void ReactionScrollViewer_PreviewMouseWheel(object sender, System.Windows.Input.MouseWheelEventArgs e)
     {
-        if (sender is FrameworkElement fe)
+        if (sender is System.Windows.Controls.ScrollViewer sv)
         {
-            _activeReactionTargetMessage = fe.Tag as Models.ChatMessage;
-            if (_activeReactionTargetMessage == null && DataContext is MainViewModel vm)
-            {
-                _activeReactionTargetMessage = vm.ContextMenuMessage;
-            }
-
-            var cm = FindVisualParent<System.Windows.Controls.ContextMenu>(fe);
-            if (cm != null) cm.IsOpen = false;
-
-            if (_activeReactionTargetMessage != null && ExpandedReactionsPopup != null && ExpandedReactionsView != null)
-            {
-                ExpandedReactionsView.ResetSearch();
-                ExpandedReactionsPopup.Placement = System.Windows.Controls.Primitives.PlacementMode.MousePoint;
-                ExpandedReactionsPopup.IsOpen = true;
-            }
+            sv.ScrollToHorizontalOffset(sv.HorizontalOffset - (e.Delta * 0.8));
+            e.Handled = true;
         }
     }
 

@@ -91,6 +91,9 @@ public partial class App : Application
         };
 
         Log("PrimeDesktop application started (primary single instance).");
+        ShutdownMode = ShutdownMode.OnExplicitShutdown;
+        MainWindow = new MainWindow();
+        MainWindow.Show();
     }
 
     protected override void OnExit(ExitEventArgs e)

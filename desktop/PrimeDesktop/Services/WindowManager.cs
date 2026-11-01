@@ -11,11 +11,13 @@ public static class WindowManager
 {
     private static SettingsWindow? _settingsWindow;
     private static PhotoViewerWindow? _photoViewerWindow;
+    private static PrimeDesktop.Views.BrowserWindow? _browserWindow;
 
-    public static void OpenSettings(MainViewModel vm)
+    public static void OpenSettings(MainViewModel vm, int initialTab = 0)
     {
         Application.Current?.Dispatcher.Invoke(() =>
         {
+            vm.SelectedSettingsTab = initialTab;
             if (_settingsWindow != null && _settingsWindow.IsLoaded)
             {
                 if (_settingsWindow.WindowState == WindowState.Minimized)
@@ -170,6 +172,58 @@ public static class WindowManager
                 _photoViewerWindow.Close();
             }
             _photoViewerWindow = null;
+        });
+    }
+
+    public static void OpenBrowser(string? initialUrl = null, MainViewModel? vm = null)
+    {
+        System.Windows.Application.Current?.Dispatcher.Invoke(() =>
+        {
+            try
+            {
+                vm ??= System.Windows.Application.Current?.MainWindow?.DataContext as MainViewModel;
+
+                if (_browserWindow != null && _browserWindow.IsLoaded)
+                {
+                    if (_browserWindow.WindowState == System.Windows.WindowState.Minimized)
+                        _browserWindow.WindowState = System.Windows.WindowState.Normal;
+                    _browserWindow.Activate();
+                    if (!string.IsNullOrWhiteSpace(initialUrl))
+                    {
+                        _browserWindow.AddNewTab(initialUrl);
+                    }
+                    return;
+                }
+
+                _browserWindow = new PrimeDesktop.Views.BrowserWindow(initialUrl, vm);
+                _browserWindow.Closed += (s, e) =>
+                {
+                    _browserWindow = null;
+                };
+
+                _browserWindow.Show();
+                _browserWindow.Activate();
+            }
+            catch (System.Exception ex)
+            {
+                App.Log($"[WindowManager OpenBrowser ERROR] {ex.Message}");
+                if (!string.IsNullOrEmpty(initialUrl))
+                {
+                    try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(initialUrl) { UseShellExecute = true }); } catch { }
+                }
+            }
+        });
+    }
+
+    public static void CloseBrowser()
+    {
+        System.Windows.Application.Current?.Dispatcher.Invoke(() =>
+        {
+            if (_browserWindow != null && _browserWindow.IsLoaded)
+            {
+                _browserWindow.Close();
+            }
+            _browserWindow = null;
         });
     }
 }

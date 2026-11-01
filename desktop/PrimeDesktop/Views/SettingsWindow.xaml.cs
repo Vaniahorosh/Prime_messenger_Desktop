@@ -1,27 +1,39 @@
 using System;
+using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
 using PrimeDesktop.Services;
+using PrimeDesktop.ViewModels;
 
 namespace PrimeDesktop.Views;
 
 public partial class SettingsWindow : Window
 {
+    private bool _isApplied = false;
+
     public SettingsWindow()
     {
         InitializeComponent();
 
         StateChanged += Window_StateChanged;
         Loaded += Window_Loaded;
+        Closing += Window_Closing;
         PreviewKeyDown += Window_PreviewKeyDown;
-
-        PrimeAnimationService.HookBrandTransitions(this, RootGrid);
     }
 
     private void Window_Loaded(object sender, RoutedEventArgs e)
     {
         ThemeManager.ApplyWindowDwm(this);
         WindowUtils.EnableWindowMinMaxHook(this);
+    }
+
+    private void Window_Closing(object? sender, System.ComponentModel.CancelEventArgs e)
+    {
+        if (!_isApplied && DataContext is MainViewModel vm)
+        {
+            vm.RevertSettingsToSnapshot();
+        }
     }
 
     private void TitleBar_MouseDown(object sender, MouseButtonEventArgs e)
@@ -59,7 +71,35 @@ public partial class SettingsWindow : Window
 
     private void BtnClose_Click(object sender, RoutedEventArgs e)
     {
+        CancelAndClose();
+    }
+
+    public void CancelAndClose()
+    {
+        if (!_isApplied && DataContext is MainViewModel vm)
+        {
+            vm.RevertSettingsToSnapshot();
+        }
         Close();
+    }
+
+    private async void BtnApply_Click(object sender, RoutedEventArgs e)
+    {
+        _isApplied = true;
+        if (DataContext is MainViewModel vm)
+        {
+            await vm.ApplyAndSaveSettingsAsync();
+
+            if (sender is Button btn)
+            {
+                string originalText = btn.Content?.ToString() ?? "Применить";
+                btn.Content = "✓ Применено!";
+                btn.IsEnabled = false;
+                await Task.Delay(800);
+                btn.Content = originalText;
+                btn.IsEnabled = true;
+            }
+        }
     }
 
     private void Window_StateChanged(object? sender, EventArgs e)
@@ -84,7 +124,7 @@ public partial class SettingsWindow : Window
     {
         if (e.Key == Key.Escape)
         {
-            Close();
+            CancelAndClose();
             e.Handled = true;
         }
     }

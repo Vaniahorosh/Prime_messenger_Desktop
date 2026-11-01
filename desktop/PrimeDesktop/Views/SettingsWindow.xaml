@@ -11,7 +11,7 @@
         Background="{DynamicResource BackgroundBrush}">
 
     <WindowChrome.WindowChrome>
-        <WindowChrome CaptionHeight="36" ResizeBorderThickness="6" GlassFrameThickness="0" CornerRadius="0"/>
+        <WindowChrome CaptionHeight="36" ResizeBorderThickness="6" GlassFrameThickness="0,0,0,1" CornerRadius="0" UseAeroCaptionButtons="False"/>
     </WindowChrome.WindowChrome>
 
     <Window.Resources>
@@ -98,6 +98,7 @@
         <conv:EqualityToVisibilityConverter x:Key="EqualityToVis"/>
         <conv:NonLockingImageConverter x:Key="NonLockingImgConverter"/>
         <conv:InitialsConverter x:Key="InitialsConverter"/>
+        <conv:HexToBrushConverter x:Key="HexToBrush"/>
         <Style x:Key="SettingsNavTabButton" TargetType="Button">
             <Setter Property="HorizontalContentAlignment" Value="Left"/>
             <Setter Property="Padding" Value="14,9"/>
@@ -129,7 +130,7 @@
         </Style>
     </Window.Resources>
 
-    <Grid x:Name="RootGrid">
+    <Grid x:Name="RootGrid" Background="{DynamicResource BackgroundBrush}">
         <Grid.RowDefinitions>
             <RowDefinition Height="36"/> <!-- Custom TitleBar -->
             <RowDefinition Height="*"/>  <!-- Main 2-Column Body -->
@@ -395,15 +396,85 @@
                                                     DockPanel.Dock="Right" Margin="8,0,0,0"/>
                                         </DockPanel>
                                         <TextBlock Text="Мгновенно применяется ко всем элементам интерфейса:" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" Margin="0,0,0,8"/>
-                                        <WrapPanel Margin="0,0,0,14">
-                                            <Button Background="#4D9FFF" ToolTip="Синий" Command="{Binding ChangeAccentColorCommand}" CommandParameter="#4D9FFF" Width="30" Height="30" Margin="4" Style="{StaticResource ModernButton}"/>
-                                            <Button Background="#26A69A" ToolTip="Изумруд" Command="{Binding ChangeAccentColorCommand}" CommandParameter="#26A69A" Width="30" Height="30" Margin="4" Style="{StaticResource ModernButton}"/>
-                                            <Button Background="#B388FF" ToolTip="Пурпур" Command="{Binding ChangeAccentColorCommand}" CommandParameter="#B388FF" Width="30" Height="30" Margin="4" Style="{StaticResource ModernButton}"/>
-                                            <Button Background="#FFB74D" ToolTip="Янтарь" Command="{Binding ChangeAccentColorCommand}" CommandParameter="#FFB74D" Width="30" Height="30" Margin="4" Style="{StaticResource ModernButton}"/>
-                                            <Button Background="#FF5252" ToolTip="Рубин" Command="{Binding ChangeAccentColorCommand}" CommandParameter="#FF5252" Width="30" Height="30" Margin="4" Style="{StaticResource ModernButton}"/>
-                                            <Button Background="#4DD0E1" ToolTip="Циан" Command="{Binding ChangeAccentColorCommand}" CommandParameter="#4DD0E1" Width="30" Height="30" Margin="4" Style="{StaticResource ModernButton}"/>
-                                            <Button Background="#FF4081" ToolTip="Розовый" Command="{Binding ChangeAccentColorCommand}" CommandParameter="#FF4081" Width="30" Height="30" Margin="4" Style="{StaticResource ModernButton}"/>
+                                        <!-- Preset Palettes + Windows Theme Button -->
+                                        <WrapPanel Margin="0,0,0,10">
+                                            <!-- Windows Accent Button -->
+                                            <Button ToolTip="Цвет из темы Windows (системный акцент)"
+                                                    Command="{Binding ApplyWindowsAccentColorCommand}"
+                                                    Background="{Binding WindowsSystemAccentHex, Converter={StaticResource HexToBrush}}"
+                                                    Width="34" Height="34" Margin="4"
+                                                    Style="{StaticResource ModernButton}" Cursor="Hand">
+                                                <Grid>
+                                                    <Path Data="{StaticResource IconWindows}" Width="15" Height="15" Fill="White" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                    <!-- Selection checkmark badge -->
+                                                    <Border Width="14" Height="14" CornerRadius="7" Background="#D0000000" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,-4,-4"
+                                                            Visibility="{Binding IsWindowsSystemAccentSelected, Converter={StaticResource BoolToVis}}">
+                                                        <Path Data="{StaticResource IconCheck}" Fill="White" Width="9" Height="9" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                    </Border>
+                                                </Grid>
+                                            </Button>
+
+                                            <!-- Preset Colors with Checkmark indicator -->
+                                            <Button Background="#4D9FFF" ToolTip="Prime Синий (#4D9FFF)" Command="{Binding ChangeAccentColorCommand}" CommandParameter="#4D9FFF" Width="34" Height="34" Margin="4" Style="{StaticResource ModernButton}">
+                                                <Path Data="{StaticResource IconCheck}" Fill="White" Width="14" Height="14" Stretch="Uniform"
+                                                      Visibility="{Binding CurrentAccentHex, Converter={StaticResource EqualityToVis}, ConverterParameter=#4D9FFF}"/>
+                                            </Button>
+                                            <Button Background="#26A69A" ToolTip="Изумруд (#26A69A)" Command="{Binding ChangeAccentColorCommand}" CommandParameter="#26A69A" Width="34" Height="34" Margin="4" Style="{StaticResource ModernButton}">
+                                                <Path Data="{StaticResource IconCheck}" Fill="White" Width="14" Height="14" Stretch="Uniform"
+                                                      Visibility="{Binding CurrentAccentHex, Converter={StaticResource EqualityToVis}, ConverterParameter=#26A69A}"/>
+                                            </Button>
+                                            <Button Background="#B388FF" ToolTip="Пурпур (#B388FF)" Command="{Binding ChangeAccentColorCommand}" CommandParameter="#B388FF" Width="34" Height="34" Margin="4" Style="{StaticResource ModernButton}">
+                                                <Path Data="{StaticResource IconCheck}" Fill="White" Width="14" Height="14" Stretch="Uniform"
+                                                      Visibility="{Binding CurrentAccentHex, Converter={StaticResource EqualityToVis}, ConverterParameter=#B388FF}"/>
+                                            </Button>
+                                            <Button Background="#FFB74D" ToolTip="Янтарь (#FFB74D)" Command="{Binding ChangeAccentColorCommand}" CommandParameter="#FFB74D" Width="34" Height="34" Margin="4" Style="{StaticResource ModernButton}">
+                                                <Path Data="{StaticResource IconCheck}" Fill="White" Width="14" Height="14" Stretch="Uniform"
+                                                      Visibility="{Binding CurrentAccentHex, Converter={StaticResource EqualityToVis}, ConverterParameter=#FFB74D}"/>
+                                            </Button>
+                                            <Button Background="#FF5252" ToolTip="Рубин (#FF5252)" Command="{Binding ChangeAccentColorCommand}" CommandParameter="#FF5252" Width="34" Height="34" Margin="4" Style="{StaticResource ModernButton}">
+                                                <Path Data="{StaticResource IconCheck}" Fill="White" Width="14" Height="14" Stretch="Uniform"
+                                                      Visibility="{Binding CurrentAccentHex, Converter={StaticResource EqualityToVis}, ConverterParameter=#FF5252}"/>
+                                            </Button>
+                                            <Button Background="#4DD0E1" ToolTip="Циан (#4DD0E1)" Command="{Binding ChangeAccentColorCommand}" CommandParameter="#4DD0E1" Width="34" Height="34" Margin="4" Style="{StaticResource ModernButton}">
+                                                <Path Data="{StaticResource IconCheck}" Fill="White" Width="14" Height="14" Stretch="Uniform"
+                                                      Visibility="{Binding CurrentAccentHex, Converter={StaticResource EqualityToVis}, ConverterParameter=#4DD0E1}"/>
+                                            </Button>
+                                            <Button Background="#FF4081" ToolTip="Розовый (#FF4081)" Command="{Binding ChangeAccentColorCommand}" CommandParameter="#FF4081" Width="34" Height="34" Margin="4" Style="{StaticResource ModernButton}">
+                                                <Path Data="{StaticResource IconCheck}" Fill="White" Width="14" Height="14" Stretch="Uniform"
+                                                      Visibility="{Binding CurrentAccentHex, Converter={StaticResource EqualityToVis}, ConverterParameter=#FF4081}"/>
+                                            </Button>
                                         </WrapPanel>
+
+                                        <!-- Custom Color Picker Row: HEX Input + Color Swatch Preview + Eyedropper / Pipette -->
+                                        <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="10,8" Margin="0,0,0,14">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <!-- Live Color Swatch -->
+                                                <Border Grid.Column="0" Width="28" Height="28" CornerRadius="6" Background="{Binding CustomAccentPreviewBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Margin="0,0,10,0"/>
+                                                <!-- Hex Input -->
+                                                <TextBox Grid.Column="1" Text="{Binding CustomAccentHexInput, UpdateSourceTrigger=PropertyChanged}"
+                                                         Foreground="{DynamicResource TextPrimaryBrush}" Background="Transparent" BorderBrush="{DynamicResource BorderBrush}"
+                                                         FontSize="12" FontFamily="Consolas, Segoe UI" VerticalContentAlignment="Center" Padding="8,4" Margin="0,0,8,0"
+                                                         ToolTip="Введите свой HEX код (например: #3399FF или #FF007F)"/>
+                                                <!-- Eyedropper Button -->
+                                                <Button Grid.Column="2" Style="{StaticResource ModernButton}" Command="{Binding PickEyedropperColorCommand}"
+                                                        ToolTip="Пипетка: наведите курсор на любой пиксель на экране и кликните для выбора цвета" Padding="8,5" Margin="0,0,6,0">
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <Path Data="{StaticResource IconPipette}" Width="14" Height="14" Fill="{DynamicResource TextPrimaryBrush}" Stretch="Uniform" Margin="0,0,6,0"/>
+                                                        <TextBlock Text="Пипетка" FontSize="11" Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+                                                    </StackPanel>
+                                                </Button>
+                                                <!-- Apply Custom Color Button -->
+                                                <Button Grid.Column="3" Style="{StaticResource AccentButton}" Command="{Binding ApplyCustomAccentColorCommand}"
+                                                        IsEnabled="{Binding IsCustomAccentHexValid}"
+                                                        Content="Задать" FontSize="11" Padding="12,5"/>
+                                            </Grid>
+                                        </Border>
 
                                         <TextBlock Text="ФОРМА АВАТАРОК" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,6"/>
                                         <DockPanel Margin="0,0,0,6">
@@ -525,7 +596,7 @@
                                     <!-- TAB 3: Браузер -->
                                     <StackPanel Visibility="{Binding SelectedSettingsTab, Converter={StaticResource EqualityToVis}, ConverterParameter=3}">
                                         <TextBlock Text="ВСТРОЕННЫЙ БРАУЗЕР" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,8"/>
-                                        <CheckBox Content="Открывать веб-ссылки во встроенном окне" IsChecked="{Binding Settings.UseInternalBrowser, Mode=TwoWay}"
+                                        <CheckBox Content="Открывать веб-ссылки во встроенном окне" IsChecked="{Binding UseInternalBrowser, Mode=TwoWay}"
                                                   Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,4"/>
                                         <TextBlock Text="Позволяет безопасно просматривать ссылки прямо в мессенджере без перехода в сторонние браузеры."
                                                    FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" Margin="24,0,0,14" TextWrapping="Wrap"/>
@@ -710,7 +781,7 @@
         <Border Grid.Row="2" Background="{DynamicResource HeaderBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0" Padding="16,10">
             <DockPanel>
                 <Button Content="Закрыть" Style="{StaticResource ModernButton}" Click="BtnClose_Click" Padding="18,7"/>
-                <Button Content="Применить" Style="{StaticResource AccentButton}" Command="{Binding SaveSettingsCommand}" DockPanel.Dock="Right" Padding="20,7" Visibility="{Binding HasPendingSettingsChanges, Converter={StaticResource BoolToVis}}"/>
+                <Button x:Name="BtnApplySettings" Content="Применить" Style="{StaticResource AccentButton}" Click="BtnApply_Click" DockPanel.Dock="Right" Padding="20,7"/>
             </DockPanel>
         </Border>
     </Grid>

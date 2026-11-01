@@ -1,4 +1,4 @@
-<Window x:Class="PrimeDesktop.Views.PrimeDialogWindow"
+﻿<Window x:Class="PrimeDesktop.Views.PrimeDialogWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Диалог"
@@ -26,8 +26,8 @@
 
             <Border.RenderTransform>
                 <TransformGroup>
-                    <ScaleTransform x:Name="CardScale" ScaleX="0.82" ScaleY="0.82" CenterX="200" CenterY="130"/>
-                    <TranslateTransform x:Name="CardTranslate" Y="40"/>
+                    <ScaleTransform x:Name="CardScale" ScaleX="0.95" ScaleY="0.95" CenterX="200" CenterY="130"/>
+                    <TranslateTransform x:Name="CardTranslate" Y="16"/>
                 </TransformGroup>
             </Border.RenderTransform>
 

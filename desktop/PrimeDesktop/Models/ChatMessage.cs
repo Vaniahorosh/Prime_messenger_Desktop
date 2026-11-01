@@ -123,42 +123,54 @@ public class ChatMessage : INotifyPropertyChanged
 
     public void UpdateReactionGroups(string myDisplayName = "")
     {
-        // Backward compatibility fallback
-        if (_userReactions.Count == 0 && !string.IsNullOrWhiteSpace(_reaction))
+        void DoUpdate()
         {
-            _userReactions[_reactionAuthor ?? "me"] = _reaction;
-        }
-
-        var groups = _userReactions
-            .GroupBy(kv => kv.Value)
-            .OrderByDescending(g => g.Count())
-            .ToList();
-
-        // Update legacy properties
-        _reaction = _userReactions.Values.FirstOrDefault();
-        _reactionAuthor = _userReactions.Keys.FirstOrDefault();
-
-        ReactionGroups.Clear();
-        foreach (var g in groups)
-        {
-            var group = new ReactionGroup
+            // Backward compatibility fallback
+            if (_userReactions.Count == 0 && !string.IsNullOrWhiteSpace(_reaction))
             {
-                Emoji = g.Key,
-                Count = g.Count(),
-                IsSelectedByMe = g.Any(kv => IsAuthorMe(kv.Key, myDisplayName)),
-                Tooltip = string.Join(", ", g.Select(kv => kv.Key))
-            };
-            foreach (var author in g.Select(kv => kv.Key))
-            {
-                group.Authors.Add(author);
+                _userReactions[_reactionAuthor ?? "me"] = _reaction;
             }
-            ReactionGroups.Add(group);
+
+            var groups = _userReactions
+                .GroupBy(kv => kv.Value)
+                .OrderByDescending(g => g.Count())
+                .ToList();
+
+            // Update legacy properties
+            _reaction = _userReactions.Values.FirstOrDefault();
+            _reactionAuthor = _userReactions.Keys.FirstOrDefault();
+
+            ReactionGroups.Clear();
+            foreach (var g in groups)
+            {
+                var group = new ReactionGroup
+                {
+                    Emoji = g.Key,
+                    Count = g.Count(),
+                    IsSelectedByMe = g.Any(kv => IsAuthorMe(kv.Key, myDisplayName)),
+                    Tooltip = string.Join(", ", g.Select(kv => kv.Key))
+                };
+                foreach (var author in g.Select(kv => kv.Key))
+                {
+                    group.Authors.Add(author);
+                }
+                ReactionGroups.Add(group);
+            }
+
+            OnPropertyChanged(nameof(Reaction));
+            OnPropertyChanged(nameof(ReactionAuthor));
+            OnPropertyChanged(nameof(HasReaction));
+            OnPropertyChanged(nameof(HasReactions));
         }
 
-        OnPropertyChanged(nameof(Reaction));
-        OnPropertyChanged(nameof(ReactionAuthor));
-        OnPropertyChanged(nameof(HasReaction));
-        OnPropertyChanged(nameof(HasReactions));
+        if (System.Windows.Application.Current?.Dispatcher != null && !System.Windows.Application.Current.Dispatcher.CheckAccess())
+        {
+            System.Windows.Application.Current.Dispatcher.Invoke(DoUpdate);
+        }
+        else
+        {
+            DoUpdate();
+        }
     }
 
     private static bool IsAuthorMe(string author, string myDisplayName)

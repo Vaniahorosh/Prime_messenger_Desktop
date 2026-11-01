@@ -8,6 +8,7 @@
 
         xmlns:conv="clr-namespace:PrimeDesktop.Converters"
         xmlns:controls="clr-namespace:PrimeDesktop.Controls"
+        xmlns:emoji="clr-namespace:Emoji.Wpf;assembly=Emoji.Wpf"
 
         Title="Prime Desktop" Icon="Assets/prime.ico" Height="720" Width="1100"
 
@@ -23,7 +24,7 @@
 
     <WindowChrome.WindowChrome>
 
-        <WindowChrome CaptionHeight="36" ResizeBorderThickness="6" GlassFrameThickness="0" CornerRadius="0"/>
+        <WindowChrome CaptionHeight="36" ResizeBorderThickness="6" GlassFrameThickness="0,0,0,1" CornerRadius="0" UseAeroCaptionButtons="False"/>
 
     </WindowChrome.WindowChrome>
 
@@ -67,10 +68,16 @@
             <Setter Property="Background" Value="{Binding IsSelectedByMe, Converter={StaticResource ReactionSelectedBgConverter}}" />
             <Setter Property="BorderBrush" Value="{Binding IsSelectedByMe, Converter={StaticResource ReactionSelectedBorderConverter}}" />
             <Setter Property="BorderThickness" Value="1.5" />
-            <Setter Property="Padding" Value="7,3" />
-            <Setter Property="Margin" Value="0,0,5,4" />
+            <Setter Property="Padding" Value="8,4" />
+            <Setter Property="Margin" Value="0,0,6,4" />
             <Setter Property="Cursor" Value="Hand" />
             <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+            <Setter Property="RenderTransformOrigin" Value="0.5,0.5"/>
+            <Setter Property="RenderTransform">
+                <Setter.Value>
+                    <ScaleTransform ScaleX="1.0" ScaleY="1.0"/>
+                </Setter.Value>
+            </Setter>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
@@ -78,16 +85,44 @@
                                 Background="{TemplateBinding Background}"
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="12"
-                                Padding="{TemplateBinding Padding}">
+                                CornerRadius="14"
+                                Padding="{TemplateBinding Padding}"
+                                SnapsToDevicePixels="True">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="ChipBorder" Property="Opacity" Value="0.88"/>
+                                <Trigger.EnterActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)"
+                                                             To="1.08" Duration="0:0:0.12">
+                                                <DoubleAnimation.EasingFunction><BackEase EasingMode="EaseOut" Amplitude="0.3"/></DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)"
+                                                             To="1.08" Duration="0:0:0.12">
+                                                <DoubleAnimation.EasingFunction><BackEase EasingMode="EaseOut" Amplitude="0.3"/></DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.EnterActions>
+                                <Trigger.ExitActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)"
+                                                             To="1.0" Duration="0:0:0.1"/>
+                                            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)"
+                                                             To="1.0" Duration="0:0:0.1"/>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.ExitActions>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="ChipBorder" Property="Opacity" Value="0.7"/>
+                                <Setter Property="RenderTransform">
+                                    <Setter.Value>
+                                        <ScaleTransform ScaleX="0.94" ScaleY="0.94"/>
+                                    </Setter.Value>
+                                </Setter>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -219,7 +254,9 @@
                             </DockPanel.RenderTransform>
 
                             <!-- Discovery Button ("Поиск устройств Prime") -->
-                            <Button x:Name="BtnDeviceDiscovery" Style="{StaticResource ModernButton}" 
+                            
+
+                              <Button x:Name="BtnDeviceDiscovery" Style="{StaticResource ModernButton}" 
                                     ToolTip="Поиск устройств Prime" Command="{Binding OpenDeviceDiscoveryCommand}" 
                                     DockPanel.Dock="Right" Width="34" Height="34" Padding="0">
                                 <Path Data="{StaticResource IconRefresh}" Fill="{DynamicResource TextSecondaryBrush}" Width="15" Height="15" Stretch="Uniform"/>
@@ -413,7 +450,7 @@
                                                       Visibility="{Binding IsMuted, Converter={StaticResource BoolToVis}}" ToolTip="Уведомления отключены"/>
                                                 <TextBlock Text="{Binding LastMessageTime}" Foreground="{StaticResource TextMutedBrush}" FontSize="11"/>
                                             </StackPanel>
-                                            <Border Background="{StaticResource BadgeBrush}" CornerRadius="10" MinWidth="18" Height="18" Margin="0,4,0,0"
+                                            <Border Background="{DynamicResource BadgeBrush}" CornerRadius="10" MinWidth="18" Height="18" Margin="0,4,0,0"
                                                     Visibility="{Binding UnreadCount, Converter={StaticResource BoolToVis}}">
                                                 <controls:AnimatedTextTransitionControl Text="{Binding UnreadCount}" Foreground="White" FontSize="10" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="4,0"/>
                                             </Border>
@@ -681,42 +718,45 @@
 
                                         <Border.ContextMenu>
                                             <ContextMenu Style="{StaticResource ModernContextMenu}">
-                                                <!-- Reaction Island (Top row of 8 emojis + expand button) -->
-                                                <Border Background="#0C131D" BorderBrush="#1F2C3F" BorderThickness="1" CornerRadius="12" Padding="6,4" Margin="2,2,2,6">
-                                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                                        <Button Content="👍" Style="{StaticResource ReactionEmojiButton}"
+                                                                                                <!-- Reaction Island (Horizontal frequent reactions row + '+' button for full collection) -->
+                                                <Border Background="#101824" BorderBrush="#25374E" BorderThickness="1" CornerRadius="18" Padding="6,3" Margin="2,2,2,8" MaxWidth="380">
+                                                    <Border.Effect>
+                                                        <DropShadowEffect BlurRadius="16" ShadowDepth="4" Direction="270" Opacity="0.5" Color="#000000"/>
+                                                    </Border.Effect>
+                                                    <DockPanel>
+                                                        <!-- '+' Button to open full emoji collection picker -->
+                                                        <Button DockPanel.Dock="Right" Style="{StaticResource ModernButton}" Width="28" Height="28" Margin="4,0,0,0"
+                                                                ToolTip="Все реакции из коллекции (+)"
                                                                 Tag="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
-                                                                Command="{Binding PlacementTarget.Tag.SetReactionCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
-                                                                CommandParameter="👍" Click="ReactionButton_Click"/>
-                                                        <Button Content="❤️" Style="{StaticResource ReactionEmojiButton}"
-                                                                Tag="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
-                                                                Command="{Binding PlacementTarget.Tag.SetReactionCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
-                                                                CommandParameter="❤️" Click="ReactionButton_Click"/>
-                                                        <Button Content="🔥" Style="{StaticResource ReactionEmojiButton}"
-                                                                Tag="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
-                                                                Command="{Binding PlacementTarget.Tag.SetReactionCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
-                                                                CommandParameter="🔥" Click="ReactionButton_Click"/>
-                                                        <Button Content="😂" Style="{StaticResource ReactionEmojiButton}"
-                                                                Tag="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
-                                                                Command="{Binding PlacementTarget.Tag.SetReactionCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
-                                                                CommandParameter="😂" Click="ReactionButton_Click"/>
-                                                        <Button Content="😮" Style="{StaticResource ReactionEmojiButton}"
-                                                                Tag="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
-                                                                Command="{Binding PlacementTarget.Tag.SetReactionCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
-                                                                CommandParameter="😮" Click="ReactionButton_Click"/>
-                                                        <Button Content="😢" Style="{StaticResource ReactionEmojiButton}"
-                                                                Tag="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
-                                                                Command="{Binding PlacementTarget.Tag.SetReactionCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
-                                                                CommandParameter="😢" Click="ReactionButton_Click"/>
-                                                        <Button Content="🎉" Style="{StaticResource ReactionEmojiButton}"
-                                                                Tag="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
-                                                                Command="{Binding PlacementTarget.Tag.SetReactionCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
-                                                                CommandParameter="🎉" Click="ReactionButton_Click"/>
-                                                        <Button Content="➕" Style="{StaticResource ReactionEmojiButton}"
-                                                                Tag="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
-                                                                Click="BtnExpandReactions_Click" ToolTip="Все реакции..."/>
-                                                    </StackPanel>
+                                                                Click="BtnOpenMoreReactions_Click">
+                                                            <Border Background="{DynamicResource AccentSoftBrush}" CornerRadius="14" Width="26" Height="26">
+                                                                <Path Data="{StaticResource IconPlus}" Width="11" Height="11" Fill="{DynamicResource AccentBrush}" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                            </Border>
+                                                        </Button>
+
+                                                        <!-- Scrollable frequent reactions -->
+                                                        <ScrollViewer HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled"
+                                                                      PanningMode="HorizontalOnly"
+                                                                      PreviewMouseWheel="ReactionScrollViewer_PreviewMouseWheel">
+                                                            <ItemsControl ItemsSource="{Binding PlacementTarget.Tag.QuickReactions, RelativeSource={RelativeSource AncestorType=ContextMenu}}">
+                                                                <ItemsControl.ItemsPanel>
+                                                                    <ItemsPanelTemplate>
+                                                                        <StackPanel Orientation="Horizontal"/>
+                                                                    </ItemsPanelTemplate>
+                                                                </ItemsControl.ItemsPanel>
+                                                                <ItemsControl.ItemTemplate>
+                                                                    <DataTemplate>
+                                                                        <Button Content="{Binding}" Style="{StaticResource ReactionEmojiButton}"
+                                                                                Tag="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                                                                Command="{Binding PlacementTarget.Tag.SetReactionCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                                                                CommandParameter="{Binding}" Click="ReactionButton_Click"/>
+                                                                    </DataTemplate>
+                                                                </ItemsControl.ItemTemplate>
+                                                            </ItemsControl>
+                                                        </ScrollViewer>
+                                                    </DockPanel>
                                                 </Border>
+
 
                                                 <!-- Actions -->
                                                 <MenuItem Header="↩️ Ответить"
@@ -1089,8 +1129,8 @@
                                                         Click="ReactionChip_Click"
                                                         ToolTip="{Binding Tooltip}">
                                                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                                        <TextBlock Text="{Binding Emoji}" FontSize="13" VerticalAlignment="Center"/>
-                                                        <TextBlock Text="{Binding Count}" FontSize="11" FontWeight="Bold" Margin="4,0,0,0" VerticalAlignment="Center"
+                                                        <emoji:TextBlock Text="{Binding Emoji}" FontSize="14" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                                                        <TextBlock Text="{Binding Count}" FontSize="11" FontWeight="Bold" VerticalAlignment="Center"
                                                                    Foreground="{Binding IsSelectedByMe, Converter={StaticResource ReactionCountBrushConverter}}"/>
                                                     </StackPanel>
                                                 </Button>
@@ -1393,10 +1433,6 @@
                                 <Popup x:Name="EmojiPickerPopup" PlacementTarget="{Binding ElementName=BtnEmojiPickerTrigger}"
                                        Placement="Top" StaysOpen="False" AllowsTransparency="True" VerticalOffset="-6">
                                     <controls:EmojiPickerControl x:Name="ChatEmojiPicker" />
-                                </Popup>
-                                <Popup x:Name="ExpandedReactionsPopup"
-                                       Placement="MousePoint" StaysOpen="False" AllowsTransparency="True" VerticalOffset="-10">
-                                    <controls:ExpandedReactionsControl x:Name="ExpandedReactionsView" />
                                 </Popup>
                             </Grid>
 
@@ -2217,6 +2253,16 @@
 
         </Grid>
 
-</Grid>
+        <!-- Full Reactions Picker Flyout Popup -->
+        <Popup x:Name="ReactionsFullPopup" StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade" Placement="MousePoint">
+            <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="14" Padding="8">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="24" ShadowDepth="6" Direction="270" Opacity="0.55" Color="#000000"/>
+                </Border.Effect>
+                <controls:ExpandedReactionsControl x:Name="ExpandedReactionsView" Width="340" MaxHeight="350"/>
+            </Border>
+        </Popup>
+
+    </Grid>
 
 </Window>

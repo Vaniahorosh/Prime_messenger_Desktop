@@ -10,6 +10,7 @@ using System.Linq;
 using System.Threading.Tasks;
 
 using System.Windows;
+using System.Windows.Media;
 
 using System.Windows.Input;
 
@@ -631,6 +632,65 @@ public class MainViewModel : ViewModelBase
         HasPendingSettingsChanges = !string.Equals(_initialSettingsSnapshot, current, StringComparison.Ordinal);
     }
 
+    public void RevertSettingsToSnapshot()
+    {
+        if (string.IsNullOrEmpty(_initialSettingsSnapshot)) return;
+        try
+        {
+            var original = System.Text.Json.JsonSerializer.Deserialize<AppSettings>(_initialSettingsSnapshot);
+            if (original != null)
+            {
+                Settings.MyDisplayName = original.MyDisplayName;
+                Settings.MyUsername = original.MyUsername;
+                Settings.MyAvatarPath = original.MyAvatarPath;
+                Settings.ChatWallpaperPath = original.ChatWallpaperPath;
+                Settings.WallpaperOpacity = original.WallpaperOpacity;
+                Settings.AccentColorHex = original.AccentColorHex;
+                Settings.ThemeMode = original.ThemeMode;
+                Settings.EnableAcrylic = original.EnableAcrylic;
+                Settings.EnableAnimations = original.EnableAnimations;
+                Settings.AvatarCornerRadiusPercent = original.AvatarCornerRadiusPercent;
+                Settings.BubbleRadius = original.BubbleRadius;
+                Settings.VideoNoteRadiusPercent = original.VideoNoteRadiusPercent;
+                Settings.PlayNotificationSounds = original.PlayNotificationSounds;
+                Settings.PlayOutgoingSound = original.PlayOutgoingSound;
+                Settings.PlayIncomingSound = original.PlayIncomingSound;
+                Settings.PlayVoiceRecordSound = original.PlayVoiceRecordSound;
+                Settings.SoundEffectsVolume = original.SoundEffectsVolume;
+                Settings.ShowToastNotifications = original.ShowToastNotifications;
+                Settings.ShowMessagePreviewInNotifications = original.ShowMessagePreviewInNotifications;
+                Settings.MinimizeToTray = original.MinimizeToTray;
+                Settings.EnableScreenshotProtection = original.EnableScreenshotProtection;
+                Settings.MaskDeviceIdentifiers = original.MaskDeviceIdentifiers;
+                Settings.LaunchAtStartup = original.LaunchAtStartup;
+                Settings.CompanionPort = original.CompanionPort;
+                Settings.AutoConnectBluetooth = original.AutoConnectBluetooth;
+                Settings.SearchEngine = original.SearchEngine;
+                Settings.UseInternalBrowser = original.UseInternalBrowser;
+                Settings.BrowserEnableJs = original.BrowserEnableJs;
+                Settings.BrowserEnableCookies = original.BrowserEnableCookies;
+                Settings.BrowserDesktopMode = original.BrowserDesktopMode;
+                Settings.BrowserToolbarLayout = original.BrowserToolbarLayout;
+
+                ThemeManager.ApplyTheme(Settings.ThemeMode, Settings.AccentColorHex);
+
+                OnPropertyChanged(nameof(Settings));
+                OnPropertyChanged(nameof(UseInternalBrowser));
+                OnPropertyChanged(nameof(SelectedSearchEngine));
+                OnPropertyChanged(nameof(CurrentAccentHex));
+                OnPropertyChanged(nameof(MyDisplayName));
+                OnPropertyChanged(nameof(MyUsername));
+                OnPropertyChanged(nameof(IsDarkThemeSelected));
+                OnPropertyChanged(nameof(IsLightThemeSelected));
+                OnPropertyChanged(nameof(IsSystemTheme));
+
+                HasPendingSettingsChanges = false;
+                StatusMessage = "Изменения отменены";
+            }
+        }
+        catch { }
+    }
+
     private string GetSettingsSnapshot()
     {
         try
@@ -730,6 +790,21 @@ public class MainViewModel : ViewModelBase
     public ICommand ConnectCompanionWifiCommand { get; }
 
     public ICommand ChangeAccentColorCommand { get; }
+    public ICommand ApplyWindowsAccentColorCommand { get; }
+    public ICommand OpenBrowserCommand { get; }
+
+    private ObservableCollection<string> _quickReactions = new();
+    public ObservableCollection<string> QuickReactions
+    {
+        get => _quickReactions;
+        set => SetProperty(ref _quickReactions, value);
+    }
+
+    public bool IsWindowsSystemAccentSelected =>
+        !string.IsNullOrEmpty(WindowsSystemAccentHex) &&
+        string.Equals(Settings?.AccentColorHex, WindowsSystemAccentHex, StringComparison.OrdinalIgnoreCase);
+
+    public string CurrentAccentHex => Settings?.AccentColorHex ?? "#4D9FFF";
 
     public ICommand ChangeContactAvatarCommand { get; }
 
@@ -818,7 +893,63 @@ public class MainViewModel : ViewModelBase
     public bool CanResetVideoNoteRadius => Settings.VideoNoteRadiusPercent != 50;
     public bool CanResetSoundVolume => Settings.SoundEffectsVolume != 80;
     public bool CanResetAccentColor => !string.Equals(Settings.AccentColorHex, "#4D9FFF", StringComparison.OrdinalIgnoreCase);
-    public bool CanResetWallpaper => !string.IsNullOrEmpty(Settings.ChatWallpaperPath);
+        public bool CanResetWallpaper => !string.IsNullOrEmpty(Settings.ChatWallpaperPath);
+
+    private string _windowsSystemAccentHex = ThemeManager.GetWindowsSystemAccentHex();
+    public string WindowsSystemAccentHex
+    {
+        get => _windowsSystemAccentHex;
+        set
+        {
+            if (SetProperty(ref _windowsSystemAccentHex, value))
+            {
+                OnPropertyChanged(nameof(IsWindowsSystemAccentSelected));
+            }
+        }
+    }
+
+    private string _customAccentHexInput = "#4D9FFF";
+    public string CustomAccentHexInput
+    {
+        get => _customAccentHexInput;
+        set
+        {
+            if (SetProperty(ref _customAccentHexInput, value))
+            {
+                OnPropertyChanged(nameof(CustomAccentPreviewBrush));
+                OnPropertyChanged(nameof(IsCustomAccentHexValid));
+            }
+        }
+    }
+
+    public Brush CustomAccentPreviewBrush
+    {
+        get
+        {
+            try
+            {
+                string hex = _customAccentHexInput?.Trim() ?? "";
+                if (!hex.StartsWith("#")) hex = "#" + hex;
+                if (hex.Length == 7 || hex.Length == 9)
+                {
+                    var color = (Color)ColorConverter.ConvertFromString(hex);
+                    return new SolidColorBrush(color);
+                }
+            }
+            catch { }
+            return Application.Current?.Resources["AccentBrush"] as Brush ?? Brushes.DodgerBlue;
+        }
+    }
+
+    public bool IsCustomAccentHexValid
+    {
+        get
+        {
+            string hex = _customAccentHexInput?.Trim() ?? "";
+            if (!hex.StartsWith("#")) hex = "#" + hex;
+            return System.Text.RegularExpressions.Regex.IsMatch(hex, @"^#([0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$");
+        }
+    }
 
     public int AvatarCornerRadiusPercent
 
@@ -902,6 +1033,22 @@ public class MainViewModel : ViewModelBase
             }
             catch { }
         }, token);
+    }
+
+    public bool UseInternalBrowser
+    {
+        get => Settings?.UseInternalBrowser ?? true;
+        set
+        {
+            if (Settings != null && Settings.UseInternalBrowser != value)
+            {
+                Settings.UseInternalBrowser = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(Settings));
+                CheckForPendingSettingsChanges();
+                StatusMessage = value ? "Встроенный браузер (ожидает применения)" : "Системный браузер (ожидает применения)";
+            }
+        }
     }
 
     public string[] SearchEngines => new[] { "Google", "Яндекс", "DuckDuckGo", "Bing" };
@@ -1125,7 +1272,9 @@ public class MainViewModel : ViewModelBase
     public ICommand ResetWallpaperOpacityCommand { get; }
     public ICommand ResetVideoNoteRadiusCommand { get; }
     public ICommand ResetSoundVolumeCommand { get; }
-    public ICommand ResetAccentColorCommand { get; }
+        public ICommand ResetAccentColorCommand { get; }
+    public ICommand ApplyCustomAccentColorCommand { get; }
+    public ICommand PickEyedropperColorCommand { get; }
 
     public ICommand CloseActiveChatCommand { get; }
 
@@ -1655,6 +1804,7 @@ public class MainViewModel : ViewModelBase
                 {
                     System.IO.Directory.Delete(tempDir, true);
                 }
+                PrimeDesktop.Services.BrowserHistoryService.ClearHistory();
             }
             catch { }
             StatusMessage = "Кэш и данные браузера очищены";
@@ -2475,20 +2625,71 @@ public class MainViewModel : ViewModelBase
         });
 
         ChangeAccentColorCommand = new RelayCommand(param =>
-
         {
-            if (param is string hex)
-
+            if (param is string hex && !string.IsNullOrWhiteSpace(hex))
             {
+                hex = hex.Trim();
+                if (!hex.StartsWith("#")) hex = "#" + hex;
                 ThemeManager.ApplyAccentColor(hex);
-
                 Settings.AccentColorHex = hex;
-
                 _ = _storageService.SaveSettingsAsync(Settings);
-
+                CustomAccentHexInput = hex;
+                OnPropertyChanged(nameof(Settings));
+                OnPropertyChanged(nameof(CurrentAccentHex));
+                OnPropertyChanged(nameof(CanResetAccentColor));
+                OnPropertyChanged(nameof(IsWindowsSystemAccentSelected));
             }
-
         });
+
+        ApplyWindowsAccentColorCommand = new RelayCommand(() =>
+        {
+            var winHex = ThemeManager.GetWindowsSystemAccentHex();
+            WindowsSystemAccentHex = winHex;
+            ChangeAccentColorCommand.Execute(winHex);
+            StatusMessage = $"Применен системный акцент Windows: {winHex}";
+        });
+
+        OpenBrowserCommand = new RelayCommand(param =>
+        {
+            WindowManager.OpenBrowser(param as string, this);
+        });
+
+        ApplyCustomAccentColorCommand = new RelayCommand(() =>
+        {
+            string hex = CustomAccentHexInput?.Trim() ?? "";
+            if (!hex.StartsWith("#")) hex = "#" + hex;
+            if (IsCustomAccentHexValid)
+            {
+                ChangeAccentColorCommand.Execute(hex);
+                StatusMessage = $"Акцентный цвет установлен: {hex}";
+            }
+            else
+            {
+                StatusMessage = "Некорректный HEX-код цвета. Пример: #4D9FFF";
+            }
+        });
+
+        PickEyedropperColorCommand = new RelayCommand(() =>
+        {
+            ScreenColorPicker.StartInteractivePick(hex =>
+            {
+                RunOnUIThread(() =>
+                {
+                    CustomAccentHexInput = hex;
+                    ChangeAccentColorCommand.Execute(hex);
+                    StatusMessage = $"Цвет пипетки применен: {hex}";
+                });
+            });
+        });
+
+        ThemeManager.SystemAccentColorChanged += hex =>
+        {
+            RunOnUIThread(() =>
+            {
+                WindowsSystemAccentHex = hex;
+                OnPropertyChanged(nameof(IsWindowsSystemAccentSelected));
+            });
+        };
 
         // Network wire-up
 
@@ -2529,6 +2730,8 @@ public class MainViewModel : ViewModelBase
             RunOnUIThread(() =>
             {
                 ThemeManager.InitializeTheme(Settings.ThemeMode, Settings.AccentColorHex);
+                CustomAccentHexInput = Settings.AccentColorHex;
+                InitializeQuickReactions();
             });
 
             var chats = await _storageService.LoadChatsAsync();
@@ -2776,6 +2979,37 @@ public class MainViewModel : ViewModelBase
 
     }
 
+    public void RecordReactionUsage(string emoji)
+    {
+        if (string.IsNullOrWhiteSpace(emoji)) return;
+        emoji = emoji.Trim();
+
+        var list = Settings.FrequentReactions;
+        list.Remove(emoji);
+        list.Insert(0, emoji);
+        if (list.Count > 30) list = list.Take(30).ToList();
+        Settings.FrequentReactions = list;
+        _ = _storageService.SaveSettingsAsync(Settings);
+
+        RunOnUIThread(() =>
+        {
+            _quickReactions.Clear();
+            foreach (var r in list) _quickReactions.Add(r);
+        });
+    }
+
+    private void InitializeQuickReactions()
+    {
+        var list = Settings.FrequentReactions;
+        if (list == null || list.Count == 0)
+        {
+            list = new List<string> { "👍", "❤️", "🔥", "😂", "🥰", "😮", "😢", "🙏", "👏", "🎉", "💯", "😍", "🤔", "🤝", "🫡", "😎", "🥳", "🚀", "👀" };
+            Settings.FrequentReactions = list;
+        }
+        _quickReactions.Clear();
+        foreach (var r in list) _quickReactions.Add(r);
+    }
+
     public async Task SendReactionAsync(ChatMessage message, string? emoji)
     {
         if (SelectedChat == null || message == null) return;
@@ -2792,16 +3026,22 @@ public class MainViewModel : ViewModelBase
         message.SetUserReaction(myName, emoji, myName);
         _ = _storageService.SaveChatsAsync(_allChats);
 
+        if (!string.IsNullOrWhiteSpace(emoji))
+        {
+            RecordReactionUsage(emoji);
+        }
+
         byte[] payload = PrimePacket.BuildReactionPayload(message.Id, emoji, myName);
+        string targetAddr = !string.IsNullOrWhiteSpace(SelectedChat.DeviceAddress) ? SelectedChat.DeviceAddress : SelectedChat.PeerId;
         try
         {
-            string targetAddr = !string.IsNullOrWhiteSpace(SelectedChat.DeviceAddress) ? SelectedChat.DeviceAddress : SelectedChat.PeerId;
             await SendNetworkPacketAsync(targetAddr, PacketType.Reaction, payload);
             App.Log($"[Reaction] Sent reaction '{emoji}' for msg '{message.Id}' to '{targetAddr}'");
         }
         catch (Exception ex)
         {
-            App.Log($"[Reaction ERROR] Failed to send reaction: {ex.Message}");
+            App.Log($"[Reaction ERROR] Send failed, queuing in outbox: {ex.Message}");
+            QueueOutboxPacket(SelectedChat.Id, PacketType.Reaction, payload, message);
         }
     }
 
@@ -4855,31 +5095,30 @@ public async Task SendTextMessageAsync()
                     break;
 
                 case PacketType.Reaction:
-
-                    var (rxMsgId, rxEmoji, rxAuthor) = PrimePacket.ParseReactionPayload(payload);
-
-                    App.Log($"[Reaction] Received: msgId='{rxMsgId}', emoji='{rxEmoji}', author='{rxAuthor}'");
-
-                    var targetMsg = chat.Messages.FirstOrDefault(m => m.Id == rxMsgId);
-
-                    if (targetMsg == null && !string.IsNullOrEmpty(rxMsgId))
+                    RunOnUIThread(() =>
                     {
-                        targetMsg = chat.Messages.FirstOrDefault(m => m.Id.Contains(rxMsgId) || rxMsgId.Contains(m.Id));
-                    }
+                        var (rxMsgId, rxEmoji, rxAuthor) = PrimePacket.ParseReactionPayload(payload);
+                        App.Log($"[Reaction] Received: msgId='{rxMsgId}', emoji='{rxEmoji}', author='{rxAuthor}'");
 
-                    if (targetMsg == null)
-                    {
-                        targetMsg = chat.Messages.LastOrDefault();
-                    }
+                        var targetMsg = chat.Messages.FirstOrDefault(m => m.Id == rxMsgId);
+                        if (targetMsg == null && !string.IsNullOrEmpty(rxMsgId))
+                        {
+                            targetMsg = chat.Messages.FirstOrDefault(m => m.Id.Contains(rxMsgId) || rxMsgId.Contains(m.Id));
+                        }
 
-                    if (targetMsg != null)
-                    {
-                        string myName = !string.IsNullOrWhiteSpace(Settings?.MyDisplayName) ? Settings.MyDisplayName : "Я";
-                        targetMsg.SetUserReaction(rxAuthor, rxEmoji, myName);
-                        _ = _storageService.SaveChatsAsync(_allChats);
-                        App.Log($"[Reaction] Updated message '{targetMsg.Id}' with reaction '{rxEmoji}' by '{rxAuthor}'");
-                    }
+                        if (targetMsg == null)
+                        {
+                            targetMsg = chat.Messages.LastOrDefault();
+                        }
 
+                        if (targetMsg != null)
+                        {
+                            string myName = !string.IsNullOrWhiteSpace(Settings?.MyDisplayName) ? Settings.MyDisplayName : "Я";
+                            targetMsg.SetUserReaction(rxAuthor, rxEmoji, myName);
+                            _ = _storageService.SaveChatsAsync(_allChats);
+                            App.Log($"[Reaction] Updated message '{targetMsg.Id}' with reaction '{rxEmoji}' by '{rxAuthor}'");
+                        }
+                    });
                     break;
 
                 case PacketType.ProfileUpdate:
