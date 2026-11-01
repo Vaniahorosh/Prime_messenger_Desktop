@@ -1321,6 +1321,75 @@ public partial class BrowserWindow : Window
         AddNewTab();
     }
 
+    private BrowserTabItem? GetTabFromMenuSender(object sender)
+    {
+        if (sender is FrameworkElement fe)
+        {
+            if (fe.DataContext is BrowserTabItem tab) return tab;
+            if (fe.Tag is BrowserTabItem tagTab) return tagTab;
+            if (fe.Parent is ContextMenu cm && cm.PlacementTarget is FrameworkElement pt)
+            {
+                if (pt.DataContext is BrowserTabItem ptTab) return ptTab;
+                if (pt.Tag is BrowserTabItem ptTagTab) return ptTagTab;
+            }
+        }
+        return ActiveTab;
+    }
+
+    private void MenuTabNew_Click(object sender, RoutedEventArgs e)
+    {
+        AddNewTab();
+    }
+
+    private void MenuTabReload_Click(object sender, RoutedEventArgs e)
+    {
+        var tab = GetTabFromMenuSender(sender);
+        if (tab?.WebView != null)
+        {
+            tab.WebView.Reload();
+        }
+    }
+
+    private void MenuTabDuplicate_Click(object sender, RoutedEventArgs e)
+    {
+        var tab = GetTabFromMenuSender(sender);
+        if (tab != null)
+        {
+            AddNewTab(tab.Url);
+        }
+    }
+
+    private void MenuTabPin_Click(object sender, RoutedEventArgs e)
+    {
+        var tab = GetTabFromMenuSender(sender);
+        if (tab != null)
+        {
+            tab.IsPinned = !tab.IsPinned;
+        }
+    }
+
+    private void MenuTabClose_Click(object sender, RoutedEventArgs e)
+    {
+        var tab = GetTabFromMenuSender(sender);
+        if (tab != null)
+        {
+            CloseTab(tab);
+        }
+    }
+
+    private void MenuTabCloseOthers_Click(object sender, RoutedEventArgs e)
+    {
+        var tab = GetTabFromMenuSender(sender);
+        if (tab != null)
+        {
+            var others = Tabs.Where(t => t != tab).ToList();
+            foreach (var other in others)
+            {
+                CloseTab(other);
+            }
+        }
+    }
+
     private void TabsScrollViewer_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
     {
         if (sender is ScrollViewer sv)

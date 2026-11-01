@@ -545,6 +545,7 @@ namespace PrimeDesktop.Views
             ImageScale.CenterY = TargetImage.ActualHeight / 2.0;
             ImageScale.ScaleX = 1.0;
             ImageScale.ScaleY = 1.0;
+            if (ImageRotate != null) ImageRotate.Angle = 0;
             ImageTranslate.X = 0;
             ImageTranslate.Y = 0;
             BtnZoomReset.Content = "100%";
@@ -675,6 +676,38 @@ namespace PrimeDesktop.Views
                 App.Log($"[MediaViewer] Save failed: {ex.Message}");
             }
         }
+
+        private void MenuSaveAs_Click(object sender, RoutedEventArgs e) => BtnSave_Click(sender, e);
+        private void MenuCopyImage_Click(object sender, RoutedEventArgs e) => BtnCopy_Click(sender, e);
+        private void MenuResetZoom_Click(object sender, RoutedEventArgs e) => ResetZoomAndPosition();
+        private void MenuRotateClockwise_Click(object sender, RoutedEventArgs e)
+        {
+            if (ImageRotate != null)
+            {
+                ImageRotate.CenterX = TargetImage.ActualWidth / 2.0;
+                ImageRotate.CenterY = TargetImage.ActualHeight / 2.0;
+                ImageRotate.Angle = (ImageRotate.Angle + 90) % 360;
+            }
+        }
+        private void MenuOpenFolder_Click(object sender, RoutedEventArgs e)
+        {
+            if (_items.Count > 0 && _currentIndex >= 0 && _currentIndex < _items.Count)
+            {
+                var cur = _items[_currentIndex];
+                if (!string.IsNullOrEmpty(cur.FilePath) && File.Exists(cur.FilePath))
+                {
+                    try
+                    {
+                        System.Diagnostics.Process.Start("explorer.exe", $"/select,\"{cur.FilePath}\"");
+                    }
+                    catch (Exception ex)
+                    {
+                        App.Log($"[MediaViewer] OpenFolder failed: {ex.Message}");
+                    }
+                }
+            }
+        }
+        private void MenuClose_Click(object sender, RoutedEventArgs e) => Close();
 
         private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
         {

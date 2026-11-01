@@ -15,6 +15,7 @@ public class BrowserTabItem : INotifyPropertyChanged
     private ImageSource? _favicon;
     private bool _isSecure = true;
     private bool _isActive;
+    private bool _isPinned;
 
     public string Id { get; } = Guid.NewGuid().ToString("N");
 
@@ -52,6 +53,12 @@ public class BrowserTabItem : INotifyPropertyChanged
     {
         get => _isActive;
         set => SetProperty(ref _isActive, value);
+    }
+
+    public bool IsPinned
+    {
+        get => _isPinned;
+        set => SetProperty(ref _isPinned, value);
     }
 
     public WebView2? WebView { get; set; }

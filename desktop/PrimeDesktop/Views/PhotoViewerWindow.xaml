@@ -24,6 +24,17 @@
     <Border x:Name="PART_Backdrop"
             Background="#D0060910"
             MouseLeftButtonDown="Backdrop_MouseLeftButtonDown">
+        <Border.ContextMenu>
+            <ContextMenu Style="{StaticResource ModernContextMenu}">
+                <MenuItem Header="💾 Сохранить как..." Click="MenuSaveAs_Click"/>
+                <MenuItem Header="📋 Копировать" Click="MenuCopyImage_Click"/>
+                <MenuItem Header="🔍 Сбросить масштаб (100%)" Click="MenuResetZoom_Click"/>
+                <MenuItem Header="🔄 Повернуть по часовой стрелке" Click="MenuRotateClockwise_Click"/>
+                <MenuItem Header="📁 Показать в проводнике" Click="MenuOpenFolder_Click"/>
+                <Separator/>
+                <MenuItem Header="✕ Закрыть просмотр" Style="{StaticResource DangerMenuItem}" Click="MenuClose_Click"/>
+            </ContextMenu>
+        </Border.ContextMenu>
         <Grid>
             <!-- Top Floating Header Bar (File Name, Details, Window Control Buttons) -->
             <Grid VerticalAlignment="Top" Height="48" Margin="20,14,20,0" Panel.ZIndex="10"
@@ -87,6 +98,7 @@
                             <Image.RenderTransform>
                                 <TransformGroup>
                                     <ScaleTransform x:Name="ImageScale" ScaleX="1" ScaleY="1" CenterX="0.5" CenterY="0.5"/>
+                                    <RotateTransform x:Name="ImageRotate" Angle="0" CenterX="0.5" CenterY="0.5"/>
                                     <TranslateTransform x:Name="ImageTranslate" X="0" Y="0"/>
                                 </TransformGroup>
                             </Image.RenderTransform>

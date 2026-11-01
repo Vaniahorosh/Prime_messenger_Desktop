@@ -155,14 +155,41 @@ public class SystemTrayService : IDisposable
             menu.Style = cmStyle;
         }
 
-        var openItem = new MenuItem { Header = "Открыть Прайм" };
+        var openItem = new MenuItem { Header = "💬 Открыть Prime" };
         if (Application.Current.TryFindResource("ModernMenuItem") is Style miStyle)
         {
             openItem.Style = miStyle;
         }
         openItem.Click += (s, e) => RestoreWindow();
 
-        var exitItem = new MenuItem { Header = "Выход" };
+        var settingsItem = new MenuItem { Header = "⚙️ Настройки" };
+        if (Application.Current.TryFindResource("ModernMenuItem") is Style miStyleSettings)
+        {
+            settingsItem.Style = miStyleSettings;
+        }
+        settingsItem.Click += (s, e) =>
+        {
+            RestoreWindow();
+            if (_window.DataContext is ViewModels.MainViewModel vm)
+            {
+                WindowManager.OpenSettings(vm);
+            }
+        };
+
+        var browserItem = new MenuItem { Header = "🌐 Браузер Prime" };
+        if (Application.Current.TryFindResource("ModernMenuItem") is Style miStyleBrowser)
+        {
+            browserItem.Style = miStyleBrowser;
+        }
+        browserItem.Click += (s, e) =>
+        {
+            if (_window.DataContext is ViewModels.MainViewModel vm)
+            {
+                WindowManager.OpenBrowser(null, vm);
+            }
+        };
+
+        var exitItem = new MenuItem { Header = "✕ Выход из Prime" };
         if (Application.Current.TryFindResource("DangerMenuItem") is Style dangerStyle)
         {
             exitItem.Style = dangerStyle;
@@ -177,7 +204,9 @@ public class SystemTrayService : IDisposable
         };
 
         menu.Items.Add(openItem);
-        menu.Items.Add(new Separator { Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0x22, 0x31, 0x45)), Margin = new Thickness(4, 3, 4, 3) });
+        menu.Items.Add(settingsItem);
+        menu.Items.Add(browserItem);
+        menu.Items.Add(new Separator());
         menu.Items.Add(exitItem);
 
         menu.IsOpen = true;
