@@ -37,8 +37,14 @@ public class PrimePacket
     /// <summary>
     /// Writes packet into stream asynchronously matching BluetoothConnectionManager.java:
     /// Atomic 5-byte header (1 byte Type + 4 bytes Big-Endian Length), then raw Payload bytes in 16KB chunks.
+    /// Optional progress callback reports (bytesSent, totalBytes).
     /// </summary>
-    public static async Task WriteToStreamAsync(Stream stream, PacketType type, byte[] payload, CancellationToken ct = default)
+    public static async Task WriteToStreamAsync(
+        Stream stream,
+        PacketType type,
+        byte[] payload,
+        CancellationToken ct = default,
+        Action<long, long>? progressCallback = null)
     {
         int len = payload != null ? payload.Length : 0;
         byte[] header = new byte[5];
@@ -56,6 +62,7 @@ public class PrimePacket
                 int toWrite = Math.Min(chunkSize, len - offset);
                 await stream.WriteAsync(payload.AsMemory(offset, toWrite), ct).ConfigureAwait(false);
                 offset += toWrite;
+                progressCallback?.Invoke(offset, len);
             }
         }
         await stream.FlushAsync(ct).ConfigureAwait(false);
@@ -64,8 +71,12 @@ public class PrimePacket
     /// <summary>
     /// Asynchronously reads one full packet from stream. Returns null on stream disconnect.
     /// Non-blocking, cancellable, prevents WinRT StreamSocket deadlocks.
+    /// Optional progress callback reports (type, bytesRead, totalBytes) for transfers larger than 32KB.
     /// </summary>
-    public static async Task<PrimePacket?> ReadFromStreamAsync(Stream stream, CancellationToken ct = default)
+    public static async Task<PrimePacket?> ReadFromStreamAsync(
+        Stream stream,
+        CancellationToken ct = default,
+        Action<PacketType, long, long>? progressCallback = null)
     {
         byte[] header = new byte[5];
         int read = 0;
@@ -90,6 +101,10 @@ public class PrimePacket
             int r = await stream.ReadAsync(payload.AsMemory(read, length - read), ct).ConfigureAwait(false);
             if (r <= 0) return null;
             read += r;
+            if (length > 32 * 1024)
+            {
+                progressCallback?.Invoke((PacketType)typeByte, read, length);
+            }
         }
 
         return new PrimePacket((PacketType)typeByte, payload);

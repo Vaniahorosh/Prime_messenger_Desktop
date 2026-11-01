@@ -55,6 +55,28 @@ public class MainViewModel : ViewModelBase
 
     private string _statusMessage = "Ready";
 
+    private bool _isIncomingTransferActive;
+    private double _incomingTransferProgress;
+    private string _incomingTransferText = string.Empty;
+
+    public bool IsIncomingTransferActive
+    {
+        get => _isIncomingTransferActive;
+        set => SetProperty(ref _isIncomingTransferActive, value);
+    }
+
+    public double IncomingTransferProgress
+    {
+        get => _incomingTransferProgress;
+        set => SetProperty(ref _incomingTransferProgress, value);
+    }
+
+    public string IncomingTransferText
+    {
+        get => _incomingTransferText;
+        set => SetProperty(ref _incomingTransferText, value);
+    }
+
     private AppSettings _settings = new();
 
     private readonly Dictionary<string, System.Windows.Threading.DispatcherTimer> _chatActivityTimers = new();
@@ -2471,16 +2493,14 @@ public class MainViewModel : ViewModelBase
         // Network wire-up
 
         _bluetoothService.PacketReceived += OnPacketReceived;
-
         _bluetoothService.ConnectionStateChanged += OnConnectionStateChanged;
-
         _bluetoothService.ErrorOccurred += OnNetworkError;
+        _bluetoothService.TransferProgressChanged += OnTransferProgressChanged;
 
         _companionService.PacketReceived += OnPacketReceived;
-
         _companionService.ConnectionStateChanged += OnConnectionStateChanged;
-
         _companionService.ErrorOccurred += OnNetworkError;
+        _companionService.TransferProgressChanged += OnTransferProgressChanged;
 
         _ = InitializeAsync();
 
@@ -2957,11 +2977,37 @@ public async Task SendTextMessageAsync()
             string vFileName = System.IO.Path.GetFileName(filePath);
             payload = PrimePacket.BuildFilePayload(msg.Id, vFileName, fileBytes, duration, isVoice: true);
             string targetAddr = !string.IsNullOrWhiteSpace(targetChat.DeviceAddress) ? targetChat.DeviceAddress : targetChat.PeerId;
-            await SendNetworkPacketAsync(targetAddr, PacketType.File, payload);
-            msg.IsDelivered = true;
+            msg.IsTransferring = true;
+            msg.TransferProgress = 0;
+            DateTime sendStart = DateTime.UtcNow;
+            await SendNetworkPacketAsync(targetAddr, PacketType.File, payload, (sent, total) =>
+            {
+                if (total <= 0) return;
+                double pct = Math.Min(99.0, (double)sent / total * 100.0);
+                double elapsed = (DateTime.UtcNow - sendStart).TotalSeconds;
+                string speed = elapsed > 0.3 ? $"{sent / elapsed / 1024.0:F0} КБ/с" : "";
+                RunOnUIThread(() =>
+                {
+                    msg.TransferProgress = pct;
+                    msg.TransferSpeedText = speed;
+                    StatusMessage = $"📤 Отправка голосового: {pct:F0}%...";
+                });
+            });
+            RunOnUIThread(() =>
+            {
+                msg.TransferProgress = 100;
+                msg.IsTransferring = false;
+                msg.TransferSpeedText = string.Empty;
+                msg.IsDelivered = true;
+                StatusMessage = "✓ Голосовое сообщение отправлено";
+            });
         }
         catch (Exception ex)
         {
+            RunOnUIThread(() =>
+            {
+                msg.IsTransferring = false;
+            });
             App.Log($"[Send] Failed to send voice message, queuing in outbox: {ex.Message}");
             if (payload != null) QueueOutboxPacket(targetChat.Id, PacketType.File, payload, msg);
             StatusMessage = "Ожидание соединения для отправки голосового сообщения...";
@@ -3254,11 +3300,37 @@ public async Task SendTextMessageAsync()
                 try
                 {
                     payload = PrimePacket.BuildCollagePayload(message.Id, items, caption);
-                    await SendNetworkPacketAsync(targetAddr, PacketType.Photo, payload);
-                    message.IsDelivered = true;
+                    message.IsTransferring = true;
+                    message.TransferProgress = 0;
+                    DateTime sendStart = DateTime.UtcNow;
+                    await SendNetworkPacketAsync(targetAddr, PacketType.Photo, payload, (sent, total) =>
+                    {
+                        if (total <= 0) return;
+                        double pct = Math.Min(99.0, (double)sent / total * 100.0);
+                        double elapsed = (DateTime.UtcNow - sendStart).TotalSeconds;
+                        string speed = elapsed > 0.3 ? $"{sent / elapsed / 1024.0:F0} КБ/с" : "";
+                        RunOnUIThread(() =>
+                        {
+                            message.TransferProgress = pct;
+                            message.TransferSpeedText = speed;
+                            StatusMessage = $"📤 Отправка коллажа: {pct:F0}% ({sent / 1024} / {total / 1024} КБ{(!string.IsNullOrEmpty(speed) ? $", {speed}" : "")})...";
+                        });
+                    });
+                    RunOnUIThread(() =>
+                    {
+                        message.TransferProgress = 100;
+                        message.IsTransferring = false;
+                        message.TransferSpeedText = string.Empty;
+                        message.IsDelivered = true;
+                        StatusMessage = "✓ Коллаж отправлен";
+                    });
                 }
                 catch (Exception ex)
                 {
+                    RunOnUIThread(() =>
+                    {
+                        message.IsTransferring = false;
+                    });
                     App.Log($"[Send] Failed to send collage, queuing in outbox: {ex.Message}");
                     if (payload != null) QueueOutboxPacket(targetChat.Id, PacketType.Photo, payload, message);
                     StatusMessage = "Ожидание соединения для отправки коллажа...";
@@ -3295,11 +3367,37 @@ public async Task SendTextMessageAsync()
                 try
                 {
                     payload = PrimePacket.BuildPhotoPayload(singleMsg.Id, optimizedBytes, caption);
-                    await SendNetworkPacketAsync(targetAddr, PacketType.Photo, payload);
-                    singleMsg.IsDelivered = true;
+                    singleMsg.IsTransferring = true;
+                    singleMsg.TransferProgress = 0;
+                    DateTime sendStart = DateTime.UtcNow;
+                    await SendNetworkPacketAsync(targetAddr, PacketType.Photo, payload, (sent, total) =>
+                    {
+                        if (total <= 0) return;
+                        double pct = Math.Min(99.0, (double)sent / total * 100.0);
+                        double elapsed = (DateTime.UtcNow - sendStart).TotalSeconds;
+                        string speed = elapsed > 0.3 ? $"{sent / elapsed / 1024.0:F0} КБ/с" : "";
+                        RunOnUIThread(() =>
+                        {
+                            singleMsg.TransferProgress = pct;
+                            singleMsg.TransferSpeedText = speed;
+                            StatusMessage = $"📤 Отправка фото: {pct:F0}% ({sent / 1024} / {total / 1024} КБ{(!string.IsNullOrEmpty(speed) ? $", {speed}" : "")})...";
+                        });
+                    });
+                    RunOnUIThread(() =>
+                    {
+                        singleMsg.TransferProgress = 100;
+                        singleMsg.IsTransferring = false;
+                        singleMsg.TransferSpeedText = string.Empty;
+                        singleMsg.IsDelivered = true;
+                        StatusMessage = "✓ Фотография отправлена";
+                    });
                 }
                 catch (Exception ex)
                 {
+                    RunOnUIThread(() =>
+                    {
+                        singleMsg.IsTransferring = false;
+                    });
                     App.Log($"[Send] Failed to send photo, queuing in outbox: {ex.Message}");
                     if (payload != null) QueueOutboxPacket(targetChat.Id, PacketType.Photo, payload, singleMsg);
                     StatusMessage = "Ожидание соединения для отправки фото...";
@@ -3346,11 +3444,38 @@ public async Task SendTextMessageAsync()
                 {
                     string effectiveCaption = isVideoNote ? $"VIDEO_NOTE:{Settings.VideoNoteRadiusPercent}" : caption;
                     payload = PrimePacket.BuildFilePayload(singleMsg.Id, fileName, fileBytes, "00:00", false, effectiveCaption);
-                    await SendNetworkPacketAsync(targetAddr, PacketType.File, payload);
-                    singleMsg.IsDelivered = true;
+                    singleMsg.IsTransferring = true;
+                    singleMsg.TransferProgress = 0;
+                    DateTime sendStart = DateTime.UtcNow;
+                    string label = isVideoNote ? "видеосообщения" : (isVidSingle ? "видео" : "файла");
+                    await SendNetworkPacketAsync(targetAddr, PacketType.File, payload, (sent, total) =>
+                    {
+                        if (total <= 0) return;
+                        double pct = Math.Min(99.0, (double)sent / total * 100.0);
+                        double elapsed = (DateTime.UtcNow - sendStart).TotalSeconds;
+                        string speed = elapsed > 0.3 ? $"{sent / elapsed / 1024.0:F0} КБ/с" : "";
+                        RunOnUIThread(() =>
+                        {
+                            singleMsg.TransferProgress = pct;
+                            singleMsg.TransferSpeedText = speed;
+                            StatusMessage = $"📤 Отправка {label}: {pct:F0}% ({sent / 1024} / {total / 1024} КБ{(!string.IsNullOrEmpty(speed) ? $", {speed}" : "")})...";
+                        });
+                    });
+                    RunOnUIThread(() =>
+                    {
+                        singleMsg.TransferProgress = 100;
+                        singleMsg.IsTransferring = false;
+                        singleMsg.TransferSpeedText = string.Empty;
+                        singleMsg.IsDelivered = true;
+                        StatusMessage = $"✓ {char.ToUpper(label[0]) + label.Substring(1)} отправлено";
+                    });
                 }
                 catch (Exception ex)
                 {
+                    RunOnUIThread(() =>
+                    {
+                        singleMsg.IsTransferring = false;
+                    });
                     App.Log($"[Send] Failed to send attachment, queuing in outbox: {ex.Message}");
                     if (payload != null) QueueOutboxPacket(targetChat.Id, PacketType.File, payload, singleMsg);
                     StatusMessage = "Ожидание соединения для отправки файла...";
@@ -4003,7 +4128,10 @@ public async Task SendTextMessageAsync()
         }
     }
 
-    public async Task SendNetworkPacketAsync(string targetAddressOrPeer, PacketType type, byte[] payload)
+    public Task SendNetworkPacketAsync(string targetAddressOrPeer, PacketType type, byte[] payload)
+        => SendNetworkPacketAsync(targetAddressOrPeer, type, payload, null);
+
+    public async Task SendNetworkPacketAsync(string targetAddressOrPeer, PacketType type, byte[] payload, Action<long, long>? progressCallback)
     {
         if (string.IsNullOrWhiteSpace(targetAddressOrPeer)) return;
 
@@ -4020,7 +4148,7 @@ public async Task SendTextMessageAsync()
                 string connectAddr = !string.IsNullOrWhiteSpace(chat?.DeviceAddress) ? chat.DeviceAddress : targetAddressOrPeer;
                 await _companionService.ConnectAsync(connectAddr);
             }
-            await _companionService.SendPacketAsync(targetAddressOrPeer, type, payload);
+            await _companionService.SendPacketAsync(targetAddressOrPeer, type, payload, progressCallback);
         }
         else
         {
@@ -4028,7 +4156,7 @@ public async Task SendTextMessageAsync()
             {
                 await _bluetoothService.ConnectAsync(targetAddressOrPeer);
             }
-            await _bluetoothService.SendPacketAsync(targetAddressOrPeer, type, payload);
+            await _bluetoothService.SendPacketAsync(targetAddressOrPeer, type, payload, progressCallback);
         }
     }
 
@@ -4938,6 +5066,38 @@ public async Task SendTextMessageAsync()
         });
     }
 
+    private void OnTransferProgressChanged(string peerId, PacketType type, long current, long total)
+    {
+        if (total <= 0) return;
+        double pct = Math.Min(100.0, (double)current / total * 100.0);
+        var chat = FindChatByAddressOrPeer(peerId);
+        string name = chat != null && !DeviceAnonymizer.IsHardwareIdentifier(chat.DisplayName) ? chat.DisplayName : "собеседника";
+        string typeLabel = type switch
+        {
+            PacketType.Photo => "фото",
+            PacketType.Voice => "голосового",
+            PacketType.File => "файла",
+            _ => "данных"
+        };
+
+        RunOnUIThread(() =>
+        {
+            if (current < total)
+            {
+                IsIncomingTransferActive = true;
+                IncomingTransferProgress = pct;
+                IncomingTransferText = $"📥 Приём {typeLabel} от {name}: {pct:F0}% ({current / 1024} КБ / {total / 1024} КБ)...";
+            }
+            else
+            {
+                IsIncomingTransferActive = false;
+                IncomingTransferProgress = 100;
+                IncomingTransferText = string.Empty;
+                StatusMessage = $"✓ {typeLabel} от {name} успешно получен";
+            }
+        });
+    }
+
     #region Outbox Auto-Delivery Queue
 
     private class QueuedOutboxItem
@@ -4968,14 +5128,54 @@ public async Task SendTextMessageAsync()
             {
                 try
                 {
-                    await SendNetworkPacketAsync(targetAddr, item.Type, item.Payload);
                     if (item.Message != null)
                     {
-                        item.Message.IsDelivered = true;
+                        RunOnUIThread(() =>
+                        {
+                            item.Message.IsTransferring = true;
+                            item.Message.TransferProgress = 0;
+                        });
+                    }
+
+                    DateTime flushStartTime = DateTime.UtcNow;
+                    Action<long, long>? onProgress = null;
+                    if (item.Message != null)
+                    {
+                        onProgress = (sent, total) =>
+                        {
+                            if (total <= 0) return;
+                            double pct = Math.Min(99.0, (double)sent / total * 100.0);
+                            double elapsed = (DateTime.UtcNow - flushStartTime).TotalSeconds;
+                            string speed = elapsed > 0.3 ? $"{sent / elapsed / 1024.0:F0} КБ/с" : "";
+                            RunOnUIThread(() =>
+                            {
+                                item.Message.TransferProgress = pct;
+                                item.Message.TransferSpeedText = speed;
+                            });
+                        };
+                    }
+
+                    await SendNetworkPacketAsync(targetAddr, item.Type, item.Payload, onProgress);
+                    if (item.Message != null)
+                    {
+                        RunOnUIThread(() =>
+                        {
+                            item.Message.TransferProgress = 100;
+                            item.Message.IsTransferring = false;
+                            item.Message.TransferSpeedText = string.Empty;
+                            item.Message.IsDelivered = true;
+                        });
                     }
                 }
                 catch (Exception ex)
                 {
+                    if (item.Message != null)
+                    {
+                        RunOnUIThread(() =>
+                        {
+                            item.Message.IsTransferring = false;
+                        });
+                    }
                     App.Log($"[Outbox] Failed to send queued packet to '{chat.DisplayName}': {ex.Message}");
                     queue.Enqueue(item);
                     break;

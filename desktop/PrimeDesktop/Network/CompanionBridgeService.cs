@@ -22,6 +22,7 @@ public class CompanionBridgeService : IPrimeNetworkService
     public event Action<string, DeviceConnectionState, string>? ConnectionStateChanged;
     public event Action<string, PacketType, byte[]>? PacketReceived;
     public event Action<string, string>? ErrorOccurred;
+    public event Action<string, PacketType, long, long>? TransferProgressChanged;
 
     private TcpListener? _listener;
     private UdpClient? _udpResponder;
@@ -347,7 +348,10 @@ public class CompanionBridgeService : IPrimeNetworkService
         }, token);
     }
 
-    public async Task SendPacketAsync(string targetPeerId, PacketType type, byte[] payload)
+    public Task SendPacketAsync(string targetPeerId, PacketType type, byte[] payload)
+        => SendPacketAsync(targetPeerId, type, payload, null);
+
+    public async Task SendPacketAsync(string targetPeerId, PacketType type, byte[] payload, Action<long, long>? progressCallback)
     {
         string peerId = ResolvePeerId(targetPeerId);
         string ip = ResolveHardwareAddress(targetPeerId);
@@ -384,7 +388,7 @@ public class CompanionBridgeService : IPrimeNetworkService
         await sem.WaitAsync().ConfigureAwait(false);
         try
         {
-            PrimePacket.WriteToStream(stream, type, payload);
+            await PrimePacket.WriteToStreamAsync(stream, type, payload, CancellationToken.None, progressCallback).ConfigureAwait(false);
         }
         finally
         {
@@ -472,13 +476,16 @@ public class CompanionBridgeService : IPrimeNetworkService
         _readCts[peerId] = cts;
         var token = cts.Token;
 
-        Task.Run(() =>
+        Task.Run(async () =>
         {
             try
             {
                 while (!token.IsCancellationRequested)
                 {
-                    var packet = PrimePacket.ReadFromStream(stream);
+                    var packet = await PrimePacket.ReadFromStreamAsync(stream, token, (type, current, total) =>
+                    {
+                        TransferProgressChanged?.Invoke(peerId, type, current, total);
+                    });
                     if (packet == null) break;
 
                     if (packet.Type == PacketType.Ping)

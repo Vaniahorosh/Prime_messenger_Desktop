@@ -561,7 +561,16 @@
 
                 </Border>
 
-
+                <!-- Incoming Transfer Banner -->
+                <Border Grid.Row="1" VerticalAlignment="Top" Height="28" Background="#EE15202E" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="0,0,0,1"
+                        Panel.ZIndex="10" Visibility="{Binding IsIncomingTransferActive, Converter={StaticResource BoolToVis}}" Padding="16,0">
+                    <DockPanel VerticalAlignment="Center">
+                        <ProgressBar DockPanel.Dock="Right" Value="{Binding IncomingTransferProgress}" Minimum="0" Maximum="100" Width="120" Height="4"
+                                     Foreground="{DynamicResource AccentBrush}" Background="#30FFFFFF" BorderThickness="0" Margin="10,0,0,0"/>
+                        <TextBlock Text="{Binding IncomingTransferText}" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="11" FontWeight="SemiBold"
+                                   TextTrimming="CharacterEllipsis"/>
+                    </DockPanel>
+                </Border>
 
                 <!-- Wallpaper Background Layer -->
 
@@ -788,11 +797,17 @@
                                                     </Border>
 
                                                     <StackPanel Grid.Column="1" VerticalAlignment="Center">
-
                                                         <TextBlock Text="{Binding FileName}" Foreground="{DynamicResource AccentBrush}" FontSize="12" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" MaxWidth="280"/>
-
-                                                        <TextBlock Text="{Binding FormattedFileSize}" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10" Margin="0,2,0,0"/>
-
+                                                        <DockPanel Margin="0,2,0,0">
+                                                            <TextBlock Text="{Binding FormattedFileSize}" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10"/>
+                                                            <TextBlock Text="{Binding TransferSpeedText}" Foreground="{DynamicResource AccentBrush}" FontSize="10" HorizontalAlignment="Right"
+                                                                       Visibility="{Binding IsTransferring, Converter={StaticResource BoolToVis}}"/>
+                                                        </DockPanel>
+                                                        <!-- Transfer Progress Bar -->
+                                                        <Grid Visibility="{Binding IsTransferring, Converter={StaticResource BoolToVis}}" Margin="0,3,0,0">
+                                                            <ProgressBar Value="{Binding TransferProgress}" Minimum="0" Maximum="100" Height="4"
+                                                                         Foreground="{DynamicResource AccentBrush}" Background="#25FFFFFF" BorderThickness="0"/>
+                                                        </Grid>
                                                     </StackPanel>
 
                                                 </Grid>
@@ -869,82 +884,104 @@
 
 
                                             <!-- Single Photo Attachment Preview -->
+                                            <Grid Visibility="{Binding IsSinglePhoto, Converter={StaticResource BoolToVis}}" Margin="0,0,0,6">
+                                                <Border CornerRadius="8" MaxHeight="280" ClipToBounds="True" Cursor="Hand">
+                                                    <Border.InputBindings>
+                                                        <MouseBinding Gesture="LeftClick"
+                                                                      Command="{Binding DataContext.OpenPhotoViewerCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                      CommandParameter="{Binding FilePath}"/>
+                                                    </Border.InputBindings>
+                                                    <Image Source="{Binding FilePath}" Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality"/>
+                                                </Border>
 
-                                            <Border CornerRadius="8" Margin="0,0,0,6" MaxHeight="280" ClipToBounds="True" Cursor="Hand"
-
-                                                    Visibility="{Binding IsSinglePhoto, Converter={StaticResource BoolToVis}}">
-
-                                                <Border.InputBindings>
-
-                                                    <MouseBinding Gesture="LeftClick"
-
-                                                                  Command="{Binding DataContext.OpenPhotoViewerCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-
-                                                                  CommandParameter="{Binding FilePath}"/>
-
-                                                </Border.InputBindings>
-
-                                                <Image Source="{Binding FilePath}" Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality"/>
-
-                                            </Border>
+                                                <!-- Photo Transfer Progress Overlay -->
+                                                <Border CornerRadius="8" ClipToBounds="True" Background="#75000000"
+                                                        Visibility="{Binding IsTransferring, Converter={StaticResource BoolToVis}}">
+                                                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                        <Border Width="52" Height="52" CornerRadius="26" Background="#C5000000"
+                                                                BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1.5"
+                                                                HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                                                                <TextBlock Text="{Binding TransferProgressText}" Foreground="White" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center"/>
+                                                                <TextBlock Text="{Binding TransferSpeedText}" Foreground="{DynamicResource AccentBrush}" FontSize="8" HorizontalAlignment="Center"/>
+                                                            </StackPanel>
+                                                        </Border>
+                                                        <ProgressBar Value="{Binding TransferProgress}" Minimum="0" Maximum="100" Width="100" Height="4"
+                                                                     Foreground="{DynamicResource AccentBrush}" Background="#30FFFFFF" BorderThickness="0" Margin="0,6,0,0"/>
+                                                    </StackPanel>
+                                                </Border>
+                                            </Grid>
 
 
 
                                             <!-- Collage / Multi-Photo Attachment Preview -->
+                                            <Grid Visibility="{Binding IsCollage, Converter={StaticResource BoolToVis}}" Margin="0,0,0,6" MaxWidth="360">
+                                                <Border CornerRadius="8" ClipToBounds="True">
+                                                    <ItemsControl ItemsSource="{Binding CollagePaths}">
+                                                        <ItemsControl.ItemsPanel>
+                                                            <ItemsPanelTemplate>
+                                                                <UniformGrid Columns="2"/>
+                                                            </ItemsPanelTemplate>
+                                                        </ItemsControl.ItemsPanel>
+                                                        <ItemsControl.ItemTemplate>
+                                                            <DataTemplate>
+                                                                <Border CornerRadius="6" Margin="2" Height="130" ClipToBounds="True" Cursor="Hand" Background="#1A222D">
+                                                                    <Border.InputBindings>
+                                                                        <MouseBinding Gesture="LeftClick"
+                                                                                      Command="{Binding DataContext.OpenPhotoViewerCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                                      CommandParameter="{Binding}"/>
+                                                                    </Border.InputBindings>
+                                                                    <Image Source="{Binding}" Stretch="UniformToFill" RenderOptions.BitmapScalingMode="HighQuality"/>
+                                                                </Border>
+                                                            </DataTemplate>
+                                                        </ItemsControl.ItemTemplate>
+                                                    </ItemsControl>
+                                                </Border>
 
-                                            <Border CornerRadius="8" Margin="0,0,0,6" ClipToBounds="True" MaxWidth="360"
-
-                                                    Visibility="{Binding IsCollage, Converter={StaticResource BoolToVis}}">
-
-                                                <ItemsControl ItemsSource="{Binding CollagePaths}">
-
-                                                    <ItemsControl.ItemsPanel>
-
-                                                        <ItemsPanelTemplate>
-
-                                                            <UniformGrid Columns="2"/>
-
-                                                        </ItemsPanelTemplate>
-
-                                                    </ItemsControl.ItemsPanel>
-
-                                                    <ItemsControl.ItemTemplate>
-
-                                                        <DataTemplate>
-
-                                                            <Border CornerRadius="6" Margin="2" Height="130" ClipToBounds="True" Cursor="Hand" Background="#1A222D">
-
-                                                                <Border.InputBindings>
-
-                                                                    <MouseBinding Gesture="LeftClick"
-
-                                                                                  Command="{Binding DataContext.OpenPhotoViewerCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-
-                                                                                  CommandParameter="{Binding}"/>
-
-                                                                </Border.InputBindings>
-
-                                                                <Image Source="{Binding}" Stretch="UniformToFill" RenderOptions.BitmapScalingMode="HighQuality"/>
-
-                                                            </Border>
-
-                                                        </DataTemplate>
-
-                                                    </ItemsControl.ItemTemplate>
-
-                                                </ItemsControl>
-
-                                            </Border>
+                                                <!-- Collage Transfer Progress Overlay -->
+                                                <Border CornerRadius="8" ClipToBounds="True" Background="#75000000"
+                                                        Visibility="{Binding IsTransferring, Converter={StaticResource BoolToVis}}">
+                                                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                        <Border Width="52" Height="52" CornerRadius="26" Background="#C5000000"
+                                                                BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1.5"
+                                                                HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                                                                <TextBlock Text="{Binding TransferProgressText}" Foreground="White" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center"/>
+                                                                <TextBlock Text="{Binding TransferSpeedText}" Foreground="{DynamicResource AccentBrush}" FontSize="8" HorizontalAlignment="Center"/>
+                                                            </StackPanel>
+                                                        </Border>
+                                                        <ProgressBar Value="{Binding TransferProgress}" Minimum="0" Maximum="100" Width="100" Height="4"
+                                                                     Foreground="{DynamicResource AccentBrush}" Background="#30FFFFFF" BorderThickness="0" Margin="0,6,0,0"/>
+                                                    </StackPanel>
+                                                </Border>
+                                            </Grid>
 
 
 
                                             <!-- Single Video Looping Preview -->
-                                            <controls:VideoPreviewPlayer Source="{Binding FilePath}"
-                                                                        Duration="{Binding Duration}"
-                                                                        ClickCommand="{Binding DataContext.OpenPhotoViewerCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                                                        ClickCommandParameter="{Binding FilePath}"
-                                                                        Margin="0,0,0,6"
-                                                                        Visibility="{Binding IsSingleVideo, Converter={StaticResource BoolToVis}}"/>
+                                            <Grid Visibility="{Binding IsSingleVideo, Converter={StaticResource BoolToVis}}" Margin="0,0,0,6">
+                                                <controls:VideoPreviewPlayer Source="{Binding FilePath}"
+                                                                            Duration="{Binding Duration}"
+                                                                            ClickCommand="{Binding DataContext.OpenPhotoViewerCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                            ClickCommandParameter="{Binding FilePath}"/>
+
+                                                <!-- Video Transfer Progress Overlay -->
+                                                <Border CornerRadius="8" ClipToBounds="True" Background="#75000000"
+                                                        Visibility="{Binding IsTransferring, Converter={StaticResource BoolToVis}}">
+                                                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                        <Border Width="52" Height="52" CornerRadius="26" Background="#C5000000"
+                                                                BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1.5"
+                                                                HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                                                                <TextBlock Text="{Binding TransferProgressText}" Foreground="White" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center"/>
+                                                                <TextBlock Text="{Binding TransferSpeedText}" Foreground="{DynamicResource AccentBrush}" FontSize="8" HorizontalAlignment="Center"/>
+                                                            </StackPanel>
+                                                        </Border>
+                                                        <ProgressBar Value="{Binding TransferProgress}" Minimum="0" Maximum="100" Width="100" Height="4"
+                                                                     Foreground="{DynamicResource AccentBrush}" Background="#30FFFFFF" BorderThickness="0" Margin="0,6,0,0"/>
+                                                    </StackPanel>
+                                                </Border>
+                                            </Grid>
 
                                             <!-- Message Text with Rich Formatting & Clickable Links -->
                                             <controls:FormattedMessageTextBlock RawText="{Binding DisplayText}"
@@ -982,11 +1019,29 @@
 
 
                                             <!-- Video Note Circle Playback (Param 11) -->
-                                            <controls:VideoNotePlayer Source="{Binding VideoNotePath}"
-                                                                      Duration="{Binding Duration}"
-                                                                      CornerRadius="{Binding VideoNoteCornerRadius}"
-                                                                      Margin="0,0,0,6"
-                                                                      Visibility="{Binding IsVideoNote, Converter={StaticResource BoolToVis}}"/>
+                                            <Grid Visibility="{Binding IsVideoNote, Converter={StaticResource BoolToVis}}" Margin="0,0,0,6">
+                                                <controls:VideoNotePlayer Source="{Binding VideoNotePath}"
+                                                                          Duration="{Binding Duration}"
+                                                                          CornerRadius="{Binding VideoNoteCornerRadius}"/>
+
+                                                <!-- Video Note Transfer Progress Overlay -->
+                                                <Border CornerRadius="{Binding VideoNoteCornerRadius}" ClipToBounds="True" Background="#75000000"
+                                                        Visibility="{Binding IsTransferring, Converter={StaticResource BoolToVis}}"
+                                                        Width="200" Height="200">
+                                                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                        <Border Width="52" Height="52" CornerRadius="26" Background="#C5000000"
+                                                                BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1.5"
+                                                                HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                                                                <TextBlock Text="{Binding TransferProgressText}" Foreground="White" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center"/>
+                                                                <TextBlock Text="{Binding TransferSpeedText}" Foreground="{DynamicResource AccentBrush}" FontSize="8" HorizontalAlignment="Center"/>
+                                                            </StackPanel>
+                                                        </Border>
+                                                        <ProgressBar Value="{Binding TransferProgress}" Minimum="0" Maximum="100" Width="80" Height="4"
+                                                                     Foreground="{DynamicResource AccentBrush}" Background="#30FFFFFF" BorderThickness="0" Margin="0,6,0,0"/>
+                                                    </StackPanel>
+                                                </Border>
+                                            </Grid>
 
 
 

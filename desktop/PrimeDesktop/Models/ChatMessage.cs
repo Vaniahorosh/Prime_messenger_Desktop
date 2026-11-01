@@ -24,6 +24,9 @@ public class ChatMessage : INotifyPropertyChanged
     private string? _reaction;
     private string? _reactionAuthor;
     private bool _isVideoNote;
+    private bool _isTransferring;
+    private double _transferProgress;
+    private string _transferSpeedText = string.Empty;
 
     public string Id { get; set; } = Guid.NewGuid().ToString();
     public string Sender { get; set; } = string.Empty;
@@ -317,6 +320,49 @@ public class ChatMessage : INotifyPropertyChanged
     }
 
     [JsonIgnore]
+    public bool IsTransferring
+    {
+        get => _isTransferring;
+        set
+        {
+            if (SetField(ref _isTransferring, value))
+            {
+                OnPropertyChanged(nameof(DisplayPlayTime));
+            }
+        }
+    }
+
+    [JsonIgnore]
+    public double TransferProgress
+    {
+        get => _transferProgress;
+        set
+        {
+            if (SetField(ref _transferProgress, value))
+            {
+                OnPropertyChanged(nameof(TransferProgressText));
+                OnPropertyChanged(nameof(DisplayPlayTime));
+            }
+        }
+    }
+
+    [JsonIgnore]
+    public string TransferSpeedText
+    {
+        get => _transferSpeedText;
+        set
+        {
+            if (SetField(ref _transferSpeedText, value))
+            {
+                OnPropertyChanged(nameof(DisplayPlayTime));
+            }
+        }
+    }
+
+    [JsonIgnore]
+    public string TransferProgressText => $"{Math.Clamp((int)TransferProgress, 0, 100)}%";
+
+    [JsonIgnore]
     public string CurrentPlayTime
     {
         get => _currentPlayTime;
@@ -330,7 +376,9 @@ public class ChatMessage : INotifyPropertyChanged
     }
 
     [JsonIgnore]
-    public string DisplayPlayTime => IsPlaying ? CurrentPlayTime : (string.IsNullOrWhiteSpace(Duration) ? "0:00" : Duration);
+    public string DisplayPlayTime => IsTransferring
+        ? $"{Math.Clamp((int)TransferProgress, 0, 100)}% ({TransferSpeedText})"
+        : (IsPlaying ? CurrentPlayTime : (string.IsNullOrWhiteSpace(Duration) ? "0:00" : Duration));
 
     [JsonIgnore]
     public double PlaybackSpeed

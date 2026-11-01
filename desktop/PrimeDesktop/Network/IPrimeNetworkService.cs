@@ -10,6 +10,7 @@ public interface IPrimeNetworkService
     event Action<string, DeviceConnectionState, string> ConnectionStateChanged;
     event Action<string, PacketType, byte[]> PacketReceived;
     event Action<string, string> ErrorOccurred;
+    event Action<string, PacketType, long, long>? TransferProgressChanged;
 
     Task StartServerAsync();
     Task StopServerAsync();
@@ -23,5 +24,6 @@ public interface IPrimeNetworkService
     string ResolvePeerId(string hardwareAddressOrPeerId);
 
     Task SendPacketAsync(string targetAddress, PacketType type, byte[] payload);
+    Task SendPacketAsync(string targetAddress, PacketType type, byte[] payload, Action<long, long>? progressCallback);
     Task<List<ChatItem>> DiscoverDevicesAsync();
 }
