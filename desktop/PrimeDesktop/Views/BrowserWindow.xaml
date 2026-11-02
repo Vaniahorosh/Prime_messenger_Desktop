@@ -1068,7 +1068,7 @@
         <Popup x:Name="TabPreviewPopup"
                AllowsTransparency="True"
                Placement="Bottom"
-               StaysOpen="False"
+               StaysOpen="True"
                PopupAnimation="None"
                IsHitTestVisible="False">
             <Border x:Name="TabPreviewCard"

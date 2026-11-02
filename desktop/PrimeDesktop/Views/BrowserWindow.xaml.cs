@@ -164,6 +164,8 @@ public partial class BrowserWindow : Window
         KeyDown += BrowserWindow_KeyDown;
         BrowserHostGrid.PreviewMouseWheel += BrowserHostGrid_PreviewMouseWheel;
         _tabHoverTimer.Tick += TabHoverTimer_Tick;
+        Deactivated += (s, e) => CloseTabPreviewPopup();
+        LocationChanged += (s, e) => CloseTabPreviewPopup();
     }
 
     private static async Task<CoreWebView2Environment?> GetOrInitEnvironmentAsync()
@@ -1048,7 +1050,10 @@ public partial class BrowserWindow : Window
                     {
                         BrowserHistoryService.RecordVisit(tab.Url, tab.Title, webView.CoreWebView2?.FaviconUri);
                         if (_isStartScreenVisible) RefreshRecentSites();
-                        _ = UpdateTabThumbnailAsync(tab);
+                        if (tab == ActiveTab)
+                        {
+                            _ = UpdateTabThumbnailAsync(tab);
+                        }
                     }
                 });
             };
@@ -1142,11 +1147,6 @@ public partial class BrowserWindow : Window
 
     public void ActivateTab(BrowserTabItem tab)
     {
-        if (ActiveTab != null && ActiveTab != tab && ActiveTab.WebView?.CoreWebView2 != null && !ActiveTab.IsLoading)
-        {
-            _ = UpdateTabThumbnailAsync(ActiveTab);
-        }
-
         if (tab == null)
         {
             ActiveTab = null;
@@ -1874,13 +1874,7 @@ public partial class BrowserWindow : Window
     private void TabButton_MouseLeave(object sender, MouseEventArgs e)
     {
         _tabHoverTimer.Stop();
-        Dispatcher.BeginInvoke(new Action(() =>
-        {
-            if (_hoveredTabElement == null || !_hoveredTabElement.IsMouseOver)
-            {
-                CloseTabPreviewPopup();
-            }
-        }), DispatcherPriority.Input);
+        CloseTabPreviewPopup();
     }
 
     private BrowserTabItem? GetTabFromSender(object sender)
@@ -1893,7 +1887,7 @@ public partial class BrowserWindow : Window
         return null;
     }
 
-    private async void TabHoverTimer_Tick(object? sender, EventArgs e)
+    private void TabHoverTimer_Tick(object? sender, EventArgs e)
     {
         _tabHoverTimer.Stop();
         if (_isToolbarEditMode || _hoveredTabItem == null || _hoveredTabElement == null || !_hoveredTabElement.IsMouseOver)
@@ -1901,7 +1895,7 @@ public partial class BrowserWindow : Window
             return;
         }
 
-        await ShowTabPreviewAsync(_hoveredTabElement, _hoveredTabItem);
+        ShowTabPreview(_hoveredTabElement, _hoveredTabItem);
     }
 
     private void CloseTabPreviewPopup()
@@ -1915,8 +1909,10 @@ public partial class BrowserWindow : Window
         _hoveredTabElement = null;
     }
 
-    private async Task ShowTabPreviewAsync(FrameworkElement target, BrowserTabItem tab)
+    private void ShowTabPreview(FrameworkElement target, BrowserTabItem tab)
     {
+        if (target == null || tab == null) return;
+
         TxtPreviewTitle.Text = string.IsNullOrWhiteSpace(tab.Title) ? "Новая вкладка" : tab.Title;
         ImgPreviewFavicon.Source = tab.Favicon;
 
@@ -1935,12 +1931,6 @@ public partial class BrowserWindow : Window
         TxtPreviewActiveStatus.Text = tab.IsActive ? "● Активна" : "○ В фоне";
         TxtPreviewRam.Text = GetTabRamUsage(tab, _sharedEnvironment);
 
-        // Capture or refresh thumbnail preview if available
-        if (tab.ThumbnailPreview == null && tab.WebView?.CoreWebView2 != null && !tab.IsLoading)
-        {
-            await UpdateTabThumbnailAsync(tab);
-        }
-
         if (tab.ThumbnailPreview != null)
         {
             ImgPreviewThumbnail.Source = tab.ThumbnailPreview;
@@ -1951,6 +1941,10 @@ public partial class BrowserWindow : Window
         {
             ImgPreviewThumbnail.Visibility = Visibility.Collapsed;
             BrdPreviewPlaceholder.Visibility = Visibility.Visible;
+            if (tab.IsActive && tab.WebView?.CoreWebView2 != null && !tab.IsLoading)
+            {
+                _ = UpdateTabThumbnailAsync(tab);
+            }
         }
 
         TabPreviewPopup.PlacementTarget = target;
@@ -1968,11 +1962,11 @@ public partial class BrowserWindow : Window
         var translate = new TranslateTransform(0, -12);
         TabPreviewCard.RenderTransform = translate;
 
-        var fadeAnim = new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(240))
+        var fadeAnim = new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(200))
         {
             EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
         };
-        var slideAnim = new DoubleAnimation(-12, 0, TimeSpan.FromMilliseconds(240))
+        var slideAnim = new DoubleAnimation(-12, 0, TimeSpan.FromMilliseconds(200))
         {
             EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
         };
@@ -1983,11 +1977,16 @@ public partial class BrowserWindow : Window
 
     private async Task UpdateTabThumbnailAsync(BrowserTabItem tab)
     {
-        if (tab.WebView?.CoreWebView2 == null || tab.IsLoading) return;
+        if (tab == null || tab.WebView?.CoreWebView2 == null || tab.IsLoading) return;
+        if (!tab.IsActive || tab.WebView.Visibility != Visibility.Visible || !tab.WebView.IsVisible) return;
+
         try
         {
             using var ms = new MemoryStream();
-            await tab.WebView.CoreWebView2.CapturePreviewAsync(CoreWebView2CapturePreviewImageFormat.Png, ms);
+            var captureTask = tab.WebView.CoreWebView2.CapturePreviewAsync(CoreWebView2CapturePreviewImageFormat.Png, ms);
+            var completedTask = await Task.WhenAny(captureTask, Task.Delay(150));
+            if (completedTask != captureTask) return;
+
             ms.Position = 0;
             var bmp = new BitmapImage();
             bmp.BeginInit();
@@ -1996,6 +1995,13 @@ public partial class BrowserWindow : Window
             bmp.EndInit();
             bmp.Freeze();
             tab.ThumbnailPreview = bmp;
+
+            if (TabPreviewPopup.IsOpen && _hoveredTabItem == tab)
+            {
+                ImgPreviewThumbnail.Source = bmp;
+                ImgPreviewThumbnail.Visibility = Visibility.Visible;
+                BrdPreviewPlaceholder.Visibility = Visibility.Collapsed;
+            }
         }
         catch { }
     }
@@ -2009,52 +2015,18 @@ public partial class BrowserWindow : Window
 
         try
         {
-            if (env != null)
+            uint pid = tab.WebView.CoreWebView2.BrowserProcessId;
+            if (pid > 0)
             {
-                var processInfos = env.GetProcessInfos();
-                long totalBytes = 0;
-                int renderCount = 0;
-                long renderBytes = 0;
-
-                foreach (var pInfo in processInfos)
-                {
-                    try
-                    {
-                        using var proc = Process.GetProcessById(pInfo.ProcessId);
-                        long ws = proc.WorkingSet64;
-                        totalBytes += ws;
-                        if (pInfo.Kind == CoreWebView2ProcessKind.Renderer)
-                        {
-                            renderCount++;
-                            renderBytes += ws;
-                        }
-                    }
-                    catch { }
-                }
-
-                if (renderBytes > 0 && renderCount > 0)
-                {
-                    long perTabMb = (renderBytes / renderCount) / (1024 * 1024);
-                    return $"ОЗУ: ~{Math.Max(30, perTabMb)} МБ";
-                }
-                else if (totalBytes > 0)
-                {
-                    long avgMb = totalBytes / (1024 * 1024);
-                    return $"ОЗУ: ~{Math.Max(35, avgMb)} МБ";
-                }
-            }
-
-            if (tab.WebView.CoreWebView2 != null)
-            {
-                uint pid = tab.WebView.CoreWebView2.BrowserProcessId;
                 using var proc = Process.GetProcessById((int)pid);
                 long mb = proc.WorkingSet64 / (1024 * 1024);
-                return $"ОЗУ: ~{Math.Max(35, mb)} МБ";
+                long tabMb = Math.Clamp(mb / 2, 45, 290);
+                return $"ОЗУ: ~{tabMb} МБ";
             }
         }
         catch { }
 
-        return "ОЗУ: ~65 МБ";
+        return "ОЗУ: ~55 МБ";
     }
 
     private void BtnCloseTab_Click(object sender, RoutedEventArgs e)

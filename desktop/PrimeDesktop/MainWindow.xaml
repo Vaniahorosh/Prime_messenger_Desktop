@@ -1421,7 +1421,7 @@
                                              VerticalAlignment="Center" MinHeight="38" MaxHeight="100" TextWrapping="Wrap"/>
                                     <TextBlock Text="{Binding InputPlaceholderText}"
                                                Foreground="{DynamicResource TextMutedBrush}"
-                                               FontSize="13" Margin="14,0,0,0"
+                                               FontSize="13" Margin="17,0,0,0"
                                                VerticalAlignment="Center" IsHitTestVisible="False"
                                                Visibility="{Binding HasInputText, Converter={StaticResource InverseBoolToVis}}"/>
                                 </Grid>
