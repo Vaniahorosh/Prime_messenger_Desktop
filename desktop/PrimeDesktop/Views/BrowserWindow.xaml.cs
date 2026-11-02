@@ -168,6 +168,41 @@ public partial class BrowserWindow : Window
         Deactivated += (s, e) => CloseTabPreviewPopup();
         LocationChanged += (s, e) => CloseTabPreviewPopup();
         ThemeManager.ApplyGlassToWindow(this);
+
+        if (StartScreenContainer != null)
+        {
+            StartScreenContainer.ScrollChanged += (s, e) =>
+            {
+                if (e.VerticalChange != 0)
+                {
+                    OnPageScrolled(e.VerticalOffset);
+                }
+            };
+        }
+    }
+
+    public void OnPageScrolled(double scrollY)
+    {
+        if (GlassBackdropBrush == null) return;
+
+        double phase = (scrollY % 700.0) / 700.0 * Math.PI * 2.0;
+        double offsetShift = Math.Sin(phase) * 0.12;
+
+        GlassBackdropStop1.Offset = Math.Clamp(0.35 + offsetShift, 0.15, 0.55);
+        GlassBackdropStop2.Offset = Math.Clamp(0.70 + offsetShift, 0.50, 0.88);
+
+        // Dynamic luminance shift simulating realistic frosted glass diffusion
+        byte alpha1 = (byte)Math.Clamp(170 + (int)(30 * Math.Sin(phase * 1.5)), 140, 220);
+        byte r1 = (byte)Math.Clamp(20 + (int)(15 * Math.Sin(phase)), 12, 45);
+        byte g1 = (byte)Math.Clamp(35 + (int)(20 * Math.Cos(phase)), 20, 65);
+        byte b1 = (byte)Math.Clamp(55 + (int)(30 * Math.Sin(phase + 1.0)), 40, 95);
+
+        GlassBackdropStop1.Color = System.Windows.Media.Color.FromArgb(alpha1, r1, g1, b1);
+
+        if (GlassSpecularHighlight != null)
+        {
+            GlassSpecularHighlight.Opacity = 0.20 + 0.18 * Math.Abs(Math.Cos(phase));
+        }
     }
 
     private static async Task<CoreWebView2Environment?> GetOrInitEnvironmentAsync()
@@ -1222,6 +1257,57 @@ public partial class BrowserWindow : Window
                     AddNewTab(e.Uri);
                 });
             };
+
+            // Passive scroll listener for real-time frosted glass refraction shimmer
+            try
+            {
+                await webView.CoreWebView2.AddScriptToExecuteOnDocumentCreatedAsync(@"
+                    (function() {
+                        var lastScrollY = -1;
+                        var ticking = false;
+                        window.addEventListener('scroll', function() {
+                            if (!ticking) {
+                                window.requestAnimationFrame(function() {
+                                    var y = window.scrollY || document.documentElement.scrollTop || 0;
+                                    if (Math.abs(y - lastScrollY) >= 3) {
+                                        lastScrollY = y;
+                                        try {
+                                            window.chrome.webview.postMessage({ type: 'prime_scroll', y: y });
+                                        } catch(e) {}
+                                    }
+                                    ticking = false;
+                                });
+                                ticking = true;
+                            }
+                        }, { passive: true });
+                    })();
+                ");
+
+                webView.WebMessageReceived += (s, e) =>
+                {
+                    try
+                    {
+                        var json = e.WebMessageAsJson;
+                        if (!string.IsNullOrEmpty(json) && json.Contains("prime_scroll"))
+                        {
+                            using var doc = System.Text.Json.JsonDocument.Parse(json);
+                            if (doc.RootElement.TryGetProperty("y", out var yProp))
+                            {
+                                double y = yProp.GetDouble();
+                                Dispatcher.Invoke(() =>
+                                {
+                                    if (tab == ActiveTab)
+                                    {
+                                        OnPageScrolled(y);
+                                    }
+                                });
+                            }
+                        }
+                    }
+                    catch { }
+                };
+            }
+            catch { }
 
             webView.Source = new Uri(targetUrl);
         }

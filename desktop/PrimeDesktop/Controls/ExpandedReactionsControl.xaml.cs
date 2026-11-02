@@ -266,13 +266,20 @@ namespace PrimeDesktop.Controls
         public void ClosePopup()
         {
             CloseRequested?.Invoke(this, EventArgs.Empty);
-            if (Parent is FrameworkElement fe && fe.Parent is System.Windows.Controls.Primitives.Popup p)
+            DependencyObject? current = this;
+            while (current != null)
             {
-                p.IsOpen = false;
-            }
-            else if (Parent is System.Windows.Controls.Primitives.Popup directP)
-            {
-                directP.IsOpen = false;
+                if (current is System.Windows.Controls.Primitives.Popup popup)
+                {
+                    popup.IsOpen = false;
+                    break;
+                }
+                var parent = LogicalTreeHelper.GetParent(current) ?? VisualTreeHelper.GetParent(current);
+                if (parent == null && current is FrameworkElement fe)
+                {
+                    parent = fe.Parent;
+                }
+                current = parent;
             }
         }
 
@@ -285,14 +292,7 @@ namespace PrimeDesktop.Controls
         {
             if (e.Key == System.Windows.Input.Key.Escape)
             {
-                if (!string.IsNullOrEmpty(TxtFilter.Text))
-                {
-                    TxtFilter.Text = string.Empty;
-                }
-                else
-                {
-                    ClosePopup();
-                }
+                ClosePopup();
                 e.Handled = true;
             }
         }

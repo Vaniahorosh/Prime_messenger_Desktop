@@ -245,12 +245,12 @@
                         <RowDefinition Height="Auto"/> <!-- Bottom Status Bar -->
                     </Grid.RowDefinitions>
 
-                    <!-- Header with Frosted Glass Profile Bar & Morphing Search Bar -->
-                    <Border Grid.Row="0" Margin="10,10,10,8" Height="48" CornerRadius="18"
-                            Background="#D9141D2B" BorderBrush="#354C68" BorderThickness="1"
+                    <!-- Header with Frosted Glass Profile Bar & Morphing Search Bar (Floats over chats) -->
+                    <Border Grid.Row="0" Panel.ZIndex="10" VerticalAlignment="Top" Margin="10,10,10,8" Height="48" CornerRadius="18"
+                            Background="#C4131E2C" BorderBrush="#55729B" BorderThickness="1"
                             Padding="6,4">
                         <Border.Effect>
-                            <DropShadowEffect BlurRadius="20" ShadowDepth="3" Direction="270" Opacity="0.35" Color="#000000"/>
+                            <DropShadowEffect BlurRadius="22" ShadowDepth="4" Direction="270" Opacity="0.45" Color="#000000"/>
                         </Border.Effect>
                         <Grid ClipToBounds="True">
                             <!-- Left Items Group: Avatar + Name + Discovery Button (slides left and fades out) -->
@@ -354,9 +354,8 @@
                         </Grid>
                     </Border>
 
-                    <!-- Chats List -->
-                    <ListBox Grid.Row="1" ItemsSource="{Binding FilteredChats}" SelectedItem="{Binding SelectedChat}"
-
+                    <!-- Chats List (Scrolls smoothly underneath the frosted glass profile capsule) -->
+                    <ListBox Grid.Row="0" Grid.RowSpan="2" Padding="0,66,0,8" ItemsSource="{Binding FilteredChats}" SelectedItem="{Binding SelectedChat}"
                              Background="Transparent" BorderThickness="0" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
 
                         <ListBox.ItemTemplate>
@@ -718,21 +717,23 @@
                                                           Focusable="False"
                                                           Padding="0"
                                                           Margin="0"
-                                                          Height="Auto">
+                                                          Height="46"
+                                                          MinHeight="46">
                                                     <MenuItem.Template>
                                                         <ControlTemplate TargetType="MenuItem">
-                                                            <Border Background="#101824" BorderBrush="#25374E" BorderThickness="1" CornerRadius="20" Padding="6,4" Margin="2,2,2,8" Height="44" MaxWidth="380" HorizontalAlignment="Stretch">
+                                                            <Border Background="#101824" BorderBrush="#25374E" BorderThickness="1" CornerRadius="21" Padding="6,2" Margin="2,2,2,6" Height="42" MaxWidth="380" HorizontalAlignment="Stretch" VerticalAlignment="Center">
                                                                 <Border.Effect>
                                                                     <DropShadowEffect BlurRadius="16" ShadowDepth="4" Direction="270" Opacity="0.5" Color="#000000"/>
                                                                 </Border.Effect>
                                                                 <DockPanel LastChildFill="True" VerticalAlignment="Center">
                                                                     <!-- '+' Button to open full emoji collection picker -->
-                                                                    <Button DockPanel.Dock="Right" Style="{StaticResource ModernButton}" Width="30" Height="30" Margin="4,0,0,0"
+                                                                    <Button DockPanel.Dock="Right" Style="{StaticResource ModernButton}" Width="28" Height="28" Margin="4,0,2,0"
                                                                             ToolTip="Все реакции из коллекции (+)"
                                                                             Tag="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
-                                                                            Click="BtnOpenMoreReactions_Click">
-                                                                        <Border Background="{DynamicResource AccentSoftBrush}" CornerRadius="15" Width="28" Height="28">
-                                                                            <Path Data="{StaticResource IconPlus}" Width="12" Height="12" Fill="{DynamicResource AccentBrush}" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                                            Click="BtnOpenMoreReactions_Click"
+                                                                            VerticalAlignment="Center">
+                                                                        <Border Background="{DynamicResource AccentSoftBrush}" CornerRadius="14" Width="26" Height="26">
+                                                                            <Path Data="{StaticResource IconPlus}" Width="11" Height="11" Fill="{DynamicResource AccentBrush}" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                                         </Border>
                                                                     </Button>
 
@@ -740,8 +741,10 @@
                                                                     <ScrollViewer HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled"
                                                                                   PanningMode="HorizontalOnly"
                                                                                   VerticalAlignment="Center"
+                                                                                  Height="34"
                                                                                   PreviewMouseWheel="ReactionScrollViewer_PreviewMouseWheel">
-                                                                        <ItemsControl ItemsSource="{Binding PlacementTarget.Tag.QuickReactions, RelativeSource={RelativeSource AncestorType=ContextMenu}}">
+                                                                        <ItemsControl ItemsSource="{Binding PlacementTarget.Tag.QuickReactions, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                                                                      VerticalAlignment="Center">
                                                                             <ItemsControl.ItemsPanel>
                                                                                 <ItemsPanelTemplate>
                                                                                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center"/>
@@ -1420,13 +1423,13 @@
 
                                 <Grid Grid.Column="0" VerticalAlignment="Center">
                                     <TextBox x:Name="MsgInputTextBox" Style="{StaticResource ModernTextBox}"
-                                             Padding="14,8,8,8"
+                                             Padding="14,9,14,9" VerticalContentAlignment="Center"
                                              Text="{Binding InputMessageText, UpdateSourceTrigger=PropertyChanged}"
                                              PreviewKeyDown="MsgInputTextBox_PreviewKeyDown"
                                              VerticalAlignment="Center" MinHeight="38" MaxHeight="100" TextWrapping="Wrap"/>
                                     <TextBlock Text="{Binding InputPlaceholderText}"
                                                Foreground="{DynamicResource TextMutedBrush}"
-                                               FontSize="13" Margin="17,0,0,0"
+                                               FontSize="13" Margin="20,0,0,0"
                                                VerticalAlignment="Center" IsHitTestVisible="False"
                                                Visibility="{Binding HasInputText, Converter={StaticResource InverseBoolToVis}}"/>
                                 </Grid>

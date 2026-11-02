@@ -425,8 +425,30 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
+        <!-- FROSTED GLASS REFRACTIVE BACKDROP (Spanning Tab Strip and Toolbar Rows 0 and 1) -->
+        <Border Grid.Row="0" Grid.RowSpan="2" Panel.ZIndex="0" IsHitTestVisible="False">
+            <Border.Background>
+                <LinearGradientBrush x:Name="GlassBackdropBrush" StartPoint="0,0" EndPoint="1,1">
+                    <GradientStop x:Name="GlassBackdropStop0" Color="#E60D1420" Offset="0"/>
+                    <GradientStop x:Name="GlassBackdropStop1" Color="#B8142337" Offset="0.35"/>
+                    <GradientStop x:Name="GlassBackdropStop2" Color="#991B324F" Offset="0.70"/>
+                    <GradientStop x:Name="GlassBackdropStop3" Color="#D90E1624" Offset="1"/>
+                </LinearGradientBrush>
+            </Border.Background>
+        </Border>
+        <Border Grid.Row="0" Grid.RowSpan="2" Panel.ZIndex="0" IsHitTestVisible="False" Opacity="0.30" x:Name="GlassSpecularHighlight">
+            <Border.Background>
+                <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                    <GradientStop Color="#40FFFFFF" Offset="0"/>
+                    <GradientStop Color="#00FFFFFF" Offset="0.30"/>
+                    <GradientStop Color="#00000000" Offset="0.80"/>
+                    <GradientStop Color="#1AFFFFFF" Offset="1"/>
+                </LinearGradientBrush>
+            </Border.Background>
+        </Border>
+
         <!-- ROW 0: TAB STRIP + WINDOW CONTROLS + TABS TOOLBAR PANELS (Frosted Glass) -->
-        <Grid Grid.Row="0" Background="#E60E1520">
+        <Grid Grid.Row="0" Panel.ZIndex="1" Background="#B80E1520">
             <Grid.ColumnDefinitions>
                 <!-- Tabs Area & Unified Elements -->
                 <ColumnDefinition Width="*"/>
@@ -563,7 +585,7 @@
                 </DockPanel>
             </Border>
 
-            <Border Background="#D9111822"
+            <Border Background="#A8111822" Panel.ZIndex="1"
                     BorderBrush="#293B50" BorderThickness="0,0,0,1"
                     Padding="10,6">
                 <Grid>

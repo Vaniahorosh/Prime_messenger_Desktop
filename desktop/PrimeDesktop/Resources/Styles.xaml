@@ -238,7 +238,8 @@
                             BorderThickness="{TemplateBinding BorderThickness}"
                             CornerRadius="12"
                             Padding="{TemplateBinding Padding}">
-                        <ScrollViewer x:Name="PART_ContentHost" Margin="0" VerticalAlignment="Center" />
+                        <ScrollViewer x:Name="PART_ContentHost" Margin="0" Focusable="False"
+                                      HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden" />
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsFocused" Value="True">

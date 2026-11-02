@@ -78,23 +78,24 @@ public partial class MainWindow : Window
             };
         }
 
+        if (ReactionsFullPopup != null)
+        {
+            ReactionsFullPopup.PreviewKeyDown += (s, e) =>
+            {
+                if (e.Key == Key.Escape)
+                {
+                    ReactionsFullPopup.IsOpen = false;
+                    e.Handled = true;
+                }
+            };
+        }
+
         // Close full reactions popup on clicking outside, window deactivation or movement
         PreviewMouseDown += (s, e) =>
         {
             if (ReactionsFullPopup != null && ReactionsFullPopup.IsOpen)
             {
-                if (ReactionsFullPopup.Child is FrameworkElement child)
-                {
-                    Point pt = e.GetPosition(child);
-                    if (pt.X < 0 || pt.Y < 0 || pt.X > child.ActualWidth || pt.Y > child.ActualHeight)
-                    {
-                        ReactionsFullPopup.IsOpen = false;
-                    }
-                }
-                else
-                {
-                    ReactionsFullPopup.IsOpen = false;
-                }
+                ReactionsFullPopup.IsOpen = false;
             }
         };
 
