@@ -24,7 +24,7 @@ public partial class SettingsWindow : Window
 
     private void Window_Loaded(object sender, RoutedEventArgs e)
     {
-        ThemeManager.ApplyWindowDwm(this);
+        ThemeManager.ApplyGlassToWindow(this);
         WindowUtils.EnableWindowMinMaxHook(this);
     }
 

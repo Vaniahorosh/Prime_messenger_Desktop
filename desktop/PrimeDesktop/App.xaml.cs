@@ -4,6 +4,7 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Threading;
 using PrimeDesktop.ViewModels;
 
@@ -92,6 +93,20 @@ public partial class App : Application
         };
 
         Log("PrimeDesktop application started (primary single instance).");
+
+        // Automatically apply DWM Glass & Acrylic to all ContextMenus across Prime
+        EventManager.RegisterClassHandler(typeof(ContextMenu), ContextMenu.OpenedEvent, new RoutedEventHandler((s, args) =>
+        {
+            if (s is ContextMenu cm)
+            {
+                var source = PresentationSource.FromVisual(cm) as System.Windows.Interop.HwndSource;
+                if (source?.Handle != null && source.Handle != IntPtr.Zero)
+                {
+                    PrimeDesktop.Services.ThemeManager.ApplyGlassToHwnd(source.Handle, isTransient: true);
+                }
+            }
+        }));
+
         ShutdownMode = ShutdownMode.OnExplicitShutdown;
         MainWindow = new MainWindow();
         MainWindow.Show();

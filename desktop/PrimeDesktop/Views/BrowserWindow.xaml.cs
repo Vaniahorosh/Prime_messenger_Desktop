@@ -167,6 +167,7 @@ public partial class BrowserWindow : Window
         _tabHoverTimer.Tick += TabHoverTimer_Tick;
         Deactivated += (s, e) => CloseTabPreviewPopup();
         LocationChanged += (s, e) => CloseTabPreviewPopup();
+        ThemeManager.ApplyGlassToWindow(this);
     }
 
     private static async Task<CoreWebView2Environment?> GetOrInitEnvironmentAsync()

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
@@ -13,7 +13,7 @@ namespace PrimeDesktop.Views
         public PrimeDialogWindow()
         {
             InitializeComponent();
-            ThemeManager.ApplyWindowDwm(this);
+            ThemeManager.ApplyGlassToWindow(this);
 
             Loaded += PrimeDialogWindow_Loaded;
         }

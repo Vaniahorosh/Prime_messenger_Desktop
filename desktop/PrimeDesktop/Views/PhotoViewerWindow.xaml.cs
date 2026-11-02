@@ -69,7 +69,7 @@ namespace PrimeDesktop.Views
 
         private void Window_SourceInitialized(object? sender, EventArgs e)
         {
-            ThemeManager.ApplyWindowDwm(this, forceDark: true);
+            ThemeManager.ApplyGlassToWindow(this);
             WindowUtils.EnableNativeWindowAnimations(this);
             WindowUtils.EnableWindowMinMaxHook(this);
         }
