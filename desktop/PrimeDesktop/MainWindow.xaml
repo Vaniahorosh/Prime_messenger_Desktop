@@ -610,7 +610,7 @@
 
                 <!-- Messages Scroll Area with Hardware-Accelerated Virtualization (Spans entire height under islands) -->
                 <ScrollViewer Grid.Row="0" Grid.RowSpan="3" Panel.ZIndex="1" x:Name="MessagesScrollViewer" VerticalScrollBarVisibility="Auto"
-                              Padding="16,80,16,96"
+                              Padding="16,0,16,0"
                               AllowDrop="True" Drop="ChatArea_Drop" DragOver="ChatArea_DragOver"
                               CanContentScroll="True"
                               VirtualizingPanel.IsVirtualizing="True"
@@ -622,7 +622,7 @@
                                   VirtualizingPanel.ScrollUnit="Pixel">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
-                                <VirtualizingStackPanel />
+                                <VirtualizingStackPanel Margin="0,74,0,88"/>
                             </ItemsPanelTemplate>
                         </ItemsControl.ItemsPanel>
 
@@ -1434,15 +1434,28 @@
 
                                 <Grid Grid.Column="0" VerticalAlignment="Center">
                                     <TextBox x:Name="MsgInputTextBox" Style="{StaticResource ModernTextBox}"
-                                             Padding="14,9,14,9" VerticalContentAlignment="Center"
+                                             Padding="12,8,12,8" VerticalContentAlignment="Center"
                                              Text="{Binding InputMessageText, UpdateSourceTrigger=PropertyChanged}"
                                              PreviewKeyDown="MsgInputTextBox_PreviewKeyDown"
                                              VerticalAlignment="Center" MinHeight="38" MaxHeight="100" TextWrapping="Wrap"/>
                                     <TextBlock Text="{Binding InputPlaceholderText}"
                                                Foreground="{DynamicResource TextMutedBrush}"
-                                               FontSize="13" Margin="20,0,0,0"
-                                               VerticalAlignment="Center" IsHitTestVisible="False"
-                                               Visibility="{Binding HasInputText, Converter={StaticResource InverseBoolToVis}}"/>
+                                               FontSize="13" Margin="14,0,0,0"
+                                               VerticalAlignment="Center" IsHitTestVisible="False">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding HasInputText}" Value="True">
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding IsKeyboardFocused, ElementName=MsgInputTextBox}" Value="True">
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
                                 </Grid>
 
                                 <!-- Emoji Picker Trigger Button -->

@@ -136,8 +136,8 @@ public static class ThemeManager
             res["TextMutedBrush"] = new SolidColorBrush(Color.FromRgb(0x6E, 0x76, 0x81));
             res["ReceivedBubbleBrush"] = new SolidColorBrush(Color.FromRgb(0x1C, 0x25, 0x36));
 
-            res["GlassSurfaceBrush"] = new SolidColorBrush(Color.FromArgb(0xD0, 0x12, 0x1C, 0x2B));
-            res["GlassBorderBrush"] = new SolidColorBrush(Color.FromArgb(0x80, 0x5A, 0x82, 0xB5));
+            res["GlassSurfaceBrush"] = new SolidColorBrush(Color.FromArgb(0x9E, 0x11, 0x1B, 0x2A));
+            res["GlassBorderBrush"] = new SolidColorBrush(Color.FromArgb(0x8A, 0x5C, 0x88, 0xC2));
             res["GlassVignetteTopBrush"] = new LinearGradientBrush(
                 new GradientStopCollection {
                     new GradientStop(Color.FromArgb(128, 0x08, 0x0D, 0x14), 0.0),
@@ -165,7 +165,7 @@ public static class ThemeManager
             res["TextMutedBrush"] = new SolidColorBrush(Color.FromRgb(0x9C, 0xA3, 0xAF));
             res["ReceivedBubbleBrush"] = new SolidColorBrush(Color.FromRgb(0xFF, 0xFF, 0xFF));
 
-            res["GlassSurfaceBrush"] = new SolidColorBrush(Color.FromArgb(0xE8, 0xF7, 0xF9, 0xFC));
+            res["GlassSurfaceBrush"] = new SolidColorBrush(Color.FromArgb(0xB8, 0xF5, 0xF7, 0xFB));
             res["GlassBorderBrush"] = new SolidColorBrush(Color.FromArgb(0x90, 0x98, 0xAB, 0xC4));
             res["GlassVignetteTopBrush"] = new LinearGradientBrush(
                 new GradientStopCollection {

@@ -18,8 +18,8 @@
     <SolidColorBrush x:Key="BorderBrush" Color="#223045" />
 
     <!-- Frosted Glass (Blurview) Brushes & Dynamic Vignettes -->
-    <SolidColorBrush x:Key="GlassSurfaceBrush" Color="#D0121C2B" />
-    <SolidColorBrush x:Key="GlassBorderBrush" Color="#805A82B5" />
+    <SolidColorBrush x:Key="GlassSurfaceBrush" Color="#9E111B2A" />
+    <SolidColorBrush x:Key="GlassBorderBrush" Color="#8A5C88C2" />
     <LinearGradientBrush x:Key="GlassVignetteTopBrush" StartPoint="0,0" EndPoint="0,1">
         <GradientStop Color="#80080D14" Offset="0"/>
         <GradientStop Color="#40080D14" Offset="0.45"/>
