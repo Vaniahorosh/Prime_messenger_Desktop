@@ -226,7 +226,7 @@
         <Setter Property="CaretBrush" Value="{DynamicResource TextPrimaryBrush}" />
         <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
         <Setter Property="BorderThickness" Value="1" />
-        <Setter Property="Padding" Value="8,6" />
+        <Setter Property="Padding" Value="12,6" />
         <Setter Property="FontSize" Value="13" />
         <Setter Property="VerticalContentAlignment" Value="Center" />
         <Setter Property="ContextMenu" Value="{DynamicResource BrandTextBoxContextMenu}" />

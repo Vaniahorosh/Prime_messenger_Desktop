@@ -708,43 +708,55 @@
                                         <Border.ContextMenu>
                                             <ContextMenu Style="{StaticResource ModernContextMenu}">
                                                                                                 <!-- Reaction Island (Horizontal frequent reactions row + '+' button for full collection) -->
-                                                <Border Background="#101824" BorderBrush="#25374E" BorderThickness="1" CornerRadius="18" Padding="6,3" Margin="2,2,2,8" MaxWidth="380">
-                                                    <Border.Effect>
-                                                        <DropShadowEffect BlurRadius="16" ShadowDepth="4" Direction="270" Opacity="0.5" Color="#000000"/>
-                                                    </Border.Effect>
-                                                    <DockPanel>
-                                                        <!-- '+' Button to open full emoji collection picker -->
-                                                        <Button DockPanel.Dock="Right" Style="{StaticResource ModernButton}" Width="28" Height="28" Margin="4,0,0,0"
-                                                                ToolTip="Все реакции из коллекции (+)"
-                                                                Tag="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
-                                                                Click="BtnOpenMoreReactions_Click">
-                                                            <Border Background="{DynamicResource AccentSoftBrush}" CornerRadius="14" Width="26" Height="26">
-                                                                <Path Data="{StaticResource IconPlus}" Width="11" Height="11" Fill="{DynamicResource AccentBrush}" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                                            </Border>
-                                                        </Button>
+                                                <!-- Reaction Island (Horizontal frequent reactions row + '+' button for full collection) -->
+                                                <MenuItem StaysOpenOnClick="True"
+                                                          Focusable="False"
+                                                          Padding="0"
+                                                          Margin="0"
+                                                          Height="Auto">
+                                                    <MenuItem.Template>
+                                                        <ControlTemplate TargetType="MenuItem">
+                                                            <Border Background="#101824" BorderBrush="#25374E" BorderThickness="1" CornerRadius="20" Padding="6,4" Margin="2,2,2,8" Height="44" MaxWidth="380" HorizontalAlignment="Stretch">
+                                                                <Border.Effect>
+                                                                    <DropShadowEffect BlurRadius="16" ShadowDepth="4" Direction="270" Opacity="0.5" Color="#000000"/>
+                                                                </Border.Effect>
+                                                                <DockPanel LastChildFill="True" VerticalAlignment="Center">
+                                                                    <!-- '+' Button to open full emoji collection picker -->
+                                                                    <Button DockPanel.Dock="Right" Style="{StaticResource ModernButton}" Width="30" Height="30" Margin="4,0,0,0"
+                                                                            ToolTip="Все реакции из коллекции (+)"
+                                                                            Tag="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                                                            Click="BtnOpenMoreReactions_Click">
+                                                                        <Border Background="{DynamicResource AccentSoftBrush}" CornerRadius="15" Width="28" Height="28">
+                                                                            <Path Data="{StaticResource IconPlus}" Width="12" Height="12" Fill="{DynamicResource AccentBrush}" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                                        </Border>
+                                                                    </Button>
 
-                                                        <!-- Scrollable frequent reactions -->
-                                                        <ScrollViewer HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled"
-                                                                      PanningMode="HorizontalOnly"
-                                                                      PreviewMouseWheel="ReactionScrollViewer_PreviewMouseWheel">
-                                                            <ItemsControl ItemsSource="{Binding PlacementTarget.Tag.QuickReactions, RelativeSource={RelativeSource AncestorType=ContextMenu}}">
-                                                                <ItemsControl.ItemsPanel>
-                                                                    <ItemsPanelTemplate>
-                                                                        <StackPanel Orientation="Horizontal"/>
-                                                                    </ItemsPanelTemplate>
-                                                                </ItemsControl.ItemsPanel>
-                                                                <ItemsControl.ItemTemplate>
-                                                                    <DataTemplate>
-                                                                        <Button Content="{Binding}" Style="{StaticResource ReactionEmojiButton}"
-                                                                                Tag="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
-                                                                                Command="{Binding PlacementTarget.Tag.SetReactionCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
-                                                                                CommandParameter="{Binding}" Click="ReactionButton_Click"/>
-                                                                    </DataTemplate>
-                                                                </ItemsControl.ItemTemplate>
-                                                            </ItemsControl>
-                                                        </ScrollViewer>
-                                                    </DockPanel>
-                                                </Border>
+                                                                    <!-- Scrollable frequent reactions -->
+                                                                    <ScrollViewer HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled"
+                                                                                  PanningMode="HorizontalOnly"
+                                                                                  VerticalAlignment="Center"
+                                                                                  PreviewMouseWheel="ReactionScrollViewer_PreviewMouseWheel">
+                                                                        <ItemsControl ItemsSource="{Binding PlacementTarget.Tag.QuickReactions, RelativeSource={RelativeSource AncestorType=ContextMenu}}">
+                                                                            <ItemsControl.ItemsPanel>
+                                                                                <ItemsPanelTemplate>
+                                                                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center"/>
+                                                                                </ItemsPanelTemplate>
+                                                                            </ItemsControl.ItemsPanel>
+                                                                            <ItemsControl.ItemTemplate>
+                                                                                <DataTemplate>
+                                                                                    <Button Content="{Binding}" Style="{StaticResource ReactionEmojiButton}"
+                                                                                            Tag="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                                                                            Command="{Binding PlacementTarget.Tag.SetReactionCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                                                                            CommandParameter="{Binding}" Click="ReactionButton_Click"/>
+                                                                                </DataTemplate>
+                                                                            </ItemsControl.ItemTemplate>
+                                                                        </ItemsControl>
+                                                                    </ScrollViewer>
+                                                                </DockPanel>
+                                                            </Border>
+                                                        </ControlTemplate>
+                                                    </MenuItem.Template>
+                                                </MenuItem>
 
 
                                                 <!-- Actions -->
@@ -1403,12 +1415,13 @@
 
                                 <Grid Grid.Column="0" VerticalAlignment="Center">
                                     <TextBox x:Name="MsgInputTextBox" Style="{StaticResource ModernTextBox}"
+                                             Padding="14,8,8,8"
                                              Text="{Binding InputMessageText, UpdateSourceTrigger=PropertyChanged}"
                                              PreviewKeyDown="MsgInputTextBox_PreviewKeyDown"
-                                             VerticalAlignment="Center" MinHeight="36" MaxHeight="100" TextWrapping="Wrap"/>
+                                             VerticalAlignment="Center" MinHeight="38" MaxHeight="100" TextWrapping="Wrap"/>
                                     <TextBlock Text="{Binding InputPlaceholderText}"
                                                Foreground="{DynamicResource TextMutedBrush}"
-                                               FontSize="13" Margin="10,0,0,0"
+                                               FontSize="13" Margin="14,0,0,0"
                                                VerticalAlignment="Center" IsHitTestVisible="False"
                                                Visibility="{Binding HasInputText, Converter={StaticResource InverseBoolToVis}}"/>
                                 </Grid>
