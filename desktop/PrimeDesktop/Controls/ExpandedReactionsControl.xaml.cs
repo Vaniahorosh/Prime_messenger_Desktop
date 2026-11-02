@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -22,6 +22,7 @@ namespace PrimeDesktop.Controls
     {
         public event EventHandler<string>? ReactionSelected;
         public event EventHandler? OpenFullEmojiPickerRequested;
+        public event EventHandler? CloseRequested;
 
         private readonly List<ReactionItem> _allReactions = new();
         private readonly ObservableCollection<ReactionItem> _displayedReactions = new();
@@ -255,6 +256,55 @@ namespace PrimeDesktop.Controls
         private void BtnMoreEmojis_Click(object sender, RoutedEventArgs e)
         {
             OpenFullEmojiPickerRequested?.Invoke(this, EventArgs.Empty);
+        }
+
+        public void FocusSearch()
+        {
+            TxtFilter?.Focus();
+        }
+
+        public void ClosePopup()
+        {
+            CloseRequested?.Invoke(this, EventArgs.Empty);
+            if (Parent is FrameworkElement fe && fe.Parent is System.Windows.Controls.Primitives.Popup p)
+            {
+                p.IsOpen = false;
+            }
+            else if (Parent is System.Windows.Controls.Primitives.Popup directP)
+            {
+                directP.IsOpen = false;
+            }
+        }
+
+        private void BtnClose_Click(object sender, RoutedEventArgs e)
+        {
+            ClosePopup();
+        }
+
+        private void TxtFilter_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+        {
+            if (e.Key == System.Windows.Input.Key.Escape)
+            {
+                if (!string.IsNullOrEmpty(TxtFilter.Text))
+                {
+                    TxtFilter.Text = string.Empty;
+                }
+                else
+                {
+                    ClosePopup();
+                }
+                e.Handled = true;
+            }
+        }
+
+        protected override void OnPreviewKeyDown(System.Windows.Input.KeyEventArgs e)
+        {
+            base.OnPreviewKeyDown(e);
+            if (e.Key == System.Windows.Input.Key.Escape)
+            {
+                ClosePopup();
+                e.Handled = true;
+            }
         }
 
         public void ResetSearch()

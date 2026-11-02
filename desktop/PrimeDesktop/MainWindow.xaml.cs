@@ -1,3 +1,4 @@
+using System.Windows.Threading;
 using System;
 using System.IO;
 using System.Linq;
@@ -58,6 +59,10 @@ public partial class MainWindow : Window
 
         if (ExpandedReactionsView != null)
         {
+            ExpandedReactionsView.CloseRequested += (s, e) =>
+            {
+                if (ReactionsFullPopup != null) ReactionsFullPopup.IsOpen = false;
+            };
             ExpandedReactionsView.ReactionSelected += async (s, emoji) =>
             {
                 if (ReactionsFullPopup != null) ReactionsFullPopup.IsOpen = false;
@@ -72,6 +77,42 @@ public partial class MainWindow : Window
                 }
             };
         }
+
+        // Close full reactions popup on clicking outside, window deactivation or movement
+        PreviewMouseDown += (s, e) =>
+        {
+            if (ReactionsFullPopup != null && ReactionsFullPopup.IsOpen)
+            {
+                if (ReactionsFullPopup.Child is FrameworkElement child)
+                {
+                    Point pt = e.GetPosition(child);
+                    if (pt.X < 0 || pt.Y < 0 || pt.X > child.ActualWidth || pt.Y > child.ActualHeight)
+                    {
+                        ReactionsFullPopup.IsOpen = false;
+                    }
+                }
+                else
+                {
+                    ReactionsFullPopup.IsOpen = false;
+                }
+            }
+        };
+
+        Deactivated += (s, e) =>
+        {
+            if (ReactionsFullPopup != null && ReactionsFullPopup.IsOpen)
+            {
+                ReactionsFullPopup.IsOpen = false;
+            }
+        };
+
+        LocationChanged += (s, e) =>
+        {
+            if (ReactionsFullPopup != null && ReactionsFullPopup.IsOpen)
+            {
+                ReactionsFullPopup.IsOpen = false;
+            }
+        };
 
         if (MessagesScrollViewer != null)
         {
@@ -140,6 +181,13 @@ public partial class MainWindow : Window
 
             if (e.Key == Key.Escape)
             {
+                if (ReactionsFullPopup != null && ReactionsFullPopup.IsOpen)
+                {
+                    ReactionsFullPopup.IsOpen = false;
+                    e.Handled = true;
+                    return;
+                }
+
                 if (DataContext is MainViewModel vm)
                 {
                     if (vm.IsPhotoViewerOpen)
@@ -540,14 +588,18 @@ public partial class MainWindow : Window
             var cm = FindVisualParent<System.Windows.Controls.ContextMenu>(fe);
             if (cm != null) cm.IsOpen = false;
 
-            if (ExpandedReactionsView != null)
+            Dispatcher.BeginInvoke(DispatcherPriority.Input, new Action(() =>
             {
-                ExpandedReactionsView.ResetSearch();
-            }
-            if (ReactionsFullPopup != null)
-            {
-                ReactionsFullPopup.IsOpen = true;
-            }
+                if (ExpandedReactionsView != null)
+                {
+                    ExpandedReactionsView.ResetSearch();
+                }
+                if (ReactionsFullPopup != null)
+                {
+                    ReactionsFullPopup.IsOpen = true;
+                    ExpandedReactionsView?.FocusSearch();
+                }
+            }));
         }
     }
 

@@ -1,4 +1,4 @@
-﻿<UserControl x:Class="PrimeDesktop.Controls.ExpandedReactionsControl"
+<UserControl x:Class="PrimeDesktop.Controls.ExpandedReactionsControl"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              Width="350" MaxHeight="440">
@@ -20,15 +20,16 @@
                 <RowDefinition Height="Auto"/> <!-- Full Picker Toggle -->
             </Grid.RowDefinitions>
 
-            <!-- Header: Title + Search Box -->
+            <!-- Header: Title + Search Box + Close Button -->
             <Grid Grid.Row="0" Margin="0,0,0,10">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
-                <TextBlock Grid.Column="0" Text="Реакции" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="14" FontWeight="Bold" VerticalAlignment="Center" Margin="2,0,12,0"/>
+                <TextBlock Grid.Column="0" Text="Реакции" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="14" FontWeight="Bold" VerticalAlignment="Center" Margin="2,0,10,0"/>
 
-                <Border Grid.Column="1" Background="#162232" BorderBrush="#263850" BorderThickness="1" Height="30" Padding="8,0">
+                <Border Grid.Column="1" Background="#162232" BorderBrush="#263850" BorderThickness="1" CornerRadius="8" Height="30" Padding="8,0">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto"/>
@@ -41,6 +42,7 @@
                                  Foreground="{DynamicResource TextPrimaryBrush}"
                                  CaretBrush="{DynamicResource AccentBrush}"
                                  FontSize="12" VerticalAlignment="Center"
+                                 KeyDown="TxtFilter_KeyDown"
                                  TextChanged="TxtFilter_TextChanged"/>
                         <TextBlock Grid.Column="1" x:Name="PlaceholderFilter" Text="Найти реакцию..."
                                    Foreground="{StaticResource TextMutedBrush}" FontSize="12"
@@ -51,6 +53,12 @@
                                 Visibility="Collapsed" Click="BtnClearFilter_Click"/>
                     </Grid>
                 </Border>
+
+                <!-- Close Button (✕) -->
+                <Button Grid.Column="2" x:Name="BtnClose" Style="{StaticResource ModernButton}" Width="26" Height="26" Margin="6,0,0,0"
+                        ToolTip="Закрыть (Esc)" Click="BtnClose_Click">
+                    <Path Data="{StaticResource IconClose}" Width="9" Height="9" Fill="{DynamicResource TextSecondaryBrush}" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Button>
             </Grid>
 
             <!-- Category Pills Bar -->
