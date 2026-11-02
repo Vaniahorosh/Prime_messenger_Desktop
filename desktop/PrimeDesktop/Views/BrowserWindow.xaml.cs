@@ -1071,7 +1071,7 @@ public partial class BrowserWindow : Window
             catch { }
         }
 
-        bool wasActive = (tab == ActiveTab);
+        bool wasActive = (tab == ActiveTab || tab.IsActive);
         Tabs.RemoveAt(index);
         UpdateTabsCounter();
 
@@ -1470,6 +1470,7 @@ public partial class BrowserWindow : Window
     #region Vertical Tabs Expandable Sidebar Handlers
 
     private bool _isVerticalTabsPopupClosing;
+    private bool _isTabContextMenuOpen;
 
     private void ApplyTabsOrientation(bool isVertical)
     {
@@ -1479,9 +1480,9 @@ public partial class BrowserWindow : Window
             TabsScrollViewer.Visibility = Visibility.Collapsed;
             BtnNewTab.Visibility = Visibility.Collapsed;
             TxtVerticalTitle.Visibility = Visibility.Visible;
-            BrowserHostGrid.Margin = new Thickness(48, 0, 0, 0);
-            StartScreenContainer.Margin = new Thickness(48, 0, 0, 0);
             if (RbVerticalTabs != null) RbVerticalTabs.IsChecked = true;
+            if (IconTabOrientation != null) IconTabOrientation.Data = (Geometry)FindResource("IconTabsHorizontal");
+            if (BtnToggleTabOrientation != null) BtnToggleTabOrientation.ToolTip = "Переключить на горизонтальные вкладки";
         }
         else
         {
@@ -1490,10 +1491,21 @@ public partial class BrowserWindow : Window
             TabsScrollViewer.Visibility = Visibility.Visible;
             BtnNewTab.Visibility = Visibility.Visible;
             TxtVerticalTitle.Visibility = Visibility.Collapsed;
-            BrowserHostGrid.Margin = new Thickness(0);
-            StartScreenContainer.Margin = new Thickness(0);
             if (RbHorizontalTabs != null) RbHorizontalTabs.IsChecked = true;
+            if (IconTabOrientation != null) IconTabOrientation.Data = (Geometry)FindResource("IconTabsVertical");
+            if (BtnToggleTabOrientation != null) BtnToggleTabOrientation.ToolTip = "Переключить на вертикальные вкладки";
         }
+    }
+
+    private void BtnToggleTabOrientation_Click(object sender, RoutedEventArgs e)
+    {
+        bool newVertical = _vm?.Settings?.BrowserVerticalTabs != true;
+        if (_vm?.Settings != null)
+        {
+            _vm.Settings.BrowserVerticalTabs = newVertical;
+            _ = _vm.ApplyAndSaveSettingsAsync();
+        }
+        ApplyTabsOrientation(newVertical);
     }
 
     private void RbTabOrientation_Checked(object sender, RoutedEventArgs e)
@@ -1502,14 +1514,49 @@ public partial class BrowserWindow : Window
         if (_vm?.Settings != null && _vm.Settings.BrowserVerticalTabs != isVertical)
         {
             _vm.Settings.BrowserVerticalTabs = isVertical;
-            _vm.FlushStorageSync();
+            _ = _vm.ApplyAndSaveSettingsAsync();
         }
         ApplyTabsOrientation(isVertical);
     }
 
+    private void TabContextMenu_Opened(object sender, RoutedEventArgs e)
+    {
+        _isTabContextMenuOpen = true;
+        _isVerticalTabsPopupClosing = false;
+        VerticalTabsPopupBorder.BeginAnimation(WidthProperty, null);
+        VerticalTabsPopupBorder.Width = 230;
+
+        if (sender is ContextMenu cm)
+        {
+            var tab = GetTabFromMenuSender(cm);
+            if (tab != null)
+            {
+                foreach (var item in cm.Items)
+                {
+                    if (item is MenuItem mi && (string?)mi.Tag == "pin")
+                    {
+                        mi.Header = tab.IsPinned ? "📌 Открепить вкладку" : "📌 Закрепить вкладку";
+                    }
+                }
+            }
+        }
+    }
+
+    private void TabContextMenu_Closed(object sender, RoutedEventArgs e)
+    {
+        _isTabContextMenuOpen = false;
+        Dispatcher.BeginInvoke(new Action(() =>
+        {
+            if (!_isTabContextMenuOpen && !VerticalTabsPopupBorder.IsMouseOver && !VerticalTabsBar.IsMouseOver)
+            {
+                CollapseVerticalTabsPopup();
+            }
+        }), System.Windows.Threading.DispatcherPriority.Input);
+    }
+
     private void VerticalTabsBar_MouseEnter(object sender, MouseEventArgs e)
     {
-        if (_isToolbarEditMode || _vm?.Settings?.BrowserVerticalTabs != true) return;
+        if (_isToolbarEditMode || _isTabContextMenuOpen || _vm?.Settings?.BrowserVerticalTabs != true) return;
         OpenVerticalTabsPopup();
     }
 
@@ -1546,7 +1593,13 @@ public partial class BrowserWindow : Window
 
     private void VerticalTabsPopupBorder_MouseLeave(object sender, MouseEventArgs e)
     {
-        if (_isVerticalTabsPopupClosing) return;
+        if (_isTabContextMenuOpen || _isVerticalTabsPopupClosing) return;
+        CollapseVerticalTabsPopup();
+    }
+
+    private void CollapseVerticalTabsPopup()
+    {
+        if (_isTabContextMenuOpen || _isVerticalTabsPopupClosing) return;
         _isVerticalTabsPopupClosing = true;
 
         var anim = new DoubleAnimation
@@ -1557,7 +1610,7 @@ public partial class BrowserWindow : Window
         };
         anim.Completed += (s, ev) =>
         {
-            if (_isVerticalTabsPopupClosing)
+            if (_isVerticalTabsPopupClosing && !_isTabContextMenuOpen)
             {
                 VerticalTabsPopup.IsOpen = false;
                 _isVerticalTabsPopupClosing = false;
@@ -1592,6 +1645,7 @@ public partial class BrowserWindow : Window
 
     private void BtnCloseTab_Click(object sender, RoutedEventArgs e)
     {
+        e.Handled = true;
         if (sender is FrameworkElement fe && fe.Tag is BrowserTabItem tab)
         {
             CloseTab(tab);
@@ -1644,10 +1698,32 @@ public partial class BrowserWindow : Window
     private void MenuTabPin_Click(object sender, RoutedEventArgs e)
     {
         var tab = GetTabFromMenuSender(sender);
-        if (tab != null)
+        if (tab == null) return;
+
+        tab.IsPinned = !tab.IsPinned;
+
+        // Reorder tabs: pinned tabs first, then unpinned tabs
+        int oldIndex = Tabs.IndexOf(tab);
+        if (tab.IsPinned)
         {
-            tab.IsPinned = !tab.IsPinned;
+            int targetIndex = Tabs.Count(t => t.IsPinned) - 1;
+            targetIndex = Math.Clamp(targetIndex, 0, Tabs.Count - 1);
+            if (oldIndex != targetIndex)
+            {
+                Tabs.Move(oldIndex, targetIndex);
+            }
         }
+        else
+        {
+            int targetIndex = Tabs.Count(t => t.IsPinned);
+            targetIndex = Math.Clamp(targetIndex, 0, Tabs.Count - 1);
+            if (oldIndex != targetIndex)
+            {
+                Tabs.Move(oldIndex, targetIndex);
+            }
+        }
+
+        ActivateTab(tab);
     }
 
     private void MenuTabClose_Click(object sender, RoutedEventArgs e)
@@ -1664,7 +1740,7 @@ public partial class BrowserWindow : Window
         var tab = GetTabFromMenuSender(sender);
         if (tab != null)
         {
-            var others = Tabs.Where(t => t != tab).ToList();
+            var others = Tabs.Where(t => t != tab && !t.IsPinned).ToList();
             foreach (var other in others)
             {
                 CloseTab(other);

@@ -28,6 +28,11 @@
         <conv:BoolToVisibilityConverter x:Key="BoolToVis"/>
         <conv:BoolToVisibilityConverter x:Key="InverseBoolToVis" Invert="True"/>
 
+        <!-- Tab Orientation & Pin Icons -->
+        <Geometry x:Key="IconTabsVertical">M3,3H21V21H3V3M5,5V19H9V5H5M11,5V19H19V5H11Z</Geometry>
+        <Geometry x:Key="IconTabsHorizontal">M3,3H21V21H3V3M5,5V9H19V5H5M5,11V19H19V11H5Z</Geometry>
+        <Geometry x:Key="IconPin">M16,12V4H17V2H7V4H8V12L6,14V16H11.2V22H12.8V16H18V14L16,12Z</Geometry>
+
         <!-- Tab Item Header Style -->
         <Style x:Key="BrowserTabButtonStyle" TargetType="RadioButton">
             <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
@@ -47,11 +52,11 @@
                                 RenderTransformOrigin="0.5,1"
                                 Tag="{Binding}">
                             <Border.ContextMenu>
-                                <ContextMenu Style="{StaticResource ModernContextMenu}">
+                                <ContextMenu Style="{StaticResource ModernContextMenu}" Opened="TabContextMenu_Opened" Closed="TabContextMenu_Closed">
                                     <MenuItem Header="➕ Новая вкладка" Click="MenuTabNew_Click"/>
                                     <MenuItem Header="🔄 Перезагрузить" Click="MenuTabReload_Click"/>
                                     <MenuItem Header="📋 Дублировать вкладку" Click="MenuTabDuplicate_Click"/>
-                                    <MenuItem Header="📌 Закрепить вкладку" Click="MenuTabPin_Click"/>
+                                    <MenuItem Header="📌 Закрепить вкладку" Tag="pin" Click="MenuTabPin_Click"/>
                                     <Separator/>
                                     <MenuItem Header="✕ Закрыть вкладку" Style="{StaticResource DangerMenuItem}" Click="MenuTabClose_Click"/>
                                     <MenuItem Header="✕ Закрыть другие вкладки" Style="{StaticResource DangerMenuItem}" Click="MenuTabCloseOthers_Click"/>
@@ -116,6 +121,14 @@
                         </Border>
 
                         <ControlTemplate.Triggers>
+                            <DataTrigger Binding="{Binding IsPinned}" Value="True">
+                                <Setter TargetName="TabBorder" Property="MinWidth" Value="38"/>
+                                <Setter TargetName="TabBorder" Property="MaxWidth" Value="38"/>
+                                <Setter TargetName="TabBorder" Property="Padding" Value="8,6,8,6"/>
+                                <Setter TargetName="TabTitleText" Property="Visibility" Value="Collapsed"/>
+                                <Setter TargetName="BtnCloseTab" Property="Visibility" Value="Collapsed"/>
+                                <Setter TargetName="TabBorder" Property="ToolTip" Value="{Binding Title}"/>
+                            </DataTrigger>
                             <EventTrigger RoutedEvent="FrameworkElement.Loaded">
                                 <BeginStoryboard>
                                     <Storyboard>
@@ -254,11 +267,11 @@
                                 Margin="5,2"
                                 Tag="{Binding}">
                             <Border.ContextMenu>
-                                <ContextMenu Style="{StaticResource ModernContextMenu}">
+                                <ContextMenu Style="{StaticResource ModernContextMenu}" Opened="TabContextMenu_Opened" Closed="TabContextMenu_Closed">
                                     <MenuItem Header="➕ Новая вкладка" Click="MenuTabNew_Click"/>
                                     <MenuItem Header="🔄 Перезагрузить" Click="MenuTabReload_Click"/>
                                     <MenuItem Header="📋 Дублировать вкладку" Click="MenuTabDuplicate_Click"/>
-                                    <MenuItem Header="📌 Закрепить вкладку" Click="MenuTabPin_Click"/>
+                                    <MenuItem Header="📌 Закрепить вкладку" Tag="pin" Click="MenuTabPin_Click"/>
                                     <Separator/>
                                     <MenuItem Header="✕ Закрыть вкладку" Style="{StaticResource DangerMenuItem}" Click="MenuTabClose_Click"/>
                                     <MenuItem Header="✕ Закрыть другие вкладки" Style="{StaticResource DangerMenuItem}" Click="MenuTabCloseOthers_Click"/>
@@ -286,7 +299,7 @@
             </Setter>
         </Style>
 
-        <!-- Expandable Vertical Tab Item Style (Icon + Title + Close Button) -->
+        <!-- Expandable Vertical Tab Item Style (Icon + Title + Close Button / Pin Badge) -->
         <Style x:Key="BrowserVerticalTabButtonStyle" TargetType="RadioButton">
             <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
             <Setter Property="Cursor" Value="Hand"/>
@@ -303,11 +316,11 @@
                                 Margin="5,2"
                                 Tag="{Binding}">
                             <Border.ContextMenu>
-                                <ContextMenu Style="{StaticResource ModernContextMenu}">
+                                <ContextMenu Style="{StaticResource ModernContextMenu}" Opened="TabContextMenu_Opened" Closed="TabContextMenu_Closed">
                                     <MenuItem Header="➕ Новая вкладка" Click="MenuTabNew_Click"/>
                                     <MenuItem Header="🔄 Перезагрузить" Click="MenuTabReload_Click"/>
                                     <MenuItem Header="📋 Дублировать вкладку" Click="MenuTabDuplicate_Click"/>
-                                    <MenuItem Header="📌 Закрепить вкладку" Click="MenuTabPin_Click"/>
+                                    <MenuItem Header="📌 Закрепить вкладку" Tag="pin" Click="MenuTabPin_Click"/>
                                     <Separator/>
                                     <MenuItem Header="✕ Закрыть вкладку" Style="{StaticResource DangerMenuItem}" Click="MenuTabClose_Click"/>
                                     <MenuItem Header="✕ Закрыть другие вкладки" Style="{StaticResource DangerMenuItem}" Click="MenuTabCloseOthers_Click"/>
@@ -338,6 +351,15 @@
                                            Foreground="{DynamicResource TextSecondaryBrush}"
                                            x:Name="TabTitleText"
                                            Margin="2,0,4,0"/>
+
+                                <!-- Pin Badge (shown when pinned) -->
+                                <Path x:Name="IconPinBadge" Grid.Column="2"
+                                      Data="{StaticResource IconPin}"
+                                      Fill="{DynamicResource AccentBrush}"
+                                      Width="11" Height="11" Stretch="Uniform"
+                                      Margin="0,0,8,0" VerticalAlignment="Center"
+                                      Visibility="Collapsed"
+                                      ToolTip="Закрепленная вкладка"/>
 
                                 <!-- Close Tab Button -->
                                 <Button Grid.Column="2"
@@ -370,6 +392,10 @@
                         </Border>
 
                         <ControlTemplate.Triggers>
+                            <DataTrigger Binding="{Binding IsPinned}" Value="True">
+                                <Setter TargetName="BtnCloseTab" Property="Visibility" Value="Collapsed"/>
+                                <Setter TargetName="IconPinBadge" Property="Visibility" Value="Visible"/>
+                            </DataTrigger>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="TabBorder" Property="Background" Value="{DynamicResource CardHoverBrush}"/>
                             </Trigger>
@@ -445,7 +471,7 @@
                             </ItemsControl.ItemsPanel>
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <RadioButton GroupName="BrowserTabsGroup"
+                                    <RadioButton GroupName="HorizontalTabsGroup"
                                                  IsChecked="{Binding IsActive, Mode=TwoWay}"
                                                  Style="{StaticResource BrowserTabButtonStyle}"
                                                  Click="TabButton_Click"
@@ -469,8 +495,20 @@
                 </ScrollViewer>
             </DockPanel>
 
-            <!-- Window Caption Buttons & Tabs Counter Badge -->
+            <!-- Window Caption Buttons & Tabs Counter Badge & Tabs Toggle -->
             <StackPanel Grid.Column="1" Orientation="Horizontal" WindowChrome.IsHitTestVisibleInChrome="True">
+                <!-- Quick Tab Orientation Toggle Button (Instant 1-click switch) -->
+                <Button x:Name="BtnToggleTabOrientation"
+                        Style="{StaticResource CaptionButtonStyle}"
+                        Width="34" Height="30"
+                        ToolTip="Переключить вертикальные / горизонтальные вкладки"
+                        Click="BtnToggleTabOrientation_Click">
+                    <Path x:Name="IconTabOrientation"
+                          Data="{StaticResource IconTabsVertical}"
+                          Width="13" Height="13" Stretch="Uniform"
+                          Fill="{DynamicResource TextSecondaryBrush}"/>
+                </Button>
+
                 <!-- Tab Counter Badge -->
                 <Button x:Name="BtnTabsCounter"
                         Style="{StaticResource ModernButton}"
@@ -622,14 +660,70 @@
                      BorderThickness="0"
                      Visibility="Collapsed"/>
 
-        <!-- ROW 3: BROWSER VIEW CONTAINER -->
-                <!-- ROW 3: BROWSER VIEW CONTAINER & START SCREEN -->
+        <!-- ROW 3: BROWSER VIEW CONTAINER & START SCREEN -->
         <Grid Grid.Row="3" Background="#0C1017">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" x:Name="ColVerticalTabs"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Miniature Vertical Tabs Strip (always visible when BrowserVerticalTabs is true) -->
+            <Border x:Name="VerticalTabsBar"
+                    Grid.Column="0"
+                    HorizontalAlignment="Left"
+                    VerticalAlignment="Stretch"
+                    Width="48"
+                    Background="{DynamicResource CardBrush}"
+                    BorderBrush="{DynamicResource BorderBrush}"
+                    BorderThickness="0,0,1,0"
+                    Panel.ZIndex="30"
+                    Visibility="Collapsed"
+                    MouseEnter="VerticalTabsBar_MouseEnter">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- New Tab Mini Button -->
+                    <Border Grid.Row="0" Padding="5,6,5,6" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
+                        <Button Style="{StaticResource AddressNavButton}"
+                                Width="36" Height="34"
+                                ToolTip="Новая вкладка (Ctrl+T)"
+                                Click="BtnNewTab_Click">
+                            <Path Data="{StaticResource IconPlus}" Width="13" Height="13"
+                                  Fill="{DynamicResource AccentBrush}" Stretch="Uniform"
+                                  HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Button>
+                    </Border>
+
+                    <!-- Scrollable miniature vertical tabs list -->
+                    <ScrollViewer Grid.Row="1"
+                                  VerticalScrollBarVisibility="Hidden"
+                                  HorizontalScrollBarVisibility="Disabled"
+                                  PanningMode="VerticalOnly">
+                        <ItemsControl x:Name="MiniVerticalTabsItemsControl">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <RadioButton GroupName="MiniVerticalTabsGroup"
+                                                 IsChecked="{Binding IsActive, Mode=TwoWay}"
+                                                 Style="{StaticResource MiniVerticalTabButtonStyle}"
+                                                 Click="TabButton_Click"
+                                                 PreviewMouseDown="TabButton_PreviewMouseDown"
+                                                 Tag="{Binding}"/>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </Grid>
+            </Border>
+
             <!-- Active WebView2 tabs container -->
-            <Grid x:Name="BrowserHostGrid"/>
+            <Grid x:Name="BrowserHostGrid" Grid.Column="1"/>
 
             <!-- START SCREEN (displayed when no active tabs) -->
             <ScrollViewer x:Name="StartScreenContainer"
+                          Grid.Column="1"
                           VerticalScrollBarVisibility="Auto"
                           HorizontalScrollBarVisibility="Disabled"
                           Visibility="Collapsed"
@@ -851,6 +945,7 @@
 
             <!-- EDIT MODE OVERLAY (Hides web page during toolbar editing) -->
             <Border x:Name="EditModeOverlay"
+                    Grid.Column="0" Grid.ColumnSpan="2"
                     Background="{DynamicResource BackgroundBrush}"
                     Visibility="Collapsed"
                     Panel.ZIndex="40">
@@ -878,56 +973,6 @@
                                 Padding="18,8" FontWeight="SemiBold" Click="BtnExitEditMode_Click"/>
                     </StackPanel>
                 </StackPanel>
-            </Border>
-
-            <!-- Miniature Vertical Tabs Strip (always visible when BrowserVerticalTabs is true) -->
-            <Border x:Name="VerticalTabsBar"
-                    HorizontalAlignment="Left"
-                    VerticalAlignment="Stretch"
-                    Width="48"
-                    Background="{DynamicResource CardBrush}"
-                    BorderBrush="{DynamicResource BorderBrush}"
-                    BorderThickness="0,0,1,0"
-                    Panel.ZIndex="30"
-                    Visibility="Collapsed"
-                    MouseEnter="VerticalTabsBar_MouseEnter">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                    </Grid.RowDefinitions>
-
-                    <!-- New Tab Mini Button -->
-                    <Border Grid.Row="0" Padding="5,6,5,6" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
-                        <Button Style="{StaticResource AddressNavButton}"
-                                Width="36" Height="34"
-                                ToolTip="Новая вкладка (Ctrl+T)"
-                                Click="BtnNewTab_Click">
-                            <Path Data="{StaticResource IconPlus}" Width="13" Height="13"
-                                  Fill="{DynamicResource AccentBrush}" Stretch="Uniform"
-                                  HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Button>
-                    </Border>
-
-                    <!-- Scrollable miniature vertical tabs list -->
-                    <ScrollViewer Grid.Row="1"
-                                  VerticalScrollBarVisibility="Hidden"
-                                  HorizontalScrollBarVisibility="Disabled"
-                                  PanningMode="VerticalOnly">
-                        <ItemsControl x:Name="MiniVerticalTabsItemsControl">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <RadioButton GroupName="BrowserTabsGroup"
-                                                 IsChecked="{Binding IsActive, Mode=TwoWay}"
-                                                 Style="{StaticResource MiniVerticalTabButtonStyle}"
-                                                 Click="TabButton_Click"
-                                                 PreviewMouseDown="TabButton_PreviewMouseDown"
-                                                 Tag="{Binding}"/>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </ScrollViewer>
-                </Grid>
             </Border>
         </Grid>
 
@@ -984,7 +1029,7 @@
                         <ItemsControl x:Name="VerticalTabsItemsControl">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <RadioButton GroupName="BrowserTabsGroup"
+                                    <RadioButton GroupName="VerticalTabsGroup"
                                                  IsChecked="{Binding IsActive, Mode=TwoWay}"
                                                  Style="{StaticResource BrowserVerticalTabButtonStyle}"
                                                  Click="TabButton_Click"
