@@ -607,6 +607,12 @@
                                                   Foreground="{DynamicResource TextPrimaryBrush}" Background="{DynamicResource CardBrush}"
                                                   BorderBrush="{DynamicResource BorderBrush}" Padding="8,5" Margin="0,0,0,16"/>
 
+                                        <TextBlock Text="ВКЛАДКИ И ИНТЕРФЕЙС" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,8"/>
+                                        <CheckBox Content="Вертикальное расположение вкладок (слева)" IsChecked="{Binding Settings.BrowserVerticalTabs, Mode=TwoWay}"
+                                                  Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,4"/>
+                                        <TextBlock Text="Вкладки сворачиваются в компактные иконки сайтов слева и плавно раскрываются при наведении курсора."
+                                                   FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" Margin="24,0,0,14" TextWrapping="Wrap"/>
+
                                         <TextBlock Text="ВЕБ-ДВИЖОК И БЕЗОПАСНОСТЬ" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,8"/>
                                         <CheckBox Content="Включить поддержку JavaScript" IsChecked="{Binding Settings.BrowserEnableJs, Mode=TwoWay}"
                                                   Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,8"/>

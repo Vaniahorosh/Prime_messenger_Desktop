@@ -88,6 +88,8 @@ public partial class BrowserWindow : Window
         _vm = vm ?? Application.Current?.MainWindow?.DataContext as MainViewModel;
 
         TabsItemsControl.ItemsSource = Tabs;
+        MiniVerticalTabsItemsControl.ItemsSource = Tabs;
+        VerticalTabsItemsControl.ItemsSource = Tabs;
         ExtensionsItemsControl.ItemsSource = InstalledExtensions;
 
         // Populate search engine combo
@@ -124,6 +126,19 @@ public partial class BrowserWindow : Window
         PrimeAnimationService.HookBrandTransitions(this);
 
         HiddenButtonsItemsControl.ItemsSource = HiddenToolbarButtons;
+
+        // Apply tab layout orientation (horizontal vs vertical)
+        ApplyTabsOrientation(_vm?.Settings?.BrowserVerticalTabs == true);
+        if (_vm?.Settings != null)
+        {
+            _vm.Settings.PropertyChanged += (s, e) =>
+            {
+                if (e.PropertyName == nameof(AppSettings.BrowserVerticalTabs))
+                {
+                    Dispatcher.Invoke(() => ApplyTabsOrientation(_vm.Settings.BrowserVerticalTabs));
+                }
+            };
+        }
 
         // Open initial tab if URL was given, otherwise show Start Screen!
         if (!string.IsNullOrWhiteSpace(initialUrl))
@@ -324,19 +339,125 @@ public partial class BrowserWindow : Window
         }
     }
 
-    private FrameworkElement? GetElementForId(string id) => id switch
+    private FrameworkElement CreateSpacerElement(string id)
     {
-        "back" => _btnBack,
-        "forward" => _btnForward,
-        "refresh" => _btnRefresh,
-        "address_bar" => CardAddressBar,
-        "desktop_mode" => _btnToggleDesktopMode,
-        "extensions" => _btnExtensions,
-        "external" => _btnOpenExternal,
-        "customize" => _btnCustomizeToolbar,
-        "settings" => _btnBrowserSettings,
-        _ => null
-    };
+        var spacerBorder = new Border
+        {
+            Height = 32,
+            Tag = id
+        };
+
+        if (_isToolbarEditMode)
+        {
+            spacerBorder.Width = 36;
+            spacerBorder.Background = (Brush)FindResource("HeaderBrush");
+            spacerBorder.BorderBrush = (Brush)FindResource("BorderBrush");
+            spacerBorder.BorderThickness = new Thickness(1);
+            spacerBorder.CornerRadius = new CornerRadius(6);
+            spacerBorder.ToolTip = "Отступ (перетащите для перемещения, ✕ для удаления)";
+            spacerBorder.Margin = new Thickness(2, 0, 2, 0);
+
+            var spContent = new Grid();
+            var icon = new TextBlock
+            {
+                Text = "↔",
+                FontSize = 13,
+                FontWeight = FontWeights.Bold,
+                Foreground = (Brush)FindResource("TextSecondaryBrush"),
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center,
+                IsHitTestVisible = false
+            };
+            spContent.Children.Add(icon);
+
+            var delBtn = new Button
+            {
+                Width = 14,
+                Height = 14,
+                HorizontalAlignment = HorizontalAlignment.Right,
+                VerticalAlignment = VerticalAlignment.Top,
+                Margin = new Thickness(0, 1, 1, 0),
+                Padding = new Thickness(0),
+                Background = Brushes.Transparent,
+                BorderThickness = new Thickness(0),
+                Cursor = Cursors.Hand,
+                ToolTip = "Удалить отступ",
+                Content = new Border
+                {
+                    CornerRadius = new CornerRadius(7),
+                    Background = new SolidColorBrush(Color.FromArgb(220, 244, 67, 54)),
+                    Child = new System.Windows.Shapes.Path
+                    {
+                        Data = (Geometry)FindResource("IconClose"),
+                        Width = 6,
+                        Height = 6,
+                        Fill = Brushes.White,
+                        Stretch = Stretch.Uniform,
+                        HorizontalAlignment = HorizontalAlignment.Center,
+                        VerticalAlignment = VerticalAlignment.Center
+                    }
+                }
+            };
+            delBtn.Click += (s, e) =>
+            {
+                var itemToRemove = ToolbarItems.FirstOrDefault(x => x.Id == id);
+                if (itemToRemove != null)
+                {
+                    ToolbarItems.Remove(itemToRemove);
+                    RebuildToolbar();
+                    SaveToolbarConfig();
+                }
+                e.Handled = true;
+            };
+            spContent.Children.Add(delBtn);
+
+            var cm = new ContextMenu();
+            var deleteItem = new MenuItem { Header = "✕ Удалить отступ" };
+            deleteItem.Click += (s, e) =>
+            {
+                var itemToRemove = ToolbarItems.FirstOrDefault(x => x.Id == id);
+                if (itemToRemove != null)
+                {
+                    ToolbarItems.Remove(itemToRemove);
+                    RebuildToolbar();
+                    SaveToolbarConfig();
+                }
+            };
+            cm.Items.Add(deleteItem);
+            spacerBorder.ContextMenu = cm;
+            spacerBorder.Child = spContent;
+        }
+        else
+        {
+            spacerBorder.Width = 16;
+            spacerBorder.Background = Brushes.Transparent;
+            spacerBorder.BorderThickness = new Thickness(0);
+        }
+
+        return spacerBorder;
+    }
+
+    private FrameworkElement? GetElementForId(string id)
+    {
+        if (id.StartsWith("spacer"))
+        {
+            return CreateSpacerElement(id);
+        }
+
+        return id switch
+        {
+            "back" => _btnBack,
+            "forward" => _btnForward,
+            "refresh" => _btnRefresh,
+            "address_bar" => CardAddressBar,
+            "desktop_mode" => _btnToggleDesktopMode,
+            "extensions" => _btnExtensions,
+            "external" => _btnOpenExternal,
+            "customize" => _btnCustomizeToolbar,
+            "settings" => _btnBrowserSettings,
+            _ => null
+        };
+    }
 
     private void LoadToolbarConfig()
     {
@@ -1268,21 +1389,29 @@ public partial class BrowserWindow : Window
         ExtensionsPopup.IsOpen = false;
 
         _isToolbarEditMode = !_isToolbarEditMode;
-        ToolbarEditModeBanner.Visibility = _isToolbarEditMode ? Visibility.Visible : Visibility.Collapsed;
-
-        double tabMinW = _isToolbarEditMode ? 44 : 0;
-        TabsToolbarLeftPanel.MinWidth = tabMinW;
-        TabsToolbarRightPanel.MinWidth = tabMinW;
-        ToolbarLeftPanel.MinWidth = _isToolbarEditMode ? 60 : 0;
-        ToolbarRightPanel.MinWidth = _isToolbarEditMode ? 60 : 0;
-
-        RebuildToolbar();
+        UpdateEditModeUi();
     }
 
     private void BtnExitEditMode_Click(object sender, RoutedEventArgs e)
     {
         _isToolbarEditMode = false;
-        ToolbarEditModeBanner.Visibility = Visibility.Collapsed;
+        UpdateEditModeUi();
+        SaveToolbarConfig();
+    }
+
+    private void BtnAddSpacer_Click(object sender, RoutedEventArgs e)
+    {
+        string newId = "spacer_" + Guid.NewGuid().ToString("N")[..8];
+        var newSpacer = new BrowserToolbarItemConfig
+        {
+            Id = newId,
+            Name = "Отступ",
+            Icon = "↔",
+            Placement = "left",
+            Order = ToolbarItems.Count,
+            IsVisible = true
+        };
+        ToolbarItems.Add(newSpacer);
         RebuildToolbar();
         SaveToolbarConfig();
     }
@@ -1296,6 +1425,145 @@ public partial class BrowserWindow : Window
         }
         RebuildToolbar();
         SaveToolbarConfig();
+    }
+
+    private void UpdateEditModeUi()
+    {
+        ToolbarEditModeBanner.Visibility = _isToolbarEditMode ? Visibility.Visible : Visibility.Collapsed;
+        EditModeOverlay.Visibility = _isToolbarEditMode ? Visibility.Visible : Visibility.Collapsed;
+
+        double tabMinW = _isToolbarEditMode ? 44 : 10;
+        TabsToolbarLeftPanel.MinWidth = tabMinW;
+        TabsToolbarRightPanel.MinWidth = tabMinW;
+        ToolbarLeftPanel.MinWidth = _isToolbarEditMode ? 60 : 0;
+        ToolbarRightPanel.MinWidth = _isToolbarEditMode ? 60 : 0;
+
+        if (_isToolbarEditMode)
+        {
+            if (VerticalTabsPopup.IsOpen) VerticalTabsPopup.IsOpen = false;
+            VerticalTabsBar.Visibility = Visibility.Collapsed;
+            BrowserHostGrid.Visibility = Visibility.Collapsed;
+            StartScreenContainer.Visibility = Visibility.Collapsed;
+        }
+        else
+        {
+            bool isVertical = _vm?.Settings?.BrowserVerticalTabs == true;
+            ApplyTabsOrientation(isVertical);
+
+            if (_isStartScreenVisible || ActiveTab == null)
+            {
+                StartScreenContainer.Visibility = Visibility.Visible;
+                BrowserHostGrid.Visibility = Visibility.Collapsed;
+            }
+            else
+            {
+                BrowserHostGrid.Visibility = Visibility.Visible;
+                StartScreenContainer.Visibility = Visibility.Collapsed;
+            }
+        }
+
+        RebuildToolbar();
+    }
+
+    #endregion
+
+    #region Vertical Tabs Expandable Sidebar Handlers
+
+    private bool _isVerticalTabsPopupClosing;
+
+    private void ApplyTabsOrientation(bool isVertical)
+    {
+        if (isVertical)
+        {
+            VerticalTabsBar.Visibility = _isToolbarEditMode ? Visibility.Collapsed : Visibility.Visible;
+            TabsScrollViewer.Visibility = Visibility.Collapsed;
+            BtnNewTab.Visibility = Visibility.Collapsed;
+            TxtVerticalTitle.Visibility = Visibility.Visible;
+            BrowserHostGrid.Margin = new Thickness(48, 0, 0, 0);
+            StartScreenContainer.Margin = new Thickness(48, 0, 0, 0);
+            if (RbVerticalTabs != null) RbVerticalTabs.IsChecked = true;
+        }
+        else
+        {
+            if (VerticalTabsPopup.IsOpen) VerticalTabsPopup.IsOpen = false;
+            VerticalTabsBar.Visibility = Visibility.Collapsed;
+            TabsScrollViewer.Visibility = Visibility.Visible;
+            BtnNewTab.Visibility = Visibility.Visible;
+            TxtVerticalTitle.Visibility = Visibility.Collapsed;
+            BrowserHostGrid.Margin = new Thickness(0);
+            StartScreenContainer.Margin = new Thickness(0);
+            if (RbHorizontalTabs != null) RbHorizontalTabs.IsChecked = true;
+        }
+    }
+
+    private void RbTabOrientation_Checked(object sender, RoutedEventArgs e)
+    {
+        bool isVertical = RbVerticalTabs.IsChecked == true;
+        if (_vm?.Settings != null && _vm.Settings.BrowserVerticalTabs != isVertical)
+        {
+            _vm.Settings.BrowserVerticalTabs = isVertical;
+            _vm.FlushStorageSync();
+        }
+        ApplyTabsOrientation(isVertical);
+    }
+
+    private void VerticalTabsBar_MouseEnter(object sender, MouseEventArgs e)
+    {
+        if (_isToolbarEditMode || _vm?.Settings?.BrowserVerticalTabs != true) return;
+        OpenVerticalTabsPopup();
+    }
+
+    private void OpenVerticalTabsPopup()
+    {
+        _isVerticalTabsPopupClosing = false;
+        VerticalTabsPopupBorder.Height = Math.Max(100, VerticalTabsBar.ActualHeight);
+        VerticalTabsPopup.IsOpen = true;
+
+        var anim = new DoubleAnimation
+        {
+            From = 48,
+            To = 230,
+            Duration = TimeSpan.FromMilliseconds(180),
+            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+        };
+        VerticalTabsPopupBorder.BeginAnimation(WidthProperty, anim);
+    }
+
+    private void VerticalTabsPopupBorder_MouseEnter(object sender, MouseEventArgs e)
+    {
+        if (_isVerticalTabsPopupClosing)
+        {
+            _isVerticalTabsPopupClosing = false;
+            var anim = new DoubleAnimation
+            {
+                To = 230,
+                Duration = TimeSpan.FromMilliseconds(150),
+                EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+            };
+            VerticalTabsPopupBorder.BeginAnimation(WidthProperty, anim);
+        }
+    }
+
+    private void VerticalTabsPopupBorder_MouseLeave(object sender, MouseEventArgs e)
+    {
+        if (_isVerticalTabsPopupClosing) return;
+        _isVerticalTabsPopupClosing = true;
+
+        var anim = new DoubleAnimation
+        {
+            To = 48,
+            Duration = TimeSpan.FromMilliseconds(160),
+            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseIn }
+        };
+        anim.Completed += (s, ev) =>
+        {
+            if (_isVerticalTabsPopupClosing)
+            {
+                VerticalTabsPopup.IsOpen = false;
+                _isVerticalTabsPopupClosing = false;
+            }
+        };
+        VerticalTabsPopupBorder.BeginAnimation(WidthProperty, anim);
     }
 
     #endregion
@@ -1960,7 +2228,7 @@ public partial class BrowserWindow : Window
     private void UpdateHiddenButtonsInSettingsPopup()
     {
         HiddenToolbarButtons.Clear();
-        foreach (var item in ToolbarItems.Where(i => !i.IsVisible && i.Id != "settings"))
+        foreach (var item in ToolbarItems.Where(i => !i.IsVisible && i.Id != "settings" && !i.Id.StartsWith("spacer")))
         {
             string title = item.Id switch
             {

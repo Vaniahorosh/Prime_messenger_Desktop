@@ -237,6 +237,153 @@
                 </Setter.Value>
             </Setter>
         </Style>
+        <!-- Miniature Vertical Tab Item Style (Width 36x36 Icon Only) -->
+        <Style x:Key="MiniVerticalTabButtonStyle" TargetType="RadioButton">
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="ToolTip" Value="{Binding Title}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Border x:Name="TabBorder"
+                                Background="Transparent"
+                                BorderBrush="Transparent"
+                                BorderThickness="1"
+                                CornerRadius="8"
+                                Width="36" Height="36"
+                                Margin="5,2"
+                                Tag="{Binding}">
+                            <Border.ContextMenu>
+                                <ContextMenu Style="{StaticResource ModernContextMenu}">
+                                    <MenuItem Header="➕ Новая вкладка" Click="MenuTabNew_Click"/>
+                                    <MenuItem Header="🔄 Перезагрузить" Click="MenuTabReload_Click"/>
+                                    <MenuItem Header="📋 Дублировать вкладку" Click="MenuTabDuplicate_Click"/>
+                                    <MenuItem Header="📌 Закрепить вкладку" Click="MenuTabPin_Click"/>
+                                    <Separator/>
+                                    <MenuItem Header="✕ Закрыть вкладку" Style="{StaticResource DangerMenuItem}" Click="MenuTabClose_Click"/>
+                                    <MenuItem Header="✕ Закрыть другие вкладки" Style="{StaticResource DangerMenuItem}" Click="MenuTabCloseOthers_Click"/>
+                                </ContextMenu>
+                            </Border.ContextMenu>
+                            <Grid Width="18" Height="18" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                <Image Source="{Binding Favicon}" Stretch="Uniform"
+                                       Visibility="{Binding Favicon, Converter={StaticResource BoolToVis}}"/>
+                                <Path Data="{StaticResource IconGlobe}" Fill="{DynamicResource TextSecondaryBrush}"
+                                      Stretch="Uniform" Width="14" Height="14"
+                                      Visibility="{Binding Favicon, Converter={StaticResource InverseBoolToVis}}"/>
+                            </Grid>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="TabBorder" Property="Background" Value="{DynamicResource CardHoverBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="TabBorder" Property="Background" Value="{DynamicResource CardBrush}"/>
+                                <Setter TargetName="TabBorder" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Expandable Vertical Tab Item Style (Icon + Title + Close Button) -->
+        <Style x:Key="BrowserVerticalTabButtonStyle" TargetType="RadioButton">
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="ToolTip" Value="{Binding Title}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Border x:Name="TabBorder"
+                                Background="Transparent"
+                                BorderBrush="Transparent"
+                                BorderThickness="1"
+                                CornerRadius="8"
+                                Height="36"
+                                Margin="5,2"
+                                Tag="{Binding}">
+                            <Border.ContextMenu>
+                                <ContextMenu Style="{StaticResource ModernContextMenu}">
+                                    <MenuItem Header="➕ Новая вкладка" Click="MenuTabNew_Click"/>
+                                    <MenuItem Header="🔄 Перезагрузить" Click="MenuTabReload_Click"/>
+                                    <MenuItem Header="📋 Дублировать вкладку" Click="MenuTabDuplicate_Click"/>
+                                    <MenuItem Header="📌 Закрепить вкладку" Click="MenuTabPin_Click"/>
+                                    <Separator/>
+                                    <MenuItem Header="✕ Закрыть вкладку" Style="{StaticResource DangerMenuItem}" Click="MenuTabClose_Click"/>
+                                    <MenuItem Header="✕ Закрыть другие вкладки" Style="{StaticResource DangerMenuItem}" Click="MenuTabCloseOthers_Click"/>
+                                </ContextMenu>
+                            </Border.ContextMenu>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="36"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+
+                                <!-- Favicon / Globe icon -->
+                                <Grid Grid.Column="0" Width="18" Height="18" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                    <Image Source="{Binding Favicon}" Stretch="Uniform"
+                                           Visibility="{Binding Favicon, Converter={StaticResource BoolToVis}}"/>
+                                    <Path Data="{StaticResource IconGlobe}" Fill="{DynamicResource TextSecondaryBrush}"
+                                          Stretch="Uniform" Width="14" Height="14"
+                                          Visibility="{Binding Favicon, Converter={StaticResource InverseBoolToVis}}"/>
+                                </Grid>
+
+                                <!-- Tab Title -->
+                                <TextBlock Grid.Column="1"
+                                           Text="{Binding Title}"
+                                           FontSize="12"
+                                           TextTrimming="CharacterEllipsis"
+                                           VerticalAlignment="Center"
+                                           Foreground="{DynamicResource TextSecondaryBrush}"
+                                           x:Name="TabTitleText"
+                                           Margin="2,0,4,0"/>
+
+                                <!-- Close Tab Button -->
+                                <Button Grid.Column="2"
+                                        x:Name="BtnCloseTab"
+                                        Background="Transparent"
+                                        BorderThickness="0"
+                                        Cursor="Hand"
+                                        Width="22" Height="22"
+                                        Padding="0" Margin="0,0,6,0"
+                                        ToolTip="Закрыть вкладку (Ctrl+W)"
+                                        Click="BtnCloseTab_Click"
+                                        Tag="{Binding}">
+                                    <Button.Template>
+                                        <ControlTemplate TargetType="Button">
+                                            <Border x:Name="Brd" Background="Transparent" CornerRadius="11">
+                                                <Path Data="{StaticResource IconClose}"
+                                                      Fill="{DynamicResource TextSecondaryBrush}"
+                                                      Width="8" Height="8" Stretch="Uniform"
+                                                      HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            </Border>
+                                            <ControlTemplate.Triggers>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter TargetName="Brd" Property="Background" Value="#33FF5252"/>
+                                                </Trigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </Button.Template>
+                                </Button>
+                            </Grid>
+                        </Border>
+
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="TabBorder" Property="Background" Value="{DynamicResource CardHoverBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="TabBorder" Property="Background" Value="{DynamicResource CardBrush}"/>
+                                <Setter TargetName="TabBorder" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                <Setter TargetName="TabTitleText" Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+                                <Setter TargetName="TabTitleText" Property="FontWeight" Value="SemiBold"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </Window.Resources>
 
     <Grid>
@@ -262,6 +409,11 @@
 
             <!-- Chrome Tab Strip with Scroll, Add Button and optional unified toolbar elements -->
             <DockPanel Grid.Column="0" Margin="6,0,0,0" WindowChrome.IsHitTestVisibleInChrome="True">
+                <!-- Vertical tabs title placeholder when vertical tabs are active -->
+                <TextBlock x:Name="TxtVerticalTitle" Text="Prime Browser" FontSize="12" FontWeight="SemiBold"
+                           Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center" Margin="10,0,12,0"
+                           Visibility="Collapsed" DockPanel.Dock="Left" IsHitTestVisible="False"/>
+
                 <!-- Tabs Toolbar Left Panel (Drop Target) -->
                 <StackPanel x:Name="TabsToolbarLeftPanel" DockPanel.Dock="Left" Orientation="Horizontal" VerticalAlignment="Center"
                             Background="Transparent" MinWidth="10"
@@ -362,7 +514,7 @@
                                    FontSize="11" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold" VerticalAlignment="Center"/>
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-
+                        <Button Content="➕ Добавить отступ" Style="{StaticResource ModernButton}" Padding="8,2" FontSize="11" Margin="0,0,6,0" Click="BtnAddSpacer_Click"/>
                         <Button Content="Сбросить" Style="{StaticResource ModernButton}" Padding="8,2" FontSize="11" Margin="0,0,6,0" Click="BtnResetToolbar_Click"/>
                         <Button Content="✓ Готово" Style="{StaticResource AccentButton}" Padding="12,2" FontSize="11" Click="BtnExitEditMode_Click"/>
                     </StackPanel>
@@ -696,7 +848,155 @@
                     </StackPanel>
                 </Grid>
             </ScrollViewer>
+
+            <!-- EDIT MODE OVERLAY (Hides web page during toolbar editing) -->
+            <Border x:Name="EditModeOverlay"
+                    Background="{DynamicResource BackgroundBrush}"
+                    Visibility="Collapsed"
+                    Panel.ZIndex="40">
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <Border Width="64" Height="64" CornerRadius="16"
+                            Background="{DynamicResource CardBrush}"
+                            BorderBrush="{DynamicResource BorderBrush}"
+                            BorderThickness="1"
+                            HorizontalAlignment="Center" Margin="0,0,0,16">
+                        <Path Data="{StaticResource IconEdit}" Width="26" Height="26"
+                              Fill="{DynamicResource AccentBrush}" Stretch="Uniform"
+                              HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <TextBlock Text="Вы в режиме редактирования" FontSize="20" FontWeight="Bold"
+                               Foreground="{DynamicResource TextPrimaryBrush}" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+                    <TextBlock Text="Перетаскивайте кнопки между панелями инструментов и строкой вкладок.&#x0a;Используйте отступы для гибкой компоновки элементов."
+                               FontSize="13" Foreground="{DynamicResource TextSecondaryBrush}"
+                               TextAlignment="Center" HorizontalAlignment="Center" Margin="0,0,0,24" LineHeight="20"/>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                        <Button Content="➕ Добавить отступ" Style="{StaticResource ModernButton}"
+                                Padding="14,8" Margin="0,0,8,0" Click="BtnAddSpacer_Click"/>
+                        <Button Content="Сбросить панели" Style="{StaticResource ModernButton}"
+                                Padding="14,8" Margin="0,0,8,0" Click="BtnResetToolbar_Click"/>
+                        <Button Content="✓ Готово" Style="{StaticResource AccentButton}"
+                                Padding="18,8" FontWeight="SemiBold" Click="BtnExitEditMode_Click"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- Miniature Vertical Tabs Strip (always visible when BrowserVerticalTabs is true) -->
+            <Border x:Name="VerticalTabsBar"
+                    HorizontalAlignment="Left"
+                    VerticalAlignment="Stretch"
+                    Width="48"
+                    Background="{DynamicResource CardBrush}"
+                    BorderBrush="{DynamicResource BorderBrush}"
+                    BorderThickness="0,0,1,0"
+                    Panel.ZIndex="30"
+                    Visibility="Collapsed"
+                    MouseEnter="VerticalTabsBar_MouseEnter">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- New Tab Mini Button -->
+                    <Border Grid.Row="0" Padding="5,6,5,6" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
+                        <Button Style="{StaticResource AddressNavButton}"
+                                Width="36" Height="34"
+                                ToolTip="Новая вкладка (Ctrl+T)"
+                                Click="BtnNewTab_Click">
+                            <Path Data="{StaticResource IconPlus}" Width="13" Height="13"
+                                  Fill="{DynamicResource AccentBrush}" Stretch="Uniform"
+                                  HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Button>
+                    </Border>
+
+                    <!-- Scrollable miniature vertical tabs list -->
+                    <ScrollViewer Grid.Row="1"
+                                  VerticalScrollBarVisibility="Hidden"
+                                  HorizontalScrollBarVisibility="Disabled"
+                                  PanningMode="VerticalOnly">
+                        <ItemsControl x:Name="MiniVerticalTabsItemsControl">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <RadioButton GroupName="BrowserTabsGroup"
+                                                 IsChecked="{Binding IsActive, Mode=TwoWay}"
+                                                 Style="{StaticResource MiniVerticalTabButtonStyle}"
+                                                 Click="TabButton_Click"
+                                                 PreviewMouseDown="TabButton_PreviewMouseDown"
+                                                 Tag="{Binding}"/>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </Grid>
+            </Border>
         </Grid>
+
+        <!-- POPUP: VERTICAL TABS EXPANDABLE FLYOUT OVER ACTIVE PAGE -->
+        <Popup x:Name="VerticalTabsPopup"
+               PlacementTarget="{Binding ElementName=VerticalTabsBar}"
+               Placement="Relative"
+               HorizontalOffset="0"
+               VerticalOffset="0"
+               AllowsTransparency="True"
+               StaysOpen="True">
+            <Border x:Name="VerticalTabsPopupBorder"
+                    Width="48"
+                    Background="{DynamicResource CardBrush}"
+                    BorderBrush="{DynamicResource BorderBrush}"
+                    BorderThickness="0,0,1,0"
+                    MouseEnter="VerticalTabsPopupBorder_MouseEnter"
+                    MouseLeave="VerticalTabsPopupBorder_MouseLeave">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="22" ShadowDepth="4" Direction="0" Opacity="0.5" Color="#000000"/>
+                </Border.Effect>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Expanded New Tab Button -->
+                    <Border Grid.Row="0" Padding="5,6,5,6" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
+                        <Button Style="{StaticResource AddressNavButton}"
+                                Height="34" HorizontalAlignment="Stretch"
+                                ToolTip="Новая вкладка (Ctrl+T)"
+                                Click="BtnNewTab_Click">
+                            <Grid HorizontalAlignment="Left">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="36"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Path Grid.Column="0" Data="{StaticResource IconPlus}" Width="13" Height="13"
+                                      Fill="{DynamicResource AccentBrush}" Stretch="Uniform"
+                                      HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="1" Text="Новая вкладка" FontSize="12" FontWeight="SemiBold"
+                                           Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"
+                                           Margin="2,0,8,0"/>
+                            </Grid>
+                        </Button>
+                    </Border>
+
+                    <!-- Scrollable expanded vertical tabs list -->
+                    <ScrollViewer Grid.Row="1"
+                                  VerticalScrollBarVisibility="Auto"
+                                  HorizontalScrollBarVisibility="Disabled"
+                                  PanningMode="VerticalOnly">
+                        <ItemsControl x:Name="VerticalTabsItemsControl">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <RadioButton GroupName="BrowserTabsGroup"
+                                                 IsChecked="{Binding IsActive, Mode=TwoWay}"
+                                                 Style="{StaticResource BrowserVerticalTabButtonStyle}"
+                                                 Click="TabButton_Click"
+                                                 PreviewMouseDown="TabButton_PreviewMouseDown"
+                                                 Tag="{Binding}"/>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </Grid>
+            </Border>
+        </Popup>
 
         <!-- POPUP: BRAND MENU FOR START SEARCH (Browser & Search Engine) -->
         <Popup x:Name="StartBrowserMenuPopup"
@@ -899,9 +1199,20 @@
                     <CheckBox x:Name="ChkDesktopMode"
                               Content="Режим ПК по умолчанию"
                               Foreground="{DynamicResource TextPrimaryBrush}"
-                              FontSize="12" Margin="0,0,0,12"
+                              FontSize="12" Margin="0,0,0,10"
                               Checked="ChkDesktopMode_Checked"
                               Unchecked="ChkDesktopMode_Checked"/>
+
+                    <!-- Tab Layout Orientation -->
+                    <TextBlock Text="Расположение вкладок:" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,4"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                        <RadioButton x:Name="RbHorizontalTabs" Content="Горизонтальные" GroupName="BrowserTabOrientationGroup"
+                                     Foreground="{DynamicResource TextPrimaryBrush}" FontSize="12" Margin="0,0,12,0"
+                                     Checked="RbTabOrientation_Checked"/>
+                        <RadioButton x:Name="RbVerticalTabs" Content="Вертикальные" GroupName="BrowserTabOrientationGroup"
+                                     Foreground="{DynamicResource TextPrimaryBrush}" FontSize="12"
+                                     Checked="RbTabOrientation_Checked"/>
+                    </StackPanel>
 
                     <!-- Pencil Button for Toolbar Customization -->
                     <Button x:Name="BtnOpenCustomizerFromSettings"

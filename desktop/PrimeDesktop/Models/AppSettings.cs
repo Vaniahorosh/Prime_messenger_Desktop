@@ -41,6 +41,7 @@ public class AppSettings : INotifyPropertyChanged
     private bool _browserDesktopMode = false;
     private string? _browserToolbarLayout;
     private bool _browserAddressBarInTabRow = false;
+    private bool _browserVerticalTabs = false;
     private int _videoNoteRadiusPercent = 50;
     private int _thanksHeartCount = 0;
     private bool _hasShownTrayNotification = false;
@@ -249,6 +250,12 @@ public class AppSettings : INotifyPropertyChanged
     {
         get => _browserAddressBarInTabRow;
         set => SetField(ref _browserAddressBarInTabRow, value);
+    }
+
+    public bool BrowserVerticalTabs
+    {
+        get => _browserVerticalTabs;
+        set => SetField(ref _browserVerticalTabs, value);
     }
 
     public int VideoNoteRadiusPercent
