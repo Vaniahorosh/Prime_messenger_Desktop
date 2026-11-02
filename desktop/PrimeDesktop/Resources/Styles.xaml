@@ -17,6 +17,20 @@
     <SolidColorBrush x:Key="CardHoverBrush" Color="#222F44" />
     <SolidColorBrush x:Key="BorderBrush" Color="#223045" />
 
+    <!-- Frosted Glass (Blurview) Brushes & Dynamic Vignettes -->
+    <SolidColorBrush x:Key="GlassSurfaceBrush" Color="#D0121C2B" />
+    <SolidColorBrush x:Key="GlassBorderBrush" Color="#805A82B5" />
+    <LinearGradientBrush x:Key="GlassVignetteTopBrush" StartPoint="0,0" EndPoint="0,1">
+        <GradientStop Color="#80080D14" Offset="0"/>
+        <GradientStop Color="#40080D14" Offset="0.45"/>
+        <GradientStop Color="#00080D14" Offset="1"/>
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="GlassVignetteBottomBrush" StartPoint="0,0" EndPoint="0,1">
+        <GradientStop Color="#00080D14" Offset="0"/>
+        <GradientStop Color="#40080D14" Offset="0.55"/>
+        <GradientStop Color="#80080D14" Offset="1"/>
+    </LinearGradientBrush>
+
     <SolidColorBrush x:Key="TextPrimaryBrush" Color="#F0F6FC" />
     <SolidColorBrush x:Key="TextSecondaryBrush" Color="#8B949E" />
     <SolidColorBrush x:Key="TextMutedBrush" Color="#6E7681" />

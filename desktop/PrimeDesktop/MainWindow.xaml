@@ -247,7 +247,7 @@
 
                     <!-- Header with Frosted Glass Profile Bar & Morphing Search Bar (Floats over chats) -->
                     <Border Grid.Row="0" Panel.ZIndex="10" VerticalAlignment="Top" Margin="10,10,10,8" Height="48" CornerRadius="18"
-                            Background="#C4131E2C" BorderBrush="#55729B" BorderThickness="1"
+                            Background="{DynamicResource GlassSurfaceBrush}" BorderBrush="{DynamicResource GlassBorderBrush}" BorderThickness="1"
                             Padding="6,4">
                         <Border.Effect>
                             <DropShadowEffect BlurRadius="22" ShadowDepth="4" Direction="270" Opacity="0.45" Color="#000000"/>
@@ -502,20 +502,20 @@
                 <Grid Visibility="{Binding HasSelectedChat, Converter={StaticResource BoolToVis}}">
 
                 <Grid.RowDefinitions>
-
-                    <RowDefinition Height="60"/> <!-- Chat Header -->
-
-                    <RowDefinition Height="*"/>  <!-- Messages Scroll Area -->
-
-                    <RowDefinition Height="Auto"/> <!-- Reply Bar & Input Area (Step 4) -->
-
+                    <RowDefinition Height="Auto"/> <!-- Top Island Area -->
+                    <RowDefinition Height="*"/>    <!-- Messages Area -->
+                    <RowDefinition Height="Auto"/> <!-- Bottom Island Area -->
                 </Grid.RowDefinitions>
 
-
-
-                <!-- Chat Header -->
-
-                <Border Grid.Row="0" Background="{DynamicResource HeaderBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1" Padding="16,0">
+                <!-- Chat Header Floating Frosted Glass Island -->
+                <Border Grid.Row="0" Panel.ZIndex="10" VerticalAlignment="Top"
+                        Margin="14,10,14,6" Height="58" CornerRadius="22"
+                        Background="{DynamicResource GlassSurfaceBrush}"
+                        BorderBrush="{DynamicResource GlassBorderBrush}"
+                        BorderThickness="1" Padding="14,6">
+                    <Border.Effect>
+                        <DropShadowEffect BlurRadius="24" ShadowDepth="4" Direction="270" Opacity="0.45" Color="#000000"/>
+                    </Border.Effect>
 
                     <DockPanel VerticalAlignment="Center">
 
@@ -602,20 +602,15 @@
 
                 </Border>
 
-                <!-- Wallpaper Background Layer -->
-
-                <Image Grid.Row="1" Source="{Binding Settings.ChatWallpaperPath}" Stretch="UniformToFill"
-
+                <!-- Wallpaper Background Layer (Full Height) -->
+                <Image Grid.Row="0" Grid.RowSpan="3" Panel.ZIndex="1" Source="{Binding Settings.ChatWallpaperPath}" Stretch="UniformToFill"
                        Opacity="{Binding Settings.WallpaperOpacity}"
-
                        Visibility="{Binding Settings.HasWallpaper, Converter={StaticResource BoolToVis}}"
-
                        IsHitTestVisible="False"/>
 
-
-
-                <!-- Messages Scroll Area with Hardware-Accelerated Virtualization -->
-                <ScrollViewer Grid.Row="1" x:Name="MessagesScrollViewer" VerticalScrollBarVisibility="Auto" Padding="16"
+                <!-- Messages Scroll Area with Hardware-Accelerated Virtualization (Spans entire height under islands) -->
+                <ScrollViewer Grid.Row="0" Grid.RowSpan="3" Panel.ZIndex="1" x:Name="MessagesScrollViewer" VerticalScrollBarVisibility="Auto"
+                              Padding="16,80,16,96"
                               AllowDrop="True" Drop="ChatArea_Drop" DragOver="ChatArea_DragOver"
                               CanContentScroll="True"
                               VirtualizingPanel.IsVirtualizing="True"
@@ -1161,11 +1156,21 @@
 
                 </ScrollViewer>
 
+                <!-- Smooth 0% to 50% Top Darkening Vignette -->
+                <Border Grid.Row="0" Grid.RowSpan="3" VerticalAlignment="Top" Height="140"
+                        Panel.ZIndex="5" IsHitTestVisible="False"
+                        Background="{DynamicResource GlassVignetteTopBrush}"/>
+
+                <!-- Smooth 0% to 50% Bottom Darkening Vignette -->
+                <Border Grid.Row="0" Grid.RowSpan="3" VerticalAlignment="Bottom" Height="160"
+                        Panel.ZIndex="5" IsHitTestVisible="False"
+                        Background="{DynamicResource GlassVignetteBottomBrush}"/>
+
                 <!-- Floating Scroll-To-Bottom FAB Button matching Android btnScrollToBottom -->
-                <Button Grid.Row="1" x:Name="BtnScrollToBottom"
+                <Button Grid.Row="0" Grid.RowSpan="3" Panel.ZIndex="12" x:Name="BtnScrollToBottom"
                         Width="40" Height="40"
                         HorizontalAlignment="Right" VerticalAlignment="Bottom"
-                        Margin="0,0,24,20"
+                        Margin="0,0,24,104"
                         Cursor="Hand"
                         Click="BtnScrollToBottom_Click"
                         Visibility="Collapsed"
@@ -1189,10 +1194,16 @@
                     </Button.Template>
                 </Button>
 
-                <!-- Row 2: Reply Bar & Message Input Area -->
-
-                <Border Grid.Row="2" Background="{DynamicResource HeaderBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0" Padding="14,10"
+                <!-- Row 2: Message Input Floating Frosted Glass Island -->
+                <Border Grid.Row="2" Panel.ZIndex="10" VerticalAlignment="Bottom"
+                        Margin="14,6,14,12" CornerRadius="24"
+                        Background="{DynamicResource GlassSurfaceBrush}"
+                        BorderBrush="{DynamicResource GlassBorderBrush}"
+                        BorderThickness="1" Padding="12,8"
                         Visibility="{Binding IsReadingMode, Converter={StaticResource InverseBoolToVis}}">
+                    <Border.Effect>
+                        <DropShadowEffect BlurRadius="26" ShadowDepth="5" Direction="270" Opacity="0.5" Color="#000000"/>
+                    </Border.Effect>
 
                     <StackPanel>
 
@@ -1273,7 +1284,7 @@
                         </Border>
 
                         <!-- Rich Formatting Toolbar for Desktop (Toggleable) -->
-                        <Border Background="#141E2C" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1" CornerRadius="10,10,0,0" Padding="8,4" Margin="0,0,0,6"
+                        <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1" CornerRadius="10,10,0,0" Padding="8,4" Margin="0,0,0,6"
                                 Visibility="{Binding IsRichFormattingActive, Converter={StaticResource BoolToVis}}">
                             <DockPanel LastChildFill="False">
                                 <StackPanel Orientation="Horizontal" DockPanel.Dock="Left">

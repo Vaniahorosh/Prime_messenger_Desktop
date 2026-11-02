@@ -135,6 +135,21 @@ public static class ThemeManager
             res["TextSecondaryBrush"] = new SolidColorBrush(Color.FromRgb(0x8B, 0x94, 0x9E));
             res["TextMutedBrush"] = new SolidColorBrush(Color.FromRgb(0x6E, 0x76, 0x81));
             res["ReceivedBubbleBrush"] = new SolidColorBrush(Color.FromRgb(0x1C, 0x25, 0x36));
+
+            res["GlassSurfaceBrush"] = new SolidColorBrush(Color.FromArgb(0xD0, 0x12, 0x1C, 0x2B));
+            res["GlassBorderBrush"] = new SolidColorBrush(Color.FromArgb(0x80, 0x5A, 0x82, 0xB5));
+            res["GlassVignetteTopBrush"] = new LinearGradientBrush(
+                new GradientStopCollection {
+                    new GradientStop(Color.FromArgb(128, 0x08, 0x0D, 0x14), 0.0),
+                    new GradientStop(Color.FromArgb(64, 0x08, 0x0D, 0x14), 0.45),
+                    new GradientStop(Color.FromArgb(0, 0x08, 0x0D, 0x14), 1.0)
+                }, new Point(0, 0), new Point(0, 1));
+            res["GlassVignetteBottomBrush"] = new LinearGradientBrush(
+                new GradientStopCollection {
+                    new GradientStop(Color.FromArgb(0, 0x08, 0x0D, 0x14), 0.0),
+                    new GradientStop(Color.FromArgb(64, 0x08, 0x0D, 0x14), 0.55),
+                    new GradientStop(Color.FromArgb(128, 0x08, 0x0D, 0x14), 1.0)
+                }, new Point(0, 0), new Point(0, 1));
         }
         else
         {
@@ -149,6 +164,21 @@ public static class ThemeManager
             res["TextSecondaryBrush"] = new SolidColorBrush(Color.FromRgb(0x4B, 0x55, 0x63));
             res["TextMutedBrush"] = new SolidColorBrush(Color.FromRgb(0x9C, 0xA3, 0xAF));
             res["ReceivedBubbleBrush"] = new SolidColorBrush(Color.FromRgb(0xFF, 0xFF, 0xFF));
+
+            res["GlassSurfaceBrush"] = new SolidColorBrush(Color.FromArgb(0xE8, 0xF7, 0xF9, 0xFC));
+            res["GlassBorderBrush"] = new SolidColorBrush(Color.FromArgb(0x90, 0x98, 0xAB, 0xC4));
+            res["GlassVignetteTopBrush"] = new LinearGradientBrush(
+                new GradientStopCollection {
+                    new GradientStop(Color.FromArgb(128, 0xC8, 0xD0, 0xD9), 0.0),
+                    new GradientStop(Color.FromArgb(64, 0xC8, 0xD0, 0xD9), 0.45),
+                    new GradientStop(Color.FromArgb(0, 0xC8, 0xD0, 0xD9), 1.0)
+                }, new Point(0, 0), new Point(0, 1));
+            res["GlassVignetteBottomBrush"] = new LinearGradientBrush(
+                new GradientStopCollection {
+                    new GradientStop(Color.FromArgb(0, 0xC8, 0xD0, 0xD9), 0.0),
+                    new GradientStop(Color.FromArgb(64, 0xC8, 0xD0, 0xD9), 0.55),
+                    new GradientStop(Color.FromArgb(128, 0xC8, 0xD0, 0xD9), 1.0)
+                }, new Point(0, 0), new Point(0, 1));
         }
 
         if (!string.IsNullOrWhiteSpace(_currentAccentHex))
