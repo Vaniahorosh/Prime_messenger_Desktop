@@ -422,23 +422,24 @@ public class MainViewModel : ViewModelBase
                     !string.IsNullOrWhiteSpace(chat.DeviceAddress) &&
                     chat.DeviceAddress.Equals(companionIp, StringComparison.OrdinalIgnoreCase))
                     return chat;
+
+                // Match by Username
+                if (!string.IsNullOrWhiteSpace(chat.Username) &&
+                    !IsGenericDeviceName(chat.Username) &&
+                    chat.Username.Equals(addressOrPeer, StringComparison.OrdinalIgnoreCase))
+                    return chat;
             }
         }
 
-        // 2. Display name match ONLY for chats that do not have an established hardware address
+        // 2. Display name or username match if no hardware address hit
         if (!string.IsNullOrWhiteSpace(displayName) &&
             !IsStatusKeyword(displayName) &&
             !IsGenericDeviceName(displayName))
         {
             foreach (var chat in _allChats)
             {
-                // If chat already has a physical address, do NOT match by display name
-                if (!string.IsNullOrWhiteSpace(chat.DeviceAddress) || !string.IsNullOrWhiteSpace(chat.PeerId))
-                {
-                    continue;
-                }
-
-                if (chat.DisplayName.Equals(displayName, StringComparison.OrdinalIgnoreCase))
+                if (chat.DisplayName.Equals(displayName, StringComparison.OrdinalIgnoreCase) ||
+                    (!string.IsNullOrWhiteSpace(chat.Username) && chat.Username.Equals(displayName, StringComparison.OrdinalIgnoreCase)))
                 {
                     return chat;
                 }
@@ -4776,6 +4777,7 @@ public async Task SendTextMessageAsync()
 
                     if (SelectedChat != chat) chat.UnreadCount++;
                     NotifyIncomingMessage(chat, text);
+                    _ = _storageService.SaveChatsAsync(_allChats);
 
                     _ = Task.Run(async () =>
 
@@ -4851,6 +4853,7 @@ public async Task SendTextMessageAsync()
                     chat.LastMessageTime = photoMsg.FormattedTime;
                     if (SelectedChat != chat) chat.UnreadCount++;
                     NotifyIncomingMessage(chat, chat.LastMessage);
+                    _ = _storageService.SaveChatsAsync(_allChats);
 
                     _ = Task.Run(async () =>
                     {
@@ -4954,6 +4957,7 @@ public async Task SendTextMessageAsync()
                     chat.LastMessageTime = incomingFileMsg.FormattedTime;
                     if (SelectedChat != chat) chat.UnreadCount++;
                     NotifyIncomingMessage(chat, chat.LastMessage);
+                    _ = _storageService.SaveChatsAsync(_allChats);
                     OnPropertyChanged(nameof(SharedMedia));
                     OnPropertyChanged(nameof(SharedMediaList));
                     OnPropertyChanged(nameof(SharedFiles));
@@ -5036,6 +5040,7 @@ public async Task SendTextMessageAsync()
                         {
                             chat.LastMessage = editText;
                         }
+                        _ = _storageService.SaveChatsAsync(_allChats);
                     }
                     break;
 
@@ -5048,6 +5053,7 @@ public async Task SendTextMessageAsync()
                         var newLast = chat.Messages.LastOrDefault();
                         chat.LastMessage = newLast?.Text ?? "";
                         chat.LastMessageTime = newLast?.FormattedTime ?? "";
+                        _ = _storageService.SaveChatsAsync(_allChats);
                     }
                     break;
 
@@ -5091,6 +5097,7 @@ public async Task SendTextMessageAsync()
 
                     if (SelectedChat != chat) chat.UnreadCount++;
                     NotifyIncomingMessage(chat, chat.LastMessage);
+                    _ = _storageService.SaveChatsAsync(_allChats);
 
                     break;
 
@@ -5185,6 +5192,7 @@ public async Task SendTextMessageAsync()
                         myMsg.IsDelivered = true;
 
                         myMsg.IsRead = true;
+                        _ = _storageService.SaveChatsAsync(_allChats);
 
                     }
 
@@ -5360,9 +5368,10 @@ public async Task SendTextMessageAsync()
     {
         if (chat == null || !chat.IsOnline) return;
         string key = chat.Id;
+        string targetAddr = !string.IsNullOrWhiteSpace(chat.DeviceAddress) ? chat.DeviceAddress : chat.PeerId;
+
         if (_pendingOutbox.TryGetValue(key, out var queue) && !queue.IsEmpty)
         {
-            string targetAddr = !string.IsNullOrWhiteSpace(chat.DeviceAddress) ? chat.DeviceAddress : chat.PeerId;
             while (queue.TryDequeue(out var item))
             {
                 try
@@ -5420,8 +5429,39 @@ public async Task SendTextMessageAsync()
                     break;
                 }
             }
-            await _storageService.SaveChatsAsync(_allChats);
         }
+
+        // Synchronization matching Android ChatPersonActivity.flushPendingMessages:
+        // Automatically resend any undelivered messages from chat history upon reconnection
+        try
+        {
+            var undeliveredMessages = chat.Messages
+                .Where(m => m.IsFromMe && !m.IsDelivered && !string.IsNullOrEmpty(m.Text))
+                .ToList();
+
+            foreach (var m in undeliveredMessages)
+            {
+                if (!chat.IsOnline) break;
+                try
+                {
+                    byte[] payload = PrimePacket.BuildTextPayload(m.Id, m.Text, m.ReplyToId, m.ReplyToSender, m.ReplyToText);
+                    await SendNetworkPacketAsync(targetAddr, PacketType.Text, payload);
+                    RunOnUIThread(() =>
+                    {
+                        m.IsDelivered = true;
+                    });
+                    App.Log($"[Outbox Sync] Resent pending message '{m.Id}' to '{chat.DisplayName}'");
+                }
+                catch (Exception ex)
+                {
+                    App.Log($"[Outbox Sync] Failed to resend pending message '{m.Id}': {ex.Message}");
+                    break;
+                }
+            }
+        }
+        catch { }
+
+        await _storageService.SaveChatsAsync(_allChats);
     }
 
     #endregion

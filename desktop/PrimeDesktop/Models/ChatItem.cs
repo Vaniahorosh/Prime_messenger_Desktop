@@ -479,6 +479,40 @@ public class ChatItem : INotifyPropertyChanged
         }
     }
 
+    public ChatItem CloneSnapshot()
+    {
+        var clone = new ChatItem
+        {
+            Id = this.Id,
+            PeerId = this.PeerId,
+            DeviceAddress = this.DeviceAddress,
+            DisplayName = this.DisplayName,
+            Username = this.Username,
+            LastMessage = this.LastMessage,
+            LastMessageTime = this.LastMessageTime,
+            UnreadCount = this.UnreadCount,
+            IsOnline = this.IsOnline,
+            IsBluetoothDevice = this.IsBluetoothDevice,
+            IsMuted = this.IsMuted,
+            AvatarPath = this.AvatarPath
+        };
+
+        if (this.AvatarHistory != null && this.AvatarHistory.Count > 0)
+        {
+            clone.AvatarHistory = new ObservableCollection<string>(this.AvatarHistory);
+        }
+
+        if (this.Messages != null)
+        {
+            foreach (var msg in this.Messages.ToList())
+            {
+                clone.Messages.Add(msg.CloneSnapshot());
+            }
+        }
+
+        return clone;
+    }
+
     public event PropertyChangedEventHandler? PropertyChanged;
     protected void OnPropertyChanged([CallerMemberName] string? propertyName = null)
         => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));

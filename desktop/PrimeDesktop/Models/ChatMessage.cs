@@ -791,6 +791,46 @@ public class ChatMessage : INotifyPropertyChanged
     [JsonIgnore]
     public bool HasFileAttachmentCard => IsFile || IsMusic || (IsVideo && !IsSingleVideo);
 
+    public ChatMessage CloneSnapshot()
+    {
+        var clone = new ChatMessage
+        {
+            Id = this.Id,
+            Sender = this.Sender,
+            Timestamp = this.Timestamp,
+            FormattedTime = this.FormattedTime,
+            IsFromMe = this.IsFromMe,
+            Type = this.Type,
+            Text = this.Text,
+            IsDelivered = this.IsDelivered,
+            IsRead = this.IsRead,
+            IsEdited = this.IsEdited,
+            FilePath = this.FilePath,
+            FileName = this.FileName,
+            FileSizeBytes = this.FileSizeBytes,
+            Duration = this.Duration,
+            ReplyToId = this.ReplyToId,
+            ReplyToSender = this.ReplyToSender,
+            ReplyToText = this.ReplyToText,
+            IsVideoNote = this.IsVideoNote,
+            VideoNoteRadiusPercent = this.VideoNoteRadiusPercent,
+            Reaction = this.Reaction,
+            ReactionAuthor = this.ReactionAuthor
+        };
+
+        if (this.CollagePaths != null && this.CollagePaths.Count > 0)
+        {
+            clone.CollagePaths = new List<string>(this.CollagePaths);
+        }
+
+        if (this.UserReactions != null && this.UserReactions.Count > 0)
+        {
+            clone.UserReactions = new Dictionary<string, string>(this.UserReactions, StringComparer.OrdinalIgnoreCase);
+        }
+
+        return clone;
+    }
+
     public event PropertyChangedEventHandler? PropertyChanged;
     protected void OnPropertyChanged([CallerMemberName] string? name = null)
         => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
