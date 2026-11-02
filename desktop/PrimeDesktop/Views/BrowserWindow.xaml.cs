@@ -56,6 +56,7 @@ public partial class BrowserWindow : Window
     private Button _btnBack = null!;
     private Button _btnForward = null!;
     private Button _btnRefresh = null!;
+    private Button _btnHome = null!;
     private Button _btnToggleDesktopMode = null!;
     private Button _btnExtensions = null!;
     private Button _btnOpenExternal = null!;
@@ -140,14 +141,14 @@ public partial class BrowserWindow : Window
             };
         }
 
-        // Open initial tab if URL was given, otherwise show Start Screen!
+        // Open initial tab if URL was given, otherwise open Start Search Screen tab
         if (!string.IsNullOrWhiteSpace(initialUrl))
         {
             AddNewTab(initialUrl);
         }
         else
         {
-            ShowStartScreen(true);
+            AddNewTab("about:home");
         }
 
         KeyDown += BrowserWindow_KeyDown;
@@ -236,6 +237,26 @@ public partial class BrowserWindow : Window
             }
         };
         _btnRefresh.Click += BtnRefresh_Click;
+
+        // Home Page (Start Screen)
+        _btnHome = new Button
+        {
+            Style = navBtnStyle,
+            ToolTip = "Главная страница поиска (Alt+Home)",
+            Margin = new Thickness(0),
+            Content = new System.Windows.Shapes.Path
+            {
+                Data = (Geometry)FindResource("IconHome"),
+                Width = 14,
+                Height = 14,
+                Fill = (Brush)FindResource("TextPrimaryBrush"),
+                Stretch = Stretch.Uniform
+            }
+        };
+        _btnHome.Click += (s, e) =>
+        {
+            NavigateCurrentTab("about:home");
+        };
 
         // Desktop / Mobile Mode Toggle
         _txtDesktopModeIcon = new TextBlock
@@ -349,13 +370,13 @@ public partial class BrowserWindow : Window
 
         if (_isToolbarEditMode)
         {
-            spacerBorder.Width = 36;
+            spacerBorder.Width = 42;
             spacerBorder.Background = (Brush)FindResource("HeaderBrush");
             spacerBorder.BorderBrush = (Brush)FindResource("BorderBrush");
             spacerBorder.BorderThickness = new Thickness(1);
             spacerBorder.CornerRadius = new CornerRadius(6);
             spacerBorder.ToolTip = "Отступ (перетащите для перемещения, ✕ для удаления)";
-            spacerBorder.Margin = new Thickness(2, 0, 2, 0);
+            spacerBorder.Margin = new Thickness(3, 0, 3, 0);
 
             var spContent = new Grid();
             var icon = new TextBlock
@@ -372,8 +393,8 @@ public partial class BrowserWindow : Window
 
             var delBtn = new Button
             {
-                Width = 14,
-                Height = 14,
+                Width = 16,
+                Height = 16,
                 HorizontalAlignment = HorizontalAlignment.Right,
                 VerticalAlignment = VerticalAlignment.Top,
                 Margin = new Thickness(0, 1, 1, 0),
@@ -384,7 +405,7 @@ public partial class BrowserWindow : Window
                 ToolTip = "Удалить отступ",
                 Content = new Border
                 {
-                    CornerRadius = new CornerRadius(7),
+                    CornerRadius = new CornerRadius(8),
                     Background = new SolidColorBrush(Color.FromArgb(220, 244, 67, 54)),
                     Child = new System.Windows.Shapes.Path
                     {
@@ -429,7 +450,7 @@ public partial class BrowserWindow : Window
         }
         else
         {
-            spacerBorder.Width = 16;
+            spacerBorder.Width = 24;
             spacerBorder.Background = Brushes.Transparent;
             spacerBorder.BorderThickness = new Thickness(0);
         }
@@ -446,6 +467,7 @@ public partial class BrowserWindow : Window
 
         return id switch
         {
+            "home" => _btnHome,
             "back" => _btnBack,
             "forward" => _btnForward,
             "refresh" => _btnRefresh,
@@ -478,6 +500,34 @@ public partial class BrowserWindow : Window
             loaded = BrowserToolbarItemConfig.GetDefaultToolbar();
         }
 
+        // Ensure home button exists
+        if (!loaded.Any(x => x.Id == "home"))
+        {
+            int refIdx = loaded.FindIndex(x => x.Id == "refresh");
+            int insertIdx = (refIdx >= 0) ? refIdx + 1 : 0;
+            loaded.Insert(insertIdx, new BrowserToolbarItemConfig
+            {
+                Id = "home",
+                Name = "Главная страница поиска",
+                Icon = "IconHome",
+                Placement = "left",
+                Order = insertIdx,
+                IsVisible = true
+            });
+        }
+
+        // Ensure address_bar defaults to center placement if not in tabs row
+        var addrItem = loaded.FirstOrDefault(x => x.Id == "address_bar");
+        if (addrItem != null && !addrItem.Placement.StartsWith("tabs_"))
+        {
+            addrItem.Placement = "center";
+        }
+
+        for (int i = 0; i < loaded.Count; i++)
+        {
+            loaded[i].Order = i;
+        }
+
         foreach (var item in loaded.OrderBy(x => x.Order))
         {
             ToolbarItems.Add(item);
@@ -500,6 +550,14 @@ public partial class BrowserWindow : Window
         TabsToolbarRightPanel.Children.Clear();
         ToolbarLeftPanel.Children.Clear();
         ToolbarRightPanel.Children.Clear();
+        ToolbarAddressBarHost.Child = null;
+
+        // In edit mode: make address bar non-interactive for typing so clicks can drag it
+        TxtAddress.IsReadOnly = _isToolbarEditMode;
+        TxtAddress.IsHitTestVisible = !_isToolbarEditMode;
+        CardAddressBar.Cursor = _isToolbarEditMode ? Cursors.Hand : Cursors.Arrow;
+        BtnGo.IsEnabled = !_isToolbarEditMode;
+        BtnClearAddress.IsEnabled = !_isToolbarEditMode;
 
         foreach (var item in ToolbarItems.OrderBy(x => x.Order))
         {
@@ -518,7 +576,21 @@ public partial class BrowserWindow : Window
 
             if (item.Id == "address_bar")
             {
-                CardAddressBar.Width = item.Placement.StartsWith("tabs_") ? 300 : 460;
+                if (item.Placement.StartsWith("tabs_"))
+                {
+                    CardAddressBar.Width = 300;
+                    CardAddressBar.HorizontalAlignment = HorizontalAlignment.Left;
+                }
+                else if (item.Placement == "left" || item.Placement == "right")
+                {
+                    CardAddressBar.Width = 460;
+                    CardAddressBar.HorizontalAlignment = (item.Placement == "left") ? HorizontalAlignment.Left : HorizontalAlignment.Right;
+                }
+                else
+                {
+                    CardAddressBar.Width = double.NaN;
+                    CardAddressBar.HorizontalAlignment = HorizontalAlignment.Stretch;
+                }
             }
 
             // Wrapper container for drag-and-drop & eye badge
@@ -543,8 +615,8 @@ public partial class BrowserWindow : Window
             element.Opacity = (!item.IsVisible && _isToolbarEditMode) ? 0.40 : 1.0;
             container.Children.Add(element);
 
-            // In edit mode: add the eye button in the bottom-right corner (except Settings and Address Bar)!
-            if (_isToolbarEditMode && item.Id != "settings" && item.Id != "address_bar")
+            // In edit mode: add the eye button in the bottom-right corner (except Settings, Address Bar, and Spacers)!
+            if (_isToolbarEditMode && item.Id != "settings" && item.Id != "address_bar" && !item.Id.StartsWith("spacer"))
             {
                 var eyeBorder = new Border
                 {
@@ -607,13 +679,17 @@ public partial class BrowserWindow : Window
             {
                 ToolbarLeftPanel.Children.Add(container);
             }
-            else
+            else if (item.Placement == "right")
             {
                 ToolbarRightPanel.Children.Add(container);
             }
+            else // "center"
+            {
+                ToolbarAddressBarHost.Child = container;
+            }
         }
 
-        bool hasRow1 = ToolbarLeftPanel.Children.Count > 0 || ToolbarRightPanel.Children.Count > 0 || _isToolbarEditMode;
+        bool hasRow1 = ToolbarLeftPanel.Children.Count > 0 || ToolbarRightPanel.Children.Count > 0 || ToolbarAddressBarHost.Child != null || _isToolbarEditMode;
         RowAddressBar.Height = hasRow1 ? GridLength.Auto : new GridLength(0);
         ToolbarRow1.Visibility = hasRow1 ? Visibility.Visible : Visibility.Collapsed;
 
@@ -698,6 +774,18 @@ public partial class BrowserWindow : Window
         if (!_isToolbarEditMode || !e.Data.GetDataPresent("PrimeToolbarItem")) return;
         var dropped = e.Data.GetData("PrimeToolbarItem") as BrowserToolbarItemConfig;
         if (dropped == null) return;
+
+        if (sender == ToolbarAddressBarHost || sender == CardAddressBar || (sender is FrameworkElement feCenter && feCenter.Parent == ToolbarAddressBarHost))
+        {
+            dropped.Placement = "center";
+            ToolbarItems.Remove(dropped);
+            ToolbarItems.Add(dropped);
+            for (int i = 0; i < ToolbarItems.Count; i++) ToolbarItems[i].Order = i;
+            RebuildToolbar();
+            SaveToolbarConfig();
+            e.Handled = true;
+            return;
+        }
 
         Panel? targetPanel = null;
         if (sender is Panel p)
@@ -819,33 +907,35 @@ public partial class BrowserWindow : Window
 
     public void AddNewTab(string? initialUrl = null)
     {
-        ShowStartScreen(false);
-        string targetUrl = !string.IsNullOrWhiteSpace(initialUrl)
-            ? BuildUrlOrSearch(initialUrl)
-            : GetDefaultHomeUrl();
+        bool isStart = string.IsNullOrWhiteSpace(initialUrl) ||
+                       initialUrl.Equals("about:home", StringComparison.OrdinalIgnoreCase) ||
+                       initialUrl.Equals("about:blank", StringComparison.OrdinalIgnoreCase);
 
         var tab = new BrowserTabItem
         {
-            Title = "Новая вкладка",
-            Url = targetUrl,
-            IsLoading = true
+            Title = isStart ? "Новая вкладка" : "Загрузка...",
+            Url = isStart ? "about:home" : BuildUrlOrSearch(initialUrl!),
+            IsLoading = !isStart
         };
 
-        var webView = new WebView2
-        {
-            HorizontalAlignment = HorizontalAlignment.Stretch,
-            VerticalAlignment = VerticalAlignment.Stretch,
-            DefaultBackgroundColor = System.Drawing.Color.FromArgb(255, 12, 16, 23)
-        };
-
-        tab.WebView = webView;
         Tabs.Add(tab);
         UpdateTabsCounter();
         AnimateTabsFlyUp();
 
-        BrowserHostGrid.Children.Add(webView);
+        if (!isStart)
+        {
+            var webView = new WebView2
+            {
+                HorizontalAlignment = HorizontalAlignment.Stretch,
+                VerticalAlignment = VerticalAlignment.Stretch,
+                DefaultBackgroundColor = System.Drawing.Color.FromArgb(255, 12, 16, 23)
+            };
 
-        _ = InitializeWebViewForTabAsync(tab, webView, targetUrl);
+            tab.WebView = webView;
+            BrowserHostGrid.Children.Add(webView);
+            _ = InitializeWebViewForTabAsync(tab, webView, tab.Url);
+        }
+
         ActivateTab(tab);
     }
 
@@ -1013,11 +1103,14 @@ public partial class BrowserWindow : Window
     {
         if (tab == null)
         {
+            ActiveTab = null;
             ShowStartScreen(true);
             return;
         }
 
-        ShowStartScreen(false);
+        bool isStartPage = string.IsNullOrEmpty(tab.Url) ||
+                           tab.Url.Equals("about:home", StringComparison.OrdinalIgnoreCase) ||
+                           tab.Url.Equals("about:blank", StringComparison.OrdinalIgnoreCase);
 
         foreach (var t in Tabs)
         {
@@ -1025,27 +1118,37 @@ public partial class BrowserWindow : Window
             t.IsActive = isCurrent;
             if (t.WebView != null)
             {
-                t.WebView.Visibility = isCurrent ? Visibility.Visible : Visibility.Collapsed;
+                t.WebView.Visibility = (isCurrent && !isStartPage) ? Visibility.Visible : Visibility.Collapsed;
             }
         }
 
         ActiveTab = tab;
-        TxtAddress.Text = tab.Url;
-        UpdateSecurityIcon(tab.IsSecure);
 
-        if (tab.WebView != null && !BrowserHostGrid.Children.Contains(tab.WebView))
+        if (isStartPage)
         {
-            BrowserHostGrid.Children.Add(tab.WebView);
-        }
-
-        // Fullscreen state check
-        if (tab.WebView?.CoreWebView2 != null)
-        {
-            SetFullScreen(tab.WebView.CoreWebView2.ContainsFullScreenElement);
+            ShowStartScreen(true);
+            TxtAddress.Text = "";
         }
         else
         {
-            SetFullScreen(false);
+            ShowStartScreen(false);
+            TxtAddress.Text = tab.Url;
+            UpdateSecurityIcon(tab.IsSecure);
+
+            if (tab.WebView != null && !BrowserHostGrid.Children.Contains(tab.WebView))
+            {
+                BrowserHostGrid.Children.Add(tab.WebView);
+            }
+
+            // Fullscreen state check
+            if (tab.WebView?.CoreWebView2 != null)
+            {
+                SetFullScreen(tab.WebView.CoreWebView2.ContainsFullScreenElement);
+            }
+            else
+            {
+                SetFullScreen(false);
+            }
         }
 
         UpdateNavigationButtonsState();
@@ -1299,22 +1402,70 @@ public partial class BrowserWindow : Window
 
     private void NavigateCurrentTab(string input)
     {
-        if (ActiveTab?.WebView == null) return;
-        string url = BuildUrlOrSearch(input);
-        try
+        string trimmed = input?.Trim() ?? "";
+        if (string.IsNullOrEmpty(trimmed)) return;
+
+        if (trimmed.Equals("about:home", StringComparison.OrdinalIgnoreCase) ||
+            trimmed.Equals("about:blank", StringComparison.OrdinalIgnoreCase))
         {
-            ActiveTab.WebView.Source = new Uri(url);
+            if (ActiveTab != null)
+            {
+                ActiveTab.Url = "about:home";
+                ActiveTab.Title = "Новая вкладка";
+                if (ActiveTab.WebView != null)
+                {
+                    ActiveTab.WebView.Visibility = Visibility.Collapsed;
+                }
+            }
+            ShowStartScreen(true);
+            return;
         }
-        catch
+
+        string url = BuildUrlOrSearch(trimmed);
+
+        if (ActiveTab == null)
         {
-            ActiveTab.WebView.CoreWebView2?.Navigate(url);
+            AddNewTab(url);
+            return;
         }
+
+        ActiveTab.Url = url;
+        ActiveTab.Title = "Загрузка...";
+        ActiveTab.IsLoading = true;
+
+        if (ActiveTab.WebView == null)
+        {
+            var webView = new WebView2
+            {
+                HorizontalAlignment = HorizontalAlignment.Stretch,
+                VerticalAlignment = VerticalAlignment.Stretch,
+                DefaultBackgroundColor = System.Drawing.Color.FromArgb(255, 12, 16, 23)
+            };
+            ActiveTab.WebView = webView;
+            BrowserHostGrid.Children.Add(webView);
+            _ = InitializeWebViewForTabAsync(ActiveTab, webView, url);
+        }
+        else
+        {
+            try
+            {
+                ActiveTab.WebView.Source = new Uri(url);
+            }
+            catch
+            {
+                ActiveTab.WebView.CoreWebView2?.Navigate(url);
+            }
+        }
+
+        ShowStartScreen(false);
     }
 
     private void UpdateNavigationButtonsState()
     {
         try
         {
+            if (_btnHome != null) _btnHome.IsEnabled = true;
+
             if (ActiveTab?.WebView != null)
             {
                 bool canBack = ActiveTab.WebView.CanGoBack;
@@ -2079,10 +2230,10 @@ public partial class BrowserWindow : Window
             return;
         }
 
-        // Alt + Home: Home Page
+        // Alt + Home: Home Page (Start Screen)
         if (isAlt && e.Key == Key.Home)
         {
-            NavigateCurrentTab(GetDefaultHomeUrl());
+            NavigateCurrentTab("about:home");
             e.Handled = true;
             return;
         }
@@ -2159,8 +2310,6 @@ public partial class BrowserWindow : Window
 
         if (show)
         {
-            ActiveTab = null;
-            foreach (var t in Tabs) t.IsActive = false;
             TxtAddress.Text = "";
             UpdateSecurityIcon(true);
             if (_btnBack != null) _btnBack.IsEnabled = false;
@@ -2206,7 +2355,7 @@ public partial class BrowserWindow : Window
         {
             if (!string.IsNullOrWhiteSpace(site.Url))
             {
-                AddNewTab(site.Url);
+                NavigateCurrentTab(site.Url);
             }
         }
     }
@@ -2219,17 +2368,28 @@ public partial class BrowserWindow : Window
         }
     }
 
+    private void SubmitStartSearch()
+    {
+        string query = StartSearchTextBox.Text?.Trim() ?? "";
+        if (!string.IsNullOrWhiteSpace(query))
+        {
+            StartSearchTextBox.Text = "";
+            NavigateCurrentTab(query);
+        }
+    }
+
     private void StartSearchTextBox_KeyDown(object sender, KeyEventArgs e)
     {
         if (e.Key == Key.Enter)
         {
-            string query = StartSearchTextBox.Text?.Trim() ?? "";
-            if (!string.IsNullOrWhiteSpace(query))
-            {
-                StartSearchTextBox.Text = "";
-                AddNewTab(query);
-            }
+            SubmitStartSearch();
+            e.Handled = true;
         }
+    }
+
+    private void BtnStartSearchSubmit_Click(object sender, RoutedEventArgs e)
+    {
+        SubmitStartSearch();
     }
 
     private void StartSearchTextBox_TextChanged(object sender, TextChangedEventArgs e)
@@ -2308,12 +2468,13 @@ public partial class BrowserWindow : Window
         {
             string title = item.Id switch
             {
+                "home" => "Главная страница поиска",
                 "back" => "Назад",
                 "forward" => "Вперед",
                 "refresh" => "Обновить страницу",
                 "desktop_mode" => "Режим ПК / Мобильный",
                 "extensions" => "Расширения Chrome",
-                "open_external" => "Открыть в системном браузере",
+                "open_external" or "external" => "Открыть в системном браузере",
                 "customize" => "Настройка кнопок (Карандаш)",
                 _ => item.Id
             };
@@ -2346,6 +2507,9 @@ public partial class BrowserWindow : Window
             BrowserSettingsPopup.IsOpen = false;
             switch (vm.Id)
             {
+                case "home":
+                    NavigateCurrentTab("about:home");
+                    break;
                 case "back":
                     BtnBack_Click(_btnBack, new RoutedEventArgs());
                     break;

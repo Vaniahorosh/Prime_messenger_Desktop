@@ -59,6 +59,7 @@ public class BrowserToolbarItemConfig : INotifyPropertyChanged
 
     public bool IsLeft => Placement == "left";
     public bool IsRight => Placement == "right";
+    public bool IsCenter => Placement == "center";
     public bool IsTabsLeft => Placement == "tabs_left";
     public bool IsTabsRight => Placement == "tabs_right";
     public string PlacementDisplay => Placement switch
@@ -67,6 +68,7 @@ public class BrowserToolbarItemConfig : INotifyPropertyChanged
         "tabs_right" => "В строке вкладок (справа)",
         "left" => "Внизу (слева)",
         "right" => "Внизу (справа)",
+        "center" => "Внизу (по центру)",
         _ => Placement
     };
 
@@ -77,7 +79,8 @@ public class BrowserToolbarItemConfig : INotifyPropertyChanged
             new() { Id = "back", Name = "Назад", Icon = "IconArrowLeft", Placement = "left", Order = 0, IsVisible = true },
             new() { Id = "forward", Name = "Вперед", Icon = "IconArrowRight", Placement = "left", Order = 1, IsVisible = true },
             new() { Id = "refresh", Name = "Обновить", Icon = "IconRefresh", Placement = "left", Order = 2, IsVisible = true },
-            new() { Id = "address_bar", Name = "Строка поиска и адреса", Icon = "IconSearch", Placement = "left", Order = 3, IsVisible = true },
+            new() { Id = "home", Name = "Главная страница поиска", Icon = "IconHome", Placement = "left", Order = 3, IsVisible = true },
+            new() { Id = "address_bar", Name = "Строка поиска и адреса", Icon = "IconSearch", Placement = "center", Order = 4, IsVisible = true },
             new() { Id = "desktop_mode", Name = "Режим ПК / Мобильный", Icon = "💻", Placement = "right", Order = 0, IsVisible = true },
             new() { Id = "extensions", Name = "Расширения Chrome", Icon = "IconExtension", Placement = "right", Order = 1, IsVisible = true },
             new() { Id = "external", Name = "Открыть во внешнем браузере", Icon = "IconOpenInNew", Placement = "right", Order = 2, IsVisible = true },
