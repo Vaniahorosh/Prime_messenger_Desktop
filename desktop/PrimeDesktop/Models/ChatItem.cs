@@ -333,7 +333,13 @@ public class ChatItem : INotifyPropertyChanged
     public string LastMessage
     {
         get => _lastMessage;
-        set => SetField(ref _lastMessage, value);
+        set
+        {
+            if (SetField(ref _lastMessage, value))
+            {
+                OnPropertyChanged(nameof(DisplaySubtitle));
+            }
+        }
     }
 
     public string LastMessageTime
@@ -358,6 +364,9 @@ public class ChatItem : INotifyPropertyChanged
                 OnPropertyChanged(nameof(StatusText));
                 OnPropertyChanged(nameof(StatusColorHex));
                 OnPropertyChanged(nameof(IsOnlineIndicatorVisible));
+                OnPropertyChanged(nameof(IsActiveState));
+                OnPropertyChanged(nameof(DisplaySubtitle));
+                OnPropertyChanged(nameof(DisplaySubtitleColorHex));
             }
         }
     }
@@ -371,6 +380,9 @@ public class ChatItem : INotifyPropertyChanged
             {
                 OnPropertyChanged(nameof(StatusText));
                 OnPropertyChanged(nameof(StatusColorHex));
+                OnPropertyChanged(nameof(IsActiveState));
+                OnPropertyChanged(nameof(DisplaySubtitle));
+                OnPropertyChanged(nameof(DisplaySubtitleColorHex));
             }
         }
     }
@@ -384,6 +396,9 @@ public class ChatItem : INotifyPropertyChanged
             {
                 OnPropertyChanged(nameof(StatusText));
                 OnPropertyChanged(nameof(StatusColorHex));
+                OnPropertyChanged(nameof(IsActiveState));
+                OnPropertyChanged(nameof(DisplaySubtitle));
+                OnPropertyChanged(nameof(DisplaySubtitleColorHex));
             }
         }
     }
@@ -398,9 +413,18 @@ public class ChatItem : INotifyPropertyChanged
                 OnPropertyChanged(nameof(StatusText));
                 OnPropertyChanged(nameof(StatusColorHex));
                 OnPropertyChanged(nameof(IsOnlineIndicatorVisible));
+                OnPropertyChanged(nameof(IsActiveState));
+                OnPropertyChanged(nameof(DisplaySubtitle));
+                OnPropertyChanged(nameof(DisplaySubtitleColorHex));
             }
         }
     }
+
+    public bool IsActiveState => (!string.IsNullOrEmpty(ActivityState) && !ActivityState.Equals("IDLE", StringComparison.OrdinalIgnoreCase)) || IsTyping;
+
+    public string DisplaySubtitle => IsActiveState ? StatusText : LastMessage;
+
+    public string DisplaySubtitleColorHex => IsActiveState ? StatusColorHex : "#8B949E";
 
     public string StatusText
     {
@@ -410,15 +434,14 @@ public class ChatItem : INotifyPropertyChanged
             {
                 var upper = ActivityState.ToUpperInvariant();
                 if (upper == "TYPING") return "Печатает...";
-                if (upper == "RECORDING_VOICE" || upper == "RECORDING_AUDIO") return "Записывает голосовое...";
-                if (upper == "RECORDING_VIDEO_NOTE") return "Записывает видеокружок...";
-                if (upper == "SENDING_VIDEO_NOTE") return "Отправка видеокружка...";
+                if (upper == "RECORDING_VOICE" || upper == "RECORDING_AUDIO") return "Записывает ГС...";
+                if (upper == "SENDING_VOICE" || upper == "SENDING_AUDIO") return "Отправляет ГС...";
+                if (upper == "RECORDING_VIDEO_NOTE") return "Записывает кружок...";
+                if (upper == "SENDING_VIDEO_NOTE") return "Отправляет кружок...";
                 if (upper == "SELECTING_MEDIA") return "Выбирает медиа...";
                 if (upper == "SELECTING_FILE") return "Выбирает файл...";
-                if (upper == "SENDING_PHOTO") return "Отправка фото...";
-                if (upper == "SENDING_VIDEO") return "Отправка видео...";
-                if (upper == "SENDING_MEDIA") return "Отправка медиа...";
-                if (upper == "SENDING_FILE") return "Отправка файла...";
+                if (upper == "SENDING_PHOTO" || upper == "SENDING_VIDEO" || upper == "SENDING_MEDIA") return "Отправляет медиа...";
+                if (upper == "SENDING_FILE") return "Отправляет файл...";
                 if (upper == "VIEWING_PHOTO") return "Смотрит фото";
                 if (upper == "VIEWING_VIDEO") return "Смотрит видео";
                 if (upper == "VIEWING_FILE") return "Смотрит файл";
@@ -442,7 +465,7 @@ public class ChatItem : INotifyPropertyChanged
             if (!string.IsNullOrEmpty(ActivityState) && !ActivityState.Equals("IDLE", StringComparison.OrdinalIgnoreCase))
             {
                 var upper = ActivityState.ToUpperInvariant();
-                if (upper.StartsWith("RECORDING")) return "#4D9FFF"; // Accent brand blue
+                if (upper == "SENDING_VIDEO_NOTE" || upper.StartsWith("RECORDING")) return "#4D9FFF"; // Accent brand blue
                 if (upper.StartsWith("SENDING") || upper.StartsWith("SELECTING")) return "#2EA043"; // Success green
                 if (upper.StartsWith("VIEWING")) return "#A371F7"; // Purple
                 if (upper.StartsWith("LISTENING")) return "#E36209"; // Orange

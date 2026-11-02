@@ -436,7 +436,7 @@
 
                                             <TextBlock Text="{Binding DisplayName}" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
 
-                                            <TextBlock Text="{Binding LastMessage}" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,2,0,0" TextTrimming="CharacterEllipsis"/>
+                                            <TextBlock Text="{Binding DisplaySubtitle}" Foreground="{Binding DisplaySubtitleColorHex, Converter={StaticResource HexToBrush}}" FontSize="12" Margin="0,2,0,0" TextTrimming="CharacterEllipsis"/>
 
                                         </StackPanel>
 
@@ -596,17 +596,6 @@
 
                     </DockPanel>
 
-                </Border>
-
-                <!-- Incoming Transfer Banner -->
-                <Border Grid.Row="1" VerticalAlignment="Top" Height="28" Background="#EE15202E" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="0,0,0,1"
-                        Panel.ZIndex="10" Visibility="{Binding IsIncomingTransferActive, Converter={StaticResource BoolToVis}}" Padding="16,0">
-                    <DockPanel VerticalAlignment="Center">
-                        <ProgressBar DockPanel.Dock="Right" Value="{Binding IncomingTransferProgress}" Minimum="0" Maximum="100" Width="120" Height="4"
-                                     Foreground="{DynamicResource AccentBrush}" Background="#30FFFFFF" BorderThickness="0" Margin="10,0,0,0"/>
-                        <TextBlock Text="{Binding IncomingTransferText}" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="11" FontWeight="SemiBold"
-                                   TextTrimming="CharacterEllipsis"/>
-                    </DockPanel>
                 </Border>
 
                 <!-- Wallpaper Background Layer -->

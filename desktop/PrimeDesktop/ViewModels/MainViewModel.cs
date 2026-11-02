@@ -3213,6 +3213,7 @@ public async Task SendTextMessageAsync()
         targetChat.LastMessageTime = msg.FormattedTime;
 
         byte[]? payload = null;
+        SendMyActivityState("SENDING_VOICE", true);
         try
         {
             string vFileName = System.IO.Path.GetFileName(filePath);
@@ -3252,6 +3253,10 @@ public async Task SendTextMessageAsync()
             App.Log($"[Send] Failed to send voice message, queuing in outbox: {ex.Message}");
             if (payload != null) QueueOutboxPacket(targetChat.Id, PacketType.File, payload, msg);
             StatusMessage = "Ожидание соединения для отправки голосового сообщения...";
+        }
+        finally
+        {
+            SendMyActivityState("IDLE", true);
         }
 
         await _storageService.SaveChatsAsync(_allChats);
@@ -3297,21 +3302,20 @@ public async Task SendTextMessageAsync()
 
         targetChat.LastMessageTime = message.FormattedTime;
 
+        SendMyActivityState("SENDING_MEDIA", true);
         try
-
         {
             string targetAddr = !string.IsNullOrWhiteSpace(targetChat.DeviceAddress) ? targetChat.DeviceAddress : targetChat.PeerId;
             await SendNetworkPacketAsync(targetAddr, PacketType.Photo, fileBytes);
-
             message.IsDelivered = true;
-
         }
-
         catch (Exception ex)
-
         {
             StatusMessage = $"Ошибка отправки фото: {ex.Message}";
-
+        }
+        finally
+        {
+            SendMyActivityState("IDLE", true);
         }
 
         await _storageService.SaveChatsAsync(_allChats);
@@ -3491,7 +3495,23 @@ public async Task SendTextMessageAsync()
     {
         if (targetChat == null || pending == null) return;
 
-        SendMyActivityState(pending.Type == PacketType.Photo ? "SENDING_PHOTO" : "SENDING_FILE", true);
+        string? primaryPath = pending.PrimaryFilePath;
+        string? lowerPrimary = primaryPath != null ? Path.GetFileName(primaryPath).ToLowerInvariant() : null;
+        bool isVidSingle = lowerPrimary != null && (lowerPrimary.EndsWith(".mp4") || lowerPrimary.EndsWith(".mkv") || lowerPrimary.EndsWith(".mov") || lowerPrimary.EndsWith(".avi") || lowerPrimary.EndsWith(".webm"));
+        bool isVideoNote = isVidSingle && (lowerPrimary!.StartsWith("vn_") || lowerPrimary.StartsWith("rec_circle_") || lowerPrimary.StartsWith("rec_videonote_"));
+
+        if (isVideoNote)
+        {
+            SendMyActivityState("SENDING_VIDEO_NOTE", true);
+        }
+        else if (pending.Type == PacketType.Photo || pending.IsCollage || isVidSingle)
+        {
+            SendMyActivityState("SENDING_MEDIA", true);
+        }
+        else
+        {
+            SendMyActivityState("SENDING_FILE", true);
+        }
 
         string targetAddr = !string.IsNullOrWhiteSpace(targetChat.DeviceAddress) ? targetChat.DeviceAddress : targetChat.PeerId;
 
@@ -3654,8 +3674,8 @@ public async Task SendTextMessageAsync()
                 byte[] fileBytes = await File.ReadAllBytesAsync(filePath);
 
                 string lowerSingle = fileName.ToLowerInvariant();
-                bool isVidSingle = lowerSingle.EndsWith(".mp4") || lowerSingle.EndsWith(".mkv") || lowerSingle.EndsWith(".mov") || lowerSingle.EndsWith(".avi") || lowerSingle.EndsWith(".webm");
-                bool isVideoNote = isVidSingle && (lowerSingle.StartsWith("vn_") || lowerSingle.StartsWith("rec_circle_") || lowerSingle.StartsWith("rec_videonote_"));
+                isVidSingle = lowerSingle.EndsWith(".mp4") || lowerSingle.EndsWith(".mkv") || lowerSingle.EndsWith(".mov") || lowerSingle.EndsWith(".avi") || lowerSingle.EndsWith(".webm");
+                isVideoNote = isVidSingle && (lowerSingle.StartsWith("vn_") || lowerSingle.StartsWith("rec_circle_") || lowerSingle.StartsWith("rec_videonote_"));
 
                 var singleMsg = new ChatMessage
                 {
@@ -4673,6 +4693,12 @@ public async Task SendTextMessageAsync()
                 ApplySearchFilter();
             }
 
+            if (type == PacketType.Text || type == PacketType.Photo || type == PacketType.Voice || type == PacketType.File)
+            {
+                chat.ActivityState = "IDLE";
+                chat.IsTyping = false;
+            }
+
             switch (type)
 
             {
@@ -5316,31 +5342,35 @@ public async Task SendTextMessageAsync()
     private void OnTransferProgressChanged(string peerId, PacketType type, long current, long total)
     {
         if (total <= 0) return;
-        double pct = Math.Min(100.0, (double)current / total * 100.0);
         var chat = FindChatByAddressOrPeer(peerId);
-        string name = chat != null && !DeviceAnonymizer.IsHardwareIdentifier(chat.DisplayName) ? chat.DisplayName : "собеседника";
-        string typeLabel = type switch
-        {
-            PacketType.Photo => "фото",
-            PacketType.Voice => "голосового",
-            PacketType.File => "файла",
-            _ => "данных"
-        };
+        if (chat == null) return;
 
         RunOnUIThread(() =>
         {
+            IsIncomingTransferActive = false;
+            IncomingTransferProgress = 0;
+            IncomingTransferText = string.Empty;
+
             if (current < total)
             {
-                IsIncomingTransferActive = true;
-                IncomingTransferProgress = pct;
-                IncomingTransferText = $"📥 Приём {typeLabel} от {name}: {pct:F0}% ({current / 1024} КБ / {total / 1024} КБ)...";
+                // Only override ActivityState if not already set to a specific state (such as SENDING_VIDEO_NOTE or RECORDING_VIDEO_NOTE)
+                if (string.IsNullOrEmpty(chat.ActivityState) ||
+                    chat.ActivityState.Equals("IDLE", StringComparison.OrdinalIgnoreCase) ||
+                    chat.ActivityState.Equals("TYPING", StringComparison.OrdinalIgnoreCase))
+                {
+                    chat.ActivityState = type switch
+                    {
+                        PacketType.Photo => "SENDING_MEDIA",
+                        PacketType.Voice => "SENDING_VOICE",
+                        PacketType.File => "SENDING_FILE",
+                        _ => "SENDING_FILE"
+                    };
+                }
             }
             else
             {
-                IsIncomingTransferActive = false;
-                IncomingTransferProgress = 100;
-                IncomingTransferText = string.Empty;
-                StatusMessage = $"✓ {typeLabel} от {name} успешно получен";
+                chat.ActivityState = "IDLE";
+                chat.IsTyping = false;
             }
         });
     }
