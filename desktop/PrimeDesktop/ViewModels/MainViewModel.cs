@@ -26,8 +26,9 @@ using PrimeDesktop.Views;
 namespace PrimeDesktop.ViewModels;
 
 public class MainViewModel : ViewModelBase
-
 {
+    public static MainViewModel? Instance { get; private set; }
+
     private readonly StorageService _storageService = new();
 
     private readonly AudioService _audioService = new();
@@ -1512,8 +1513,8 @@ public class MainViewModel : ViewModelBase
     public bool HasSharedAudio => SharedAudio.Any();
 
     public MainViewModel()
-
     {
+        Instance = this;
         _settings.PropertyChanged += async (s, e) =>
         {
             CheckForPendingSettingsChanges();
@@ -2361,6 +2362,7 @@ public class MainViewModel : ViewModelBase
                 {
                     _allChats.Add(item);
                     existing = item;
+                    _ = _storageService.SaveChatsAsync(_allChats);
                 }
                 else
                 {
@@ -2790,15 +2792,20 @@ public class MainViewModel : ViewModelBase
                         }
                         m.UpdateReactionGroups(Settings?.MyDisplayName ?? "Я");
                     }
-                    // Filter out corrupt / error-named chats and obsolete system chat
-                    if (IsStatusKeyword(c.DisplayName) || 
-                        c.DisplayName == "Ошибка подключения" || 
-                        c.DisplayName == "Установка связи..." ||
-                        c.PeerId.Equals("peer_prime_support", StringComparison.OrdinalIgnoreCase) ||
+                    // Filter out obsolete system chat
+                    if (c.PeerId.Equals("peer_prime_support", StringComparison.OrdinalIgnoreCase) ||
                         c.DisplayName.Equals("Команда Прайм", StringComparison.OrdinalIgnoreCase))
                     {
-                        App.Log($"[Init] Skipping corrupt or removed chat '{c.DisplayName}' ({c.PeerId})");
+                        App.Log($"[Init] Skipping removed bot chat '{c.DisplayName}' ({c.PeerId})");
                         continue;
+                    }
+
+                    // Repair display name if it was accidentally saved as a status message
+                    if (IsStatusKeyword(c.DisplayName) || 
+                        c.DisplayName == "Ошибка подключения" || 
+                        c.DisplayName == "Установка связи...")
+                    {
+                        c.DisplayName = DeviceAnonymizer.SanitizeDisplayName(null, c.DeviceAddress);
                     }
 
                     // Anonymize PeerId if it was stored as raw MAC
@@ -2926,6 +2933,7 @@ public class MainViewModel : ViewModelBase
                     {
                         _allChats.Add(dev);
                         App.Log($"[Init] Added paired device '{dev.DisplayName}' ({dev.PeerId}) to chat list.");
+                        _ = _storageService.SaveChatsAsync(_allChats);
                     }
                 }
                 ApplySearchFilter();
@@ -4525,6 +4533,7 @@ public async Task SendTextMessageAsync()
 
                 _allChats.Add(chat);
                 ApplySearchFilter();
+                _ = _storageService.SaveChatsAsync(_allChats);
             }
 
             chat.ConnectionState = state;
@@ -4691,6 +4700,7 @@ public async Task SendTextMessageAsync()
 
                 _allChats.Add(chat);
                 ApplySearchFilter();
+                _ = _storageService.SaveChatsAsync(_allChats);
             }
 
             if (type == PacketType.Text || type == PacketType.Photo || type == PacketType.Voice || type == PacketType.File)
@@ -5492,6 +5502,19 @@ public async Task SendTextMessageAsync()
         catch { }
 
         await _storageService.SaveChatsAsync(_allChats);
+    }
+
+    public void FlushStorageSync()
+    {
+        try
+        {
+            _storageService.SaveChatsSync(_allChats);
+            _storageService.SaveSettingsSync(Settings);
+        }
+        catch (Exception ex)
+        {
+            App.Log($"[FlushStorageSync ERROR] {ex.Message}");
+        }
     }
 
     #endregion

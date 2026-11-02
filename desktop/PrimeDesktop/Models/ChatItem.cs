@@ -420,12 +420,16 @@ public class ChatItem : INotifyPropertyChanged
         }
     }
 
+    [JsonIgnore]
     public bool IsActiveState => (!string.IsNullOrEmpty(ActivityState) && !ActivityState.Equals("IDLE", StringComparison.OrdinalIgnoreCase)) || IsTyping;
 
+    [JsonIgnore]
     public string DisplaySubtitle => IsActiveState ? StatusText : LastMessage;
 
+    [JsonIgnore]
     public string DisplaySubtitleColorHex => IsActiveState ? StatusColorHex : "#8B949E";
 
+    [JsonIgnore]
     public string StatusText
     {
         get
@@ -458,6 +462,7 @@ public class ChatItem : INotifyPropertyChanged
         }
     }
 
+    [JsonIgnore]
     public string StatusColorHex
     {
         get
@@ -482,6 +487,7 @@ public class ChatItem : INotifyPropertyChanged
         }
     }
 
+    [JsonIgnore]
     public bool IsOnlineIndicatorVisible => ConnectionState == DeviceConnectionState.Connected;
 
     public bool IsMuted
@@ -490,6 +496,7 @@ public class ChatItem : INotifyPropertyChanged
         set => SetField(ref _isMuted, value);
     }
 
+    [JsonIgnore]
     public string Initials
     {
         get

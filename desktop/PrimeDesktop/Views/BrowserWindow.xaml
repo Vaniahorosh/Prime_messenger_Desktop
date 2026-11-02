@@ -386,8 +386,6 @@
                     <StackPanel Grid.Column="0" x:Name="ToolbarLeftPanel" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,8,0"
                                 AllowDrop="True" DragOver="ToolbarPanel_DragOver" Drop="ToolbarPanel_Drop"/>
 
-                    <!-- Center: Address Bar Host -->
-                    <Border Grid.Column="1" x:Name="ToolbarAddressBarHost">
                     <!-- Center: Address Bar -->
                     <Border Grid.Column="1"
                             x:Name="CardAddressBar"
@@ -453,8 +451,6 @@
                                 </Border>
                             </Button>
                         </Grid>
-                    </Border>
-
                     </Border>
 
                     <!-- Right Customizable Button Panel -->

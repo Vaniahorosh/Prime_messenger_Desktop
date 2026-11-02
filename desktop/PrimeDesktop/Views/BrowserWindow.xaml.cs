@@ -307,6 +307,23 @@ public partial class BrowserWindow : Window
         _btnBrowserSettings.Click += BtnBrowserSettings_Click;
     }
 
+    private static void DisconnectFromParent(FrameworkElement? element)
+    {
+        if (element == null) return;
+        if (element.Parent is Panel panel)
+        {
+            panel.Children.Remove(element);
+        }
+        else if (element.Parent is Decorator decorator)
+        {
+            decorator.Child = null;
+        }
+        else if (element.Parent is ContentControl contentControl)
+        {
+            contentControl.Content = null;
+        }
+    }
+
     private FrameworkElement? GetElementForId(string id) => id switch
     {
         "back" => _btnBack,
@@ -376,10 +393,7 @@ public partial class BrowserWindow : Window
             var element = GetElementForId(item.Id);
             if (element == null) continue;
 
-            if (element.Parent is Panel parentPanel)
-            {
-                parentPanel.Children.Remove(element);
-            }
+            DisconnectFromParent(element);
 
             if (item.Id == "address_bar")
             {

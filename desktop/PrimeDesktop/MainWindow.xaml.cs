@@ -21,6 +21,7 @@ public partial class MainWindow : Window
     public void ForceClose()
     {
         _isExplicitExit = true;
+        (DataContext as MainViewModel)?.FlushStorageSync();
         Close();
     }
 
@@ -35,6 +36,10 @@ public partial class MainWindow : Window
                 e.Cancel = true;
                 Hide();
                 ShowTrayMinimizedNotificationIfNeeded();
+            }
+            else
+            {
+                (DataContext as MainViewModel)?.FlushStorageSync();
             }
             App.Log($"MainWindow Closing (Cancel={e.Cancel})");
         };
@@ -397,6 +402,7 @@ public partial class MainWindow : Window
 
     protected override void OnClosed(EventArgs e)
     {
+        (DataContext as MainViewModel)?.FlushStorageSync();
         TrayService?.Dispose();
         base.OnClosed(e);
     }

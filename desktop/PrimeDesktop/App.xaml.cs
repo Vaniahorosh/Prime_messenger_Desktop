@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Threading;
+using PrimeDesktop.ViewModels;
 
 namespace PrimeDesktop;
 
@@ -99,6 +100,11 @@ public partial class App : Application
     protected override void OnExit(ExitEventArgs e)
     {
         Log($"PrimeDesktop application exited with code {e.ApplicationExitCode}.");
+        try
+        {
+            MainViewModel.Instance?.FlushStorageSync();
+        }
+        catch { }
         if (_instanceMutex != null)
         {
             try
