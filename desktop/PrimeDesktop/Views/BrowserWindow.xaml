@@ -477,6 +477,8 @@
                                                  Style="{StaticResource BrowserTabButtonStyle}"
                                                  Click="TabButton_Click"
                                                  PreviewMouseDown="TabButton_PreviewMouseDown"
+                                                 MouseEnter="TabButton_MouseEnter"
+                                                 MouseLeave="TabButton_MouseLeave"
                                                  Tag="{Binding}"/>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
@@ -718,6 +720,8 @@
                                                  Style="{StaticResource MiniVerticalTabButtonStyle}"
                                                  Click="TabButton_Click"
                                                  PreviewMouseDown="TabButton_PreviewMouseDown"
+                                                 MouseEnter="TabButton_MouseEnter"
+                                                 MouseLeave="TabButton_MouseLeave"
                                                  Tag="{Binding}"/>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
@@ -1049,11 +1053,117 @@
                                                  Style="{StaticResource BrowserVerticalTabButtonStyle}"
                                                  Click="TabButton_Click"
                                                  PreviewMouseDown="TabButton_PreviewMouseDown"
+                                                 MouseEnter="TabButton_MouseEnter"
+                                                 MouseLeave="TabButton_MouseLeave"
                                                  Tag="{Binding}"/>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
                     </ScrollViewer>
+                </Grid>
+            </Border>
+        </Popup>
+
+        <!-- POPUP: TAB HOVER PREVIEW (Title, Screenshot, RAM Usage) -->
+        <Popup x:Name="TabPreviewPopup"
+               AllowsTransparency="True"
+               Placement="Bottom"
+               StaysOpen="False"
+               PopupAnimation="None"
+               IsHitTestVisible="False">
+            <Border x:Name="TabPreviewCard"
+                    Width="270"
+                    Background="{DynamicResource CardBrush}"
+                    BorderBrush="{DynamicResource BorderBrush}"
+                    BorderThickness="1"
+                    CornerRadius="14"
+                    Padding="12"
+                    Margin="12"
+                    RenderTransformOrigin="0.5,0">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="28" ShadowDepth="6" Direction="270" Opacity="0.6" Color="#000000"/>
+                </Border.Effect>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <!-- Top: Favicon, Title, Domain -->
+                        <RowDefinition Height="Auto"/>
+                        <!-- Middle: Thumbnail Preview -->
+                        <RowDefinition Height="Auto"/>
+                        <!-- Bottom: Memory (RAM) Usage -->
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Top: Header with Favicon, Title, Domain -->
+                    <Grid Grid.Row="0" Margin="0,0,0,10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Border Grid.Column="0" Width="22" Height="22" CornerRadius="6"
+                                Background="{DynamicResource HeaderBrush}" Margin="0,0,8,0" VerticalAlignment="Center">
+                            <Image x:Name="ImgPreviewFavicon" Width="14" Height="14" Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality"/>
+                        </Border>
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                            <TextBlock x:Name="TxtPreviewTitle"
+                                       Text="Новая вкладка"
+                                       FontSize="12" FontWeight="SemiBold"
+                                       Foreground="{DynamicResource TextPrimaryBrush}"
+                                       TextTrimming="CharacterEllipsis"
+                                       MaxWidth="210"/>
+                            <TextBlock x:Name="TxtPreviewDomain"
+                                       Text="about:home"
+                                       FontSize="11"
+                                       Foreground="{DynamicResource TextSecondaryBrush}"
+                                       TextTrimming="CharacterEllipsis"
+                                       MaxWidth="210"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- Middle: Page Thumbnail Preview -->
+                    <Border Grid.Row="1"
+                            Height="145"
+                            CornerRadius="8"
+                            ClipToBounds="True"
+                            Background="{DynamicResource HeaderBrush}"
+                            BorderBrush="{DynamicResource BorderBrush}"
+                            BorderThickness="1"
+                            Margin="0,0,0,10">
+                        <Grid>
+                            <Image x:Name="ImgPreviewThumbnail"
+                                   Stretch="UniformToFill"
+                                   RenderOptions.BitmapScalingMode="HighQuality"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Top"/>
+                            <Border x:Name="BrdPreviewPlaceholder" Visibility="Collapsed" Background="{DynamicResource HeaderBrush}">
+                                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                                    <Path Data="{StaticResource IconGlobe}" Width="30" Height="30"
+                                          Fill="{DynamicResource TextSecondaryBrush}" Stretch="Uniform" HorizontalAlignment="Center" Margin="0,0,0,6"/>
+                                    <TextBlock Text="Предпросмотр вкладки" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" HorizontalAlignment="Center"/>
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+                    </Border>
+
+                    <!-- Bottom: Memory Consumption (RAM) & State -->
+                    <Border Grid.Row="2"
+                            Background="{DynamicResource HeaderBrush}"
+                            CornerRadius="8"
+                            Padding="10,6">
+                        <DockPanel>
+                            <TextBlock Text="⚡" FontSize="12" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock x:Name="TxtPreviewRam"
+                                       Text="Память: ~45 МБ"
+                                       FontSize="11" FontWeight="SemiBold"
+                                       Foreground="{DynamicResource AccentBrush}"
+                                       VerticalAlignment="Center"/>
+                            <TextBlock x:Name="TxtPreviewActiveStatus"
+                                       Text="Активна"
+                                       FontSize="10"
+                                       Foreground="{DynamicResource TextSecondaryBrush}"
+                                       HorizontalAlignment="Right"
+                                       VerticalAlignment="Center"/>
+                        </DockPanel>
+                    </Border>
                 </Grid>
             </Border>
         </Popup>

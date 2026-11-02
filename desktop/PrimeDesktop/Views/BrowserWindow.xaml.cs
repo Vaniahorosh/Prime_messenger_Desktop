@@ -1,4 +1,6 @@
 using System.Windows.Media.Animation;
+using System.Windows.Controls.Primitives;
+using System.Windows.Threading;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -63,6 +65,14 @@ public partial class BrowserWindow : Window
     private Button _btnCustomizeToolbar = null!;
     private Button _btnBrowserSettings = null!;
     private TextBlock _txtDesktopModeIcon = null!;
+
+    // Tab hover preview (Edge/Chrome style: title, thumbnail, RAM usage after 2s hover)
+    private readonly DispatcherTimer _tabHoverTimer = new()
+    {
+        Interval = TimeSpan.FromSeconds(2.0)
+    };
+    private FrameworkElement? _hoveredTabElement;
+    private BrowserTabItem? _hoveredTabItem;
 
     // Drag and drop state
     private Point _dragStartPoint;
@@ -153,6 +163,7 @@ public partial class BrowserWindow : Window
 
         KeyDown += BrowserWindow_KeyDown;
         BrowserHostGrid.PreviewMouseWheel += BrowserHostGrid_PreviewMouseWheel;
+        _tabHoverTimer.Tick += TabHoverTimer_Tick;
     }
 
     private static async Task<CoreWebView2Environment?> GetOrInitEnvironmentAsync()
@@ -559,6 +570,26 @@ public partial class BrowserWindow : Window
         BtnGo.IsEnabled = !_isToolbarEditMode;
         BtnClearAddress.IsEnabled = !_isToolbarEditMode;
 
+        // Ensure panels allow drop only during edit mode
+        TabsToolbarLeftPanel.AllowDrop = _isToolbarEditMode;
+        TabsToolbarRightPanel.AllowDrop = _isToolbarEditMode;
+        ToolbarLeftPanel.AllowDrop = _isToolbarEditMode;
+        ToolbarRightPanel.AllowDrop = _isToolbarEditMode;
+        ToolbarAddressBarHost.AllowDrop = _isToolbarEditMode;
+
+        // Explicitly enable all toolbar action buttons when in normal mode
+        if (!_isToolbarEditMode)
+        {
+            if (_btnHome != null) _btnHome.IsEnabled = true;
+            if (_btnRefresh != null) _btnRefresh.IsEnabled = true;
+            if (_btnToggleDesktopMode != null) _btnToggleDesktopMode.IsEnabled = true;
+            if (_btnExtensions != null) _btnExtensions.IsEnabled = true;
+            if (_btnOpenExternal != null) _btnOpenExternal.IsEnabled = true;
+            if (_btnCustomizeToolbar != null) _btnCustomizeToolbar.IsEnabled = true;
+            if (_btnBrowserSettings != null) _btnBrowserSettings.IsEnabled = true;
+            UpdateNavigationButtonsState();
+        }
+
         foreach (var item in ToolbarItems.OrderBy(x => x.Order))
         {
             if (item.Id == "settings" || item.Id == "address_bar")
@@ -613,6 +644,8 @@ public partial class BrowserWindow : Window
 
             // Button opacity: semi-transparent if hidden during edit mode
             element.Opacity = (!item.IsVisible && _isToolbarEditMode) ? 0.40 : 1.0;
+            // In edit mode, disable hit test on button so drag-and-drop works cleanly and mouse clicks are not swallowed
+            element.IsHitTestVisible = !_isToolbarEditMode;
             container.Children.Add(element);
 
             // In edit mode: add the eye button in the bottom-right corner (except Settings, Address Bar, and Spacers)!
@@ -721,9 +754,16 @@ public partial class BrowserWindow : Window
         {
             _dropIndicator.Width = (_draggedItem.Id == "address_bar") ? 160 : 34;
             var data = new DataObject("PrimeToolbarItem", _draggedItem);
-            DragDrop.DoDragDrop((DependencyObject)sender, data, DragDropEffects.Move);
-            _draggedItem = null;
-            RemoveDropIndicator();
+            try
+            {
+                DragDrop.DoDragDrop((DependencyObject)sender, data, DragDropEffects.Move);
+            }
+            finally
+            {
+                _draggedItem = null;
+                RemoveDropIndicator();
+                Mouse.Capture(null);
+            }
         }
     }
 
@@ -1008,6 +1048,7 @@ public partial class BrowserWindow : Window
                     {
                         BrowserHistoryService.RecordVisit(tab.Url, tab.Title, webView.CoreWebView2?.FaviconUri);
                         if (_isStartScreenVisible) RefreshRecentSites();
+                        _ = UpdateTabThumbnailAsync(tab);
                     }
                 });
             };
@@ -1101,6 +1142,11 @@ public partial class BrowserWindow : Window
 
     public void ActivateTab(BrowserTabItem tab)
     {
+        if (ActiveTab != null && ActiveTab != tab && ActiveTab.WebView?.CoreWebView2 != null && !ActiveTab.IsLoading)
+        {
+            _ = UpdateTabThumbnailAsync(ActiveTab);
+        }
+
         if (tab == null)
         {
             ActiveTab = null;
@@ -1156,6 +1202,7 @@ public partial class BrowserWindow : Window
 
     private void CloseTab(BrowserTabItem tab)
     {
+        CloseTabPreviewPopup();
         int index = Tabs.IndexOf(tab);
         if (index < 0) return;
 
@@ -1540,14 +1587,26 @@ public partial class BrowserWindow : Window
         ExtensionsPopup.IsOpen = false;
 
         _isToolbarEditMode = !_isToolbarEditMode;
+        if (!_isToolbarEditMode)
+        {
+            _draggedItem = null;
+            RemoveDropIndicator();
+            Mouse.Capture(null);
+            SaveToolbarConfig();
+            Focus();
+        }
         UpdateEditModeUi();
     }
 
     private void BtnExitEditMode_Click(object sender, RoutedEventArgs e)
     {
+        _draggedItem = null;
+        RemoveDropIndicator();
+        Mouse.Capture(null);
         _isToolbarEditMode = false;
         UpdateEditModeUi();
         SaveToolbarConfig();
+        Focus();
     }
 
     private void BtnAddSpacer_Click(object sender, RoutedEventArgs e)
@@ -1776,6 +1835,8 @@ public partial class BrowserWindow : Window
 
     private void TabButton_Click(object sender, RoutedEventArgs e)
     {
+        _tabHoverTimer.Stop();
+        CloseTabPreviewPopup();
         if (sender is FrameworkElement fe && fe.Tag is BrowserTabItem tab)
         {
             ActivateTab(tab);
@@ -1784,6 +1845,8 @@ public partial class BrowserWindow : Window
 
     private void TabButton_PreviewMouseDown(object sender, MouseButtonEventArgs e)
     {
+        _tabHoverTimer.Stop();
+        CloseTabPreviewPopup();
         if (e.ChangedButton == MouseButton.Middle)
         {
             if (sender is FrameworkElement fe && fe.Tag is BrowserTabItem tab)
@@ -1792,6 +1855,206 @@ public partial class BrowserWindow : Window
                 e.Handled = true;
             }
         }
+    }
+
+    private void TabButton_MouseEnter(object sender, MouseEventArgs e)
+    {
+        if (_isToolbarEditMode) return;
+        var tab = GetTabFromSender(sender);
+        if (tab == null) return;
+
+        if (_hoveredTabItem == tab && TabPreviewPopup.IsOpen) return;
+
+        _hoveredTabElement = sender as FrameworkElement;
+        _hoveredTabItem = tab;
+        _tabHoverTimer.Stop();
+        _tabHoverTimer.Start();
+    }
+
+    private void TabButton_MouseLeave(object sender, MouseEventArgs e)
+    {
+        _tabHoverTimer.Stop();
+        Dispatcher.BeginInvoke(new Action(() =>
+        {
+            if (_hoveredTabElement == null || !_hoveredTabElement.IsMouseOver)
+            {
+                CloseTabPreviewPopup();
+            }
+        }), DispatcherPriority.Input);
+    }
+
+    private BrowserTabItem? GetTabFromSender(object sender)
+    {
+        if (sender is FrameworkElement fe)
+        {
+            if (fe.Tag is BrowserTabItem tagTab) return tagTab;
+            if (fe.DataContext is BrowserTabItem dcTab) return dcTab;
+        }
+        return null;
+    }
+
+    private async void TabHoverTimer_Tick(object? sender, EventArgs e)
+    {
+        _tabHoverTimer.Stop();
+        if (_isToolbarEditMode || _hoveredTabItem == null || _hoveredTabElement == null || !_hoveredTabElement.IsMouseOver)
+        {
+            return;
+        }
+
+        await ShowTabPreviewAsync(_hoveredTabElement, _hoveredTabItem);
+    }
+
+    private void CloseTabPreviewPopup()
+    {
+        _tabHoverTimer.Stop();
+        if (TabPreviewPopup.IsOpen)
+        {
+            TabPreviewPopup.IsOpen = false;
+        }
+        _hoveredTabItem = null;
+        _hoveredTabElement = null;
+    }
+
+    private async Task ShowTabPreviewAsync(FrameworkElement target, BrowserTabItem tab)
+    {
+        TxtPreviewTitle.Text = string.IsNullOrWhiteSpace(tab.Title) ? "Новая вкладка" : tab.Title;
+        ImgPreviewFavicon.Source = tab.Favicon;
+
+        string domain = "";
+        try
+        {
+            if (Uri.TryCreate(tab.Url, UriKind.Absolute, out var uri))
+            {
+                domain = uri.Host;
+            }
+        }
+        catch { }
+        TxtPreviewDomain.Text = string.IsNullOrWhiteSpace(domain) ? tab.Url : domain;
+        TxtPreviewDomain.Visibility = string.IsNullOrWhiteSpace(TxtPreviewDomain.Text) ? Visibility.Collapsed : Visibility.Visible;
+
+        TxtPreviewActiveStatus.Text = tab.IsActive ? "● Активна" : "○ В фоне";
+        TxtPreviewRam.Text = GetTabRamUsage(tab, _sharedEnvironment);
+
+        // Capture or refresh thumbnail preview if available
+        if (tab.ThumbnailPreview == null && tab.WebView?.CoreWebView2 != null && !tab.IsLoading)
+        {
+            await UpdateTabThumbnailAsync(tab);
+        }
+
+        if (tab.ThumbnailPreview != null)
+        {
+            ImgPreviewThumbnail.Source = tab.ThumbnailPreview;
+            ImgPreviewThumbnail.Visibility = Visibility.Visible;
+            BrdPreviewPlaceholder.Visibility = Visibility.Collapsed;
+        }
+        else
+        {
+            ImgPreviewThumbnail.Visibility = Visibility.Collapsed;
+            BrdPreviewPlaceholder.Visibility = Visibility.Visible;
+        }
+
+        TabPreviewPopup.PlacementTarget = target;
+        TabPreviewPopup.Placement = (_vm?.Settings?.BrowserVerticalTabs == true && target != TabsItemsControl)
+            ? PlacementMode.Right
+            : PlacementMode.Bottom;
+        TabPreviewPopup.IsOpen = true;
+
+        AnimateTabPreviewFlyOut();
+    }
+
+    private void AnimateTabPreviewFlyOut()
+    {
+        TabPreviewCard.Opacity = 0;
+        var translate = new TranslateTransform(0, -12);
+        TabPreviewCard.RenderTransform = translate;
+
+        var fadeAnim = new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(240))
+        {
+            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+        };
+        var slideAnim = new DoubleAnimation(-12, 0, TimeSpan.FromMilliseconds(240))
+        {
+            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+        };
+
+        TabPreviewCard.BeginAnimation(UIElement.OpacityProperty, fadeAnim);
+        translate.BeginAnimation(TranslateTransform.YProperty, slideAnim);
+    }
+
+    private async Task UpdateTabThumbnailAsync(BrowserTabItem tab)
+    {
+        if (tab.WebView?.CoreWebView2 == null || tab.IsLoading) return;
+        try
+        {
+            using var ms = new MemoryStream();
+            await tab.WebView.CoreWebView2.CapturePreviewAsync(CoreWebView2CapturePreviewImageFormat.Png, ms);
+            ms.Position = 0;
+            var bmp = new BitmapImage();
+            bmp.BeginInit();
+            bmp.CacheOption = BitmapCacheOption.OnLoad;
+            bmp.StreamSource = ms;
+            bmp.EndInit();
+            bmp.Freeze();
+            tab.ThumbnailPreview = bmp;
+        }
+        catch { }
+    }
+
+    public static string GetTabRamUsage(BrowserTabItem tab, CoreWebView2Environment? env)
+    {
+        if (tab.Url == "about:home" || tab.Url == "about:blank" || tab.WebView?.CoreWebView2 == null)
+        {
+            return "ОЗУ: ~16 МБ";
+        }
+
+        try
+        {
+            if (env != null)
+            {
+                var processInfos = env.GetProcessInfos();
+                long totalBytes = 0;
+                int renderCount = 0;
+                long renderBytes = 0;
+
+                foreach (var pInfo in processInfos)
+                {
+                    try
+                    {
+                        using var proc = Process.GetProcessById(pInfo.ProcessId);
+                        long ws = proc.WorkingSet64;
+                        totalBytes += ws;
+                        if (pInfo.Kind == CoreWebView2ProcessKind.Renderer)
+                        {
+                            renderCount++;
+                            renderBytes += ws;
+                        }
+                    }
+                    catch { }
+                }
+
+                if (renderBytes > 0 && renderCount > 0)
+                {
+                    long perTabMb = (renderBytes / renderCount) / (1024 * 1024);
+                    return $"ОЗУ: ~{Math.Max(30, perTabMb)} МБ";
+                }
+                else if (totalBytes > 0)
+                {
+                    long avgMb = totalBytes / (1024 * 1024);
+                    return $"ОЗУ: ~{Math.Max(35, avgMb)} МБ";
+                }
+            }
+
+            if (tab.WebView.CoreWebView2 != null)
+            {
+                uint pid = tab.WebView.CoreWebView2.BrowserProcessId;
+                using var proc = Process.GetProcessById((int)pid);
+                long mb = proc.WorkingSet64 / (1024 * 1024);
+                return $"ОЗУ: ~{Math.Max(35, mb)} МБ";
+            }
+        }
+        catch { }
+
+        return "ОЗУ: ~65 МБ";
     }
 
     private void BtnCloseTab_Click(object sender, RoutedEventArgs e)

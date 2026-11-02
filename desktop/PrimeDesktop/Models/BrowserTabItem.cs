@@ -16,6 +16,8 @@ public class BrowserTabItem : INotifyPropertyChanged
     private bool _isSecure = true;
     private bool _isActive;
     private bool _isPinned;
+    private ImageSource? _thumbnailPreview;
+    private string _ramUsage = "";
 
     public string Id { get; } = Guid.NewGuid().ToString("N");
 
@@ -59,6 +61,18 @@ public class BrowserTabItem : INotifyPropertyChanged
     {
         get => _isPinned;
         set => SetProperty(ref _isPinned, value);
+    }
+
+    public ImageSource? ThumbnailPreview
+    {
+        get => _thumbnailPreview;
+        set => SetProperty(ref _thumbnailPreview, value);
+    }
+
+    public string RamUsage
+    {
+        get => _ramUsage;
+        set => SetProperty(ref _ramUsage, value);
     }
 
     public WebView2? WebView { get; set; }
