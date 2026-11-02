@@ -1,6 +1,7 @@
 using System.Windows.Media.Animation;
 using System.Windows.Controls.Primitives;
 using System.Windows.Threading;
+using System.Windows.Shell;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -268,6 +269,7 @@ public partial class BrowserWindow : Window
         };
         _btnHome.Click += (s, e) =>
         {
+            if (_isToolbarEditMode) return;
             NavigateCurrentTab("about:home");
         };
 
@@ -390,6 +392,7 @@ public partial class BrowserWindow : Window
             spacerBorder.CornerRadius = new CornerRadius(6);
             spacerBorder.ToolTip = "Отступ (перетащите для перемещения, ✕ для удаления)";
             spacerBorder.Margin = new Thickness(3, 0, 3, 0);
+            WindowChrome.SetIsHitTestVisibleInChrome(spacerBorder, true);
 
             var spContent = new Grid();
             var icon = new TextBlock
@@ -432,6 +435,7 @@ public partial class BrowserWindow : Window
                     }
                 }
             };
+            WindowChrome.SetIsHitTestVisibleInChrome(delBtn, true);
             delBtn.Click += (s, e) =>
             {
                 var itemToRemove = ToolbarItems.FirstOrDefault(x => x.Id == id);
@@ -630,8 +634,10 @@ public partial class BrowserWindow : Window
             var container = new Grid
             {
                 Margin = new Thickness(1, 0, 1, 0),
-                Tag = item
+                Tag = item,
+                Background = _isToolbarEditMode ? Brushes.Transparent : null
             };
+            WindowChrome.SetIsHitTestVisibleInChrome(container, true);
 
             // In edit mode: allow dragging
             if (_isToolbarEditMode)
@@ -646,8 +652,16 @@ public partial class BrowserWindow : Window
 
             // Button opacity: semi-transparent if hidden during edit mode
             element.Opacity = (!item.IsVisible && _isToolbarEditMode) ? 0.40 : 1.0;
-            // In edit mode, disable hit test on button so drag-and-drop works cleanly and mouse clicks are not swallowed
-            element.IsHitTestVisible = !_isToolbarEditMode;
+            // In edit mode, regular buttons are not hit-testable directly so dragging anywhere on them works,
+            // while spacers must remain hit-testable so their delete button and context menu function!
+            if (item.Id.StartsWith("spacer"))
+            {
+                element.IsHitTestVisible = true;
+            }
+            else
+            {
+                element.IsHitTestVisible = !_isToolbarEditMode;
+            }
             container.Children.Add(element);
 
             // In edit mode: add the eye button in the bottom-right corner (except Settings, Address Bar, and Spacers)!
@@ -724,6 +738,18 @@ public partial class BrowserWindow : Window
             }
         }
 
+        if (_isToolbarEditMode)
+        {
+            if (TabsToolbarLeftPanel.Children.Count == 0)
+            {
+                TabsToolbarLeftPanel.Children.Add(CreateDropZoneHint("Вкладки (слева)"));
+            }
+            if (TabsToolbarRightPanel.Children.Count == 0)
+            {
+                TabsToolbarRightPanel.Children.Add(CreateDropZoneHint("Вкладки (справа)"));
+            }
+        }
+
         bool hasRow1 = ToolbarLeftPanel.Children.Count > 0 || ToolbarRightPanel.Children.Count > 0 || ToolbarAddressBarHost.Child != null || _isToolbarEditMode;
         RowAddressBar.Height = hasRow1 ? GridLength.Auto : new GridLength(0);
         ToolbarRow1.Visibility = hasRow1 ? Visibility.Visible : Visibility.Collapsed;
@@ -738,6 +764,17 @@ public partial class BrowserWindow : Window
     private void ToolbarItem_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
         if (!_isToolbarEditMode) return;
+
+        // If clicked on eye toggle button or spacer delete button, let the button handle it
+        if (e.OriginalSource is DependencyObject dep)
+        {
+            var btn = FindVisualParent<Button>(dep);
+            if (btn != null && (btn.Tag is BrowserToolbarItemConfig || btn.ToolTip?.ToString()?.Contains("Удалить") == true))
+            {
+                return;
+            }
+        }
+
         _dragStartPoint = e.GetPosition(this);
         if (sender is FrameworkElement fe && fe.Tag is BrowserToolbarItemConfig item)
         {
@@ -769,15 +806,40 @@ public partial class BrowserWindow : Window
         }
     }
 
+    private Panel? FindToolbarPanel(DependencyObject? cur)
+    {
+        while (cur != null)
+        {
+            if (cur == TabsToolbarLeftPanel) return TabsToolbarLeftPanel;
+            if (cur == TabsToolbarRightPanel) return TabsToolbarRightPanel;
+            if (cur == ToolbarLeftPanel) return ToolbarLeftPanel;
+            if (cur == ToolbarRightPanel) return ToolbarRightPanel;
+            if (cur == TabsScrollViewer || cur == TabsItemsControl) return TabsToolbarLeftPanel;
+            cur = VisualTreeHelper.GetParent(cur);
+        }
+        return null;
+    }
+
+    private static T? FindVisualParent<T>(DependencyObject? child) where T : DependencyObject
+    {
+        while (child != null)
+        {
+            if (child is T parent) return parent;
+            child = VisualTreeHelper.GetParent(child);
+        }
+        return null;
+    }
+
     private void ToolbarItem_DragOver(object sender, DragEventArgs e)
     {
         if (!_isToolbarEditMode || !e.Data.GetDataPresent("PrimeToolbarItem")) return;
         e.Effects = DragDropEffects.Move;
         e.Handled = true;
 
-        if (sender is FrameworkElement fe && fe.Parent is Panel parentPanel)
+        var panel = FindToolbarPanel(sender as DependencyObject);
+        if (panel != null)
         {
-            UpdateDropIndicator(parentPanel, e.GetPosition(parentPanel));
+            UpdateDropIndicator(panel, e.GetPosition(panel));
         }
     }
 
@@ -792,7 +854,8 @@ public partial class BrowserWindow : Window
         e.Effects = DragDropEffects.Move;
         e.Handled = true;
 
-        if (sender is Panel panel)
+        var panel = FindToolbarPanel(sender as DependencyObject);
+        if (panel != null)
         {
             UpdateDropIndicator(panel, e.GetPosition(panel));
         }
@@ -817,7 +880,20 @@ public partial class BrowserWindow : Window
         var dropped = e.Data.GetData("PrimeToolbarItem") as BrowserToolbarItemConfig;
         if (dropped == null) return;
 
-        if (sender == ToolbarAddressBarHost || sender == CardAddressBar || (sender is FrameworkElement feCenter && feCenter.Parent == ToolbarAddressBarHost))
+        DependencyObject? cur = sender as DependencyObject;
+        bool isCenter = false;
+        DependencyObject? checkCur = cur;
+        while (checkCur != null)
+        {
+            if (checkCur == ToolbarAddressBarHost || checkCur == CardAddressBar)
+            {
+                isCenter = true;
+                break;
+            }
+            checkCur = VisualTreeHelper.GetParent(checkCur);
+        }
+
+        if (isCenter)
         {
             dropped.Placement = "center";
             ToolbarItems.Remove(dropped);
@@ -829,16 +905,7 @@ public partial class BrowserWindow : Window
             return;
         }
 
-        Panel? targetPanel = null;
-        if (sender is Panel p)
-        {
-            targetPanel = p;
-        }
-        else if (sender is FrameworkElement fe && fe.Parent is Panel parentP)
-        {
-            targetPanel = parentP;
-        }
-
+        var targetPanel = FindToolbarPanel(cur);
         if (targetPanel == null) return;
 
         string targetPlacement = "left";
@@ -882,11 +949,50 @@ public partial class BrowserWindow : Window
         e.Handled = true;
     }
 
+    private Border CreateDropZoneHint(string label)
+    {
+        var b = new Border
+        {
+            BorderBrush = (Brush)FindResource("BorderBrush"),
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(6),
+            Background = (Brush)FindResource("HeaderBrush"),
+            Padding = new Thickness(8, 2, 8, 2),
+            Height = 28,
+            VerticalAlignment = VerticalAlignment.Center,
+            Opacity = 0.50,
+            AllowDrop = true,
+            IsHitTestVisible = true,
+            ToolTip = "Перетащите элемент сюда"
+        };
+        WindowChrome.SetIsHitTestVisibleInChrome(b, true);
+        b.DragOver += ToolbarPanel_DragOver;
+        b.Drop += ToolbarPanel_Drop;
+        b.Child = new TextBlock
+        {
+            Text = label,
+            FontSize = 10,
+            Foreground = (Brush)FindResource("TextSecondaryBrush"),
+            VerticalAlignment = VerticalAlignment.Center,
+            HorizontalAlignment = HorizontalAlignment.Center
+        };
+        return b;
+    }
+
     private void UpdateDropIndicator(Panel panel, Point mousePos)
     {
         if (_dropIndicator == null) return;
         _dropIndicator.IsHitTestVisible = false;
         _dropIndicator.Width = (_draggedItem?.Id == "address_bar") ? 160 : 34;
+
+        // Remove hint placeholder if present in this panel
+        for (int i = panel.Children.Count - 1; i >= 0; i--)
+        {
+            if (panel.Children[i] is Border b && b.Opacity == 0.50)
+            {
+                panel.Children.RemoveAt(i);
+            }
+        }
 
         int targetIdx = GetDropIndex(panel, mousePos);
 
@@ -918,17 +1024,14 @@ public partial class BrowserWindow : Window
         foreach (UIElement child in panel.Children)
         {
             if (child == _dropIndicator) continue;
+            if (child is Border b && b.Opacity == 0.50) continue;
             if (child is FrameworkElement fe)
             {
                 Point pos = fe.TranslatePoint(new Point(0, 0), panel);
-                double midX = pos.X + fe.ActualWidth / 2.0;
+                double midX = pos.X + (fe.ActualWidth / 2.0);
                 if (mousePos.X > midX)
                 {
                     index++;
-                }
-                else
-                {
-                    break;
                 }
             }
         }
@@ -2156,6 +2259,7 @@ public partial class BrowserWindow : Window
 
     private void BtnBack_Click(object sender, RoutedEventArgs e)
     {
+        if (_isToolbarEditMode) return;
         if (ActiveTab?.WebView != null)
         {
             if (ActiveTab.WebView.CanGoBack)
@@ -2171,6 +2275,7 @@ public partial class BrowserWindow : Window
 
     private void BtnForward_Click(object sender, RoutedEventArgs e)
     {
+        if (_isToolbarEditMode) return;
         if (ActiveTab?.WebView != null)
         {
             if (ActiveTab.WebView.CanGoForward)
@@ -2186,6 +2291,7 @@ public partial class BrowserWindow : Window
 
     private void BtnRefresh_Click(object sender, RoutedEventArgs e)
     {
+        if (_isToolbarEditMode) return;
         if (ActiveTab?.WebView != null)
         {
             if (ActiveTab.IsLoading)

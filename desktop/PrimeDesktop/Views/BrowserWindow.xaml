@@ -443,12 +443,12 @@
 
                 <!-- Tabs Toolbar Left Panel (Drop Target) -->
                 <StackPanel x:Name="TabsToolbarLeftPanel" DockPanel.Dock="Left" Orientation="Horizontal" VerticalAlignment="Center"
-                            Background="Transparent" MinWidth="10"
+                            Background="Transparent" MinWidth="10" WindowChrome.IsHitTestVisibleInChrome="True"
                             Margin="0,0,4,0" AllowDrop="True" DragOver="ToolbarPanel_DragOver" Drop="ToolbarPanel_Drop" DragLeave="ToolbarPanel_DragLeave"/>
 
                 <!-- Tabs Toolbar Right Panel (Drop Target) -->
                 <StackPanel x:Name="TabsToolbarRightPanel" DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center"
-                            Background="Transparent" MinWidth="10"
+                            Background="Transparent" MinWidth="10" WindowChrome.IsHitTestVisibleInChrome="True"
                             Margin="4,0,4,0" AllowDrop="True" DragOver="ToolbarPanel_DragOver" Drop="ToolbarPanel_Drop" DragLeave="ToolbarPanel_DragLeave"/>
 
                 <!-- Tabs Address Bar Host (Host for address bar when in tab row) -->
@@ -577,14 +577,16 @@
 
                     <!-- Left Customizable Button Panel -->
                     <StackPanel Grid.Column="0" x:Name="ToolbarLeftPanel" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,8,0"
-                                AllowDrop="True" DragOver="ToolbarPanel_DragOver" Drop="ToolbarPanel_Drop"/>
+                                Background="Transparent"
+                                AllowDrop="True" DragOver="ToolbarPanel_DragOver" Drop="ToolbarPanel_Drop" DragLeave="ToolbarPanel_DragLeave"/>
 
                     <!-- Center: Address Bar Host (Stretches across all available center width!) -->
                     <Border Grid.Column="1"
                             x:Name="ToolbarAddressBarHost"
                             VerticalAlignment="Center"
                             HorizontalAlignment="Stretch"
-                            AllowDrop="True" DragOver="ToolbarPanel_DragOver" Drop="ToolbarPanel_Drop"
+                            Background="Transparent"
+                            AllowDrop="True" DragOver="ToolbarPanel_DragOver" Drop="ToolbarPanel_Drop" DragLeave="ToolbarPanel_DragLeave"
                             Margin="0,0,0,0">
                         <Border x:Name="CardAddressBar"
                                 Background="{DynamicResource HeaderBrush}"
@@ -655,7 +657,8 @@
 
                     <!-- Right Customizable Button Panel -->
                     <StackPanel Grid.Column="2" x:Name="ToolbarRightPanel" Orientation="Horizontal" VerticalAlignment="Center" Margin="8,0,0,0"
-                                AllowDrop="True" DragOver="ToolbarPanel_DragOver" Drop="ToolbarPanel_Drop"/>
+                                Background="Transparent"
+                                AllowDrop="True" DragOver="ToolbarPanel_DragOver" Drop="ToolbarPanel_Drop" DragLeave="ToolbarPanel_DragLeave"/>
                 </Grid>
             </Border>
         </StackPanel>
