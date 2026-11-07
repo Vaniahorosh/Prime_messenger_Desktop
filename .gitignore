@@ -1,16 +1,7 @@
-# Build & Output
-bin/
-obj/
-desktop/**/bin/
-desktop/**/obj/
-desktop/PrimeSetup/Payload/app_files.zip
-
-# Visual Studio & IDE
-.vs/
-*.user
-*.suo
-*.userosscache
-*.sln.docstates
+# Rust build
+/target
+**/*.rs.bk
+*.pdb
 
 # OS & Temp
 Thumbs.db
