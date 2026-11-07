@@ -46,6 +46,8 @@ public partial class MainWindow : Window
         };
         Closed += (s, e) => App.Log("MainWindow Closed");
         StateChanged += MainWindow_StateChanged;
+        SizeChanged += MainWindow_SizeChanged;
+        Loaded += MainWindow_Loaded;
 
         TrayService = new SystemTrayService(this);
         if (MsgInputTextBox != null)
@@ -863,5 +865,74 @@ public partial class MainWindow : Window
         }
 
         return false;
+    }
+
+    private void MainWindow_Loaded(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is MainViewModel vm)
+        {
+            vm.PropertyChanged += (s, args) =>
+            {
+                if (args.PropertyName == nameof(MainViewModel.SelectedChat) ||
+                    args.PropertyName == nameof(MainViewModel.HasSelectedChat) ||
+                    args.PropertyName == nameof(MainViewModel.IsMediaDrawerOpen))
+                {
+                    UpdateResponsiveLayout(ActualWidth);
+                }
+            };
+            UpdateResponsiveLayout(ActualWidth);
+        }
+    }
+
+    private void MainWindow_SizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        UpdateResponsiveLayout(e.NewSize.Width);
+    }
+
+    private void UpdateResponsiveLayout(double windowWidth)
+    {
+        if (DataContext is not MainViewModel vm) return;
+
+        bool isCompact = windowWidth < 740;
+        if (vm.IsCompactWindow != isCompact)
+        {
+            vm.IsCompactWindow = isCompact;
+        }
+
+        if (ColSidebar == null || ColChatView == null) return;
+
+        if (isCompact)
+        {
+            // Compact mode: show either sidebar or chat, not both
+            if (vm.HasSelectedChat)
+            {
+                ColSidebar.Width = new GridLength(0);
+                ColSidebar.MinWidth = 0;
+                if (ColSplitter1 != null) ColSplitter1.Width = new GridLength(0);
+            }
+            else
+            {
+                ColSidebar.Width = new GridLength(1, GridUnitType.Star);
+                ColSidebar.MinWidth = 0;
+                if (ColSplitter1 != null) ColSplitter1.Width = new GridLength(0);
+            }
+
+            // In compact mode, drawer should not exceed remaining width
+            if (ColDrawer != null && vm.IsMediaDrawerOpen)
+            {
+                ColDrawer.MaxWidth = Math.Max(260, windowWidth - 60);
+            }
+        }
+        else
+        {
+            // Normal desktop mode: wide layout
+            if (ColSidebar.Width.Value == 0 || ColSidebar.Width.IsStar)
+            {
+                ColSidebar.Width = new GridLength(320);
+                ColSidebar.MinWidth = 72;
+            }
+            if (ColSplitter1 != null) ColSplitter1.Width = GridLength.Auto;
+            if (ColDrawer != null) ColDrawer.MaxWidth = 850;
+        }
     }
 }

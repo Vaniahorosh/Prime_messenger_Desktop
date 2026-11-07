@@ -852,7 +852,9 @@
                                              Padding="0"
                                              VerticalAlignment="Center"
                                              KeyDown="StartSearchTextBox_KeyDown"
-                                             TextChanged="StartSearchTextBox_TextChanged"/>
+                                             TextChanged="StartSearchTextBox_TextChanged"
+                                             GotFocus="StartSearchTextBox_GotFocus"
+                                             LostFocus="StartSearchTextBox_LostFocus"/>
 
                                     <TextBlock x:Name="StartSearchPlaceholder"
                                                Text="Искать в Интернете или ввести адрес..."

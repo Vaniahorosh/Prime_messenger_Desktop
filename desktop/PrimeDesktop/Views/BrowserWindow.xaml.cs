@@ -2822,7 +2822,23 @@ public partial class BrowserWindow : Window
 
     private void StartSearchTextBox_TextChanged(object sender, TextChangedEventArgs e)
     {
-        StartSearchPlaceholder.Visibility = string.IsNullOrEmpty(StartSearchTextBox.Text)
+        UpdateStartSearchPlaceholder();
+    }
+
+    private void StartSearchTextBox_GotFocus(object sender, RoutedEventArgs e)
+    {
+        UpdateStartSearchPlaceholder();
+    }
+
+    private void StartSearchTextBox_LostFocus(object sender, RoutedEventArgs e)
+    {
+        UpdateStartSearchPlaceholder();
+    }
+
+    private void UpdateStartSearchPlaceholder()
+    {
+        if (StartSearchPlaceholder == null || StartSearchTextBox == null) return;
+        StartSearchPlaceholder.Visibility = (string.IsNullOrEmpty(StartSearchTextBox.Text) && !StartSearchTextBox.IsFocused)
             ? Visibility.Visible
             : Visibility.Collapsed;
     }

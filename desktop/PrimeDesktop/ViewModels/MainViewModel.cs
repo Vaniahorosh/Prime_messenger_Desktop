@@ -1351,16 +1351,20 @@ public class MainViewModel : ViewModelBase
     }
 
     private int _selectedSettingsTab = 0;
-
     public int SelectedSettingsTab
-
     {
         get => _selectedSettingsTab;
-
         set => SetProperty(ref _selectedSettingsTab, value);
+    }
 
-    }    private bool _isDiscoveryOpen;
+    private bool _isCompactWindow;
+    public bool IsCompactWindow
+    {
+        get => _isCompactWindow;
+        set => SetProperty(ref _isCompactWindow, value);
+    }
 
+    private bool _isDiscoveryOpen;
     public bool IsDiscoveryOpen
 
     {

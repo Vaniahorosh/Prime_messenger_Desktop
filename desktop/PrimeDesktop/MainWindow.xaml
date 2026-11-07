@@ -12,7 +12,8 @@
 
         Title="Prime Desktop" Icon="Assets/prime.ico" Height="720" Width="1100"
 
-        MinHeight="550" MinWidth="850"
+        MinHeight="400" MinWidth="440"
+        UseLayoutRounding="True" TextOptions.TextFormattingMode="Display"
 
         WindowStartupLocation="CenterScreen"
 
@@ -211,10 +212,10 @@
         <Grid Grid.Row="1" x:Name="MainContentGrid">
 
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="320" MinWidth="72" MaxWidth="450"/> <!-- Col 0: Sidebar (can shrink to 72px for avatar rail) -->
-                <ColumnDefinition Width="Auto"/>                             <!-- Col 1: Splitter 1 -->
-                <ColumnDefinition Width="*"/>                                <!-- Col 2: Chat View -->
-                <ColumnDefinition Width="Auto"/>                             <!-- Col 3: Splitter 2 -->
+                <ColumnDefinition x:Name="ColSidebar" Width="320" MinWidth="0" MaxWidth="450"/> <!-- Col 0: Sidebar -->
+                <ColumnDefinition x:Name="ColSplitter1" Width="Auto"/>                             <!-- Col 1: Splitter 1 -->
+                <ColumnDefinition x:Name="ColChatView" Width="*"/>                                <!-- Col 2: Chat View -->
+                <ColumnDefinition x:Name="ColSplitter2" Width="Auto"/>                             <!-- Col 3: Splitter 2 -->
                 <ColumnDefinition x:Name="ColDrawer" MaxWidth="850">                            <!-- Col 4: Profile & Info Drawer -->
                     <ColumnDefinition.Style>
                         <Style TargetType="ColumnDefinition">
@@ -556,6 +557,14 @@
 
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
 
+                            <!-- Adaptive Back to Chats Button (shown when window is compact) -->
+                            <Button x:Name="BtnAdaptiveBackToChats" Style="{StaticResource ModernButton}"
+                                    Command="{Binding CloseActiveChatCommand}" ToolTip="Назад к чатам"
+                                    Width="34" Height="34" Padding="0" Margin="0,0,8,0"
+                                    Visibility="{Binding IsCompactWindow, Converter={StaticResource BoolToVis}}">
+                                <TextBlock Text="‹" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,-4,1,0"/>
+                            </Button>
+
                             <Border Width="38" Height="38" CornerRadius="{Binding HeaderAvatarCornerRadius}" Background="{DynamicResource CardBrush}" Margin="0,0,12,0">
 
                                 <Grid>
@@ -708,15 +717,16 @@
                                             <ContextMenu Style="{StaticResource ModernContextMenu}">
                                                                                                 <!-- Reaction Island (Horizontal frequent reactions row + '+' button for full collection) -->
                                                 <!-- Reaction Island (Horizontal frequent reactions row + '+' button for full collection) -->
-                                                <MenuItem StaysOpenOnClick="True"
+                                                <MenuItem Style="{x:Null}"
+                                                          StaysOpenOnClick="True"
                                                           Focusable="False"
                                                           Padding="0"
                                                           Margin="0"
-                                                          Height="46"
-                                                          MinHeight="46">
+                                                          Height="48"
+                                                          MinHeight="48">
                                                     <MenuItem.Template>
                                                         <ControlTemplate TargetType="MenuItem">
-                                                            <Border Background="#101824" BorderBrush="#25374E" BorderThickness="1" CornerRadius="21" Padding="6,2" Margin="2,2,2,6" Height="42" MaxWidth="380" HorizontalAlignment="Stretch" VerticalAlignment="Center">
+                                                            <Border Background="#101824" BorderBrush="#25374E" BorderThickness="1" CornerRadius="22" Padding="6,2" Margin="2,2,2,6" Height="44" HorizontalAlignment="Stretch" VerticalAlignment="Center">
                                                                 <Border.Effect>
                                                                     <DropShadowEffect BlurRadius="16" ShadowDepth="4" Direction="270" Opacity="0.5" Color="#000000"/>
                                                                 </Border.Effect>
@@ -736,7 +746,7 @@
                                                                     <ScrollViewer HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled"
                                                                                   PanningMode="HorizontalOnly"
                                                                                   VerticalAlignment="Center"
-                                                                                  Height="34"
+                                                                                  Height="36"
                                                                                   PreviewMouseWheel="ReactionScrollViewer_PreviewMouseWheel">
                                                                         <ItemsControl ItemsSource="{Binding PlacementTarget.Tag.QuickReactions, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
                                                                                       VerticalAlignment="Center">
@@ -1631,184 +1641,181 @@
                     <!-- Scrollable Profile Content -->
                     <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="14">
                         <StackPanel>
-                            <!-- 7.1. Header Card with Large Photo, Left Actions, and Story Avatar Flipping -->
-                            <Border Height="270" CornerRadius="16" ClipToBounds="True" Background="{DynamicResource CardBrush}" Margin="0,0,0,14" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
-                                <Grid>
-                                    <!-- Fallback Initials Display -->
-                                    <Grid Background="{DynamicResource AccentBrush}" Visibility="{Binding SelectedChat.HasAvatar, Converter={StaticResource InverseBoolToVis}}">
-                                        <TextBlock Text="{Binding SelectedChat.Initials}" Foreground="White" FontSize="56" FontWeight="Bold"
-                                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                    </Grid>
+                            <!-- 7.1. Android PersonInformation Header: Left Actions Column + Right Photo Card -->
+                            <Grid Margin="0,0,0,14">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="72"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
 
-                                    <!-- Actual Avatar Photo (Floods the top/card) -->
-                                    <Image Source="{Binding SelectedChat.CurrentAvatarDisplayPath, Converter={StaticResource NonLockingImgConverter}}" Stretch="UniformToFill"
-                                           RenderOptions.BitmapScalingMode="HighQuality"
-                                           Visibility="{Binding SelectedChat.HasAvatar, Converter={StaticResource BoolToVis}}"/>
-
-                                    <!-- Left / Right Click Areas for fast cycling through avatar history -->
-                                    <Grid Visibility="{Binding SelectedChat.HasMultipleAvatars, Converter={StaticResource BoolToVis}}" Margin="48,25,0,80">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="*"/>
-                                        </Grid.ColumnDefinitions>
-                                        <Border Grid.Column="0" Background="Transparent" Cursor="Hand" ToolTip="Предыдущий аватар">
-                                            <Border.InputBindings>
-                                                <MouseBinding Gesture="LeftClick" Command="{Binding PrevContactAvatarCommand}"/>
-                                            </Border.InputBindings>
-                                        </Border>
-                                        <Border Grid.Column="1" Background="Transparent" Cursor="Hand" ToolTip="Следующий аватар">
-                                            <Border.InputBindings>
-                                                <MouseBinding Gesture="LeftClick" Command="{Binding NextContactAvatarCommand}"/>
-                                            </Border.InputBindings>
-                                        </Border>
-                                    </Grid>
-
-                                    <!-- Context Menu Area for the Avatar Card -->
-                                    <Border Background="Transparent" IsHitTestVisible="True">
-                                        <Border.ContextMenu>
-                                            <ContextMenu Style="{StaticResource ModernContextMenu}">
-                                                <MenuItem Header="📷 Сменить аватар" Style="{StaticResource ModernMenuItem}" Command="{Binding ChangeContactAvatarCommand}"/>
-                                                <MenuItem Header="🗑️ Удалить этот аватар из истории" Style="{StaticResource DangerMenuItem}" Command="{Binding DeleteContactAvatarCommand}" Visibility="{Binding SelectedChat.HasAvatar, Converter={StaticResource BoolToVis}}"/>
-                                            </ContextMenu>
-                                        </Border.ContextMenu>
-                                    </Border>
-
-                                    <!-- Top Segment Indicator Bars (Telegram / Instagram story style) -->
-                                    <ItemsControl ItemsSource="{Binding SelectedChat.AvatarSegments}"
-                                                  VerticalAlignment="Top" Margin="14,12,14,0"
-                                                  Visibility="{Binding SelectedChat.HasMultipleAvatars, Converter={StaticResource BoolToVis}}"
-                                                  IsHitTestVisible="False">
-                                        <ItemsControl.ItemsPanel>
-                                            <ItemsPanelTemplate>
-                                                <UniformGrid Rows="1"/>
-                                            </ItemsPanelTemplate>
-                                        </ItemsControl.ItemsPanel>
-                                        <ItemsControl.ItemTemplate>
-                                            <DataTemplate>
-                                                <Border Height="3" Margin="2,0" CornerRadius="1.5">
-                                                    <Border.Style>
-                                                        <Style TargetType="Border">
-                                                            <Setter Property="Background" Value="#55FFFFFF"/>
-                                                            <Style.Triggers>
-                                                                <DataTrigger Binding="{Binding IsActive}" Value="True">
-                                                                    <Setter Property="Background" Value="#FFFFFFFF"/>
-                                                                </DataTrigger>
-                                                            </Style.Triggers>
-                                                        </Style>
-                                                    </Border.Style>
-                                                </Border>
-                                            </DataTemplate>
-                                        </ItemsControl.ItemTemplate>
-                                    </ItemsControl>
-
-                                    <!-- Left Chevron Navigation Button (‹) -->
-                                    <Button Style="{StaticResource ProfileChevronButton}"
-                                            Command="{Binding PrevContactAvatarCommand}"
-                                            HorizontalAlignment="Left" VerticalAlignment="Center"
-                                            Margin="52,0,0,0"
-                                            ToolTip="Предыдущий аватар"
-                                            Visibility="{Binding SelectedChat.HasMultipleAvatars, Converter={StaticResource BoolToVis}}">
-                                        <TextBlock Text="‹" FontSize="20" FontWeight="Bold" Foreground="White" Margin="0,-2,1,0"/>
-                                    </Button>
-
-                                    <!-- Right Chevron Navigation Button (›) -->
-                                    <Button Style="{StaticResource ProfileChevronButton}"
-                                            Command="{Binding NextContactAvatarCommand}"
-                                            HorizontalAlignment="Right" VerticalAlignment="Center"
-                                            Margin="0,0,12,0"
-                                            ToolTip="Следующий аватар"
-                                            Visibility="{Binding SelectedChat.HasMultipleAvatars, Converter={StaticResource BoolToVis}}">
-                                        <TextBlock Text="›" FontSize="20" FontWeight="Bold" Foreground="White" Margin="1,-2,0,0"/>
-                                    </Button>
-
-                                    <!-- Left Vertical Action Buttons (Square along the left middle edge, expanding label on hover) -->
-                                    <StackPanel HorizontalAlignment="Left" VerticalAlignment="Center" Margin="10,0,0,0">
-                                        <!-- 1. Закрыть -->
-                                        <Button Style="{StaticResource ProfileGlassButton}"
+                                <!-- Left Actions Column (Android layoutLeftColumn) -->
+                                <StackPanel Grid.Column="0" VerticalAlignment="Center" HorizontalAlignment="Center">
+                                    <!-- 1. Назад (btnBack) -->
+                                    <StackPanel HorizontalAlignment="Center" Margin="0,0,0,10">
+                                        <Button Style="{StaticResource AndroidProfileActionButton}"
                                                 Command="{Binding ToggleMediaDrawerCommand}"
-                                                ToolTip="Закрыть"
-                                                Margin="0,0,0,8">
-                                            <StackPanel Orientation="Horizontal">
-                                                <Border Width="36" Height="36">
-                                                    <TextBlock Text="✕" FontSize="12" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                                </Border>
-                                                <TextBlock Text="Закрыть" FontSize="11" FontWeight="SemiBold" Foreground="White" VerticalAlignment="Center" Margin="0,0,12,0"/>
-                                            </StackPanel>
+                                                ToolTip="Назад">
+                                            <Path Data="{StaticResource IconArrowLeft}" Fill="{DynamicResource TextPrimaryBrush}" Width="18" Height="18" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                         </Button>
-
-                                        <!-- 2. Фото -->
-                                        <Button Style="{StaticResource ProfileGlassButton}"
-                                                Command="{Binding OpenPhotoViewerCommand}"
-                                                CommandParameter="{Binding SelectedChat.CurrentAvatarDisplayPath}"
-                                                ToolTip="Просмотр фото"
-                                                Margin="0,0,0,8">
-                                            <StackPanel Orientation="Horizontal">
-                                                <Border Width="36" Height="36">
-                                                    <TextBlock Text="👁️" FontSize="13" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                                </Border>
-                                                <TextBlock Text="Фото" FontSize="11" FontWeight="SemiBold" Foreground="White" VerticalAlignment="Center" Margin="0,0,12,0"/>
-                                            </StackPanel>
-                                        </Button>
-
-                                        <!-- 3. Чтение -->
-                                        <Button Style="{StaticResource ProfileGlassButton}"
-                                                Command="{Binding ToggleReadingModeCommand}"
-                                                ToolTip="{Binding ReadingModeToolTip}"
-                                                Margin="0,0,0,8">
-                                            <StackPanel Orientation="Horizontal">
-                                                <Border Width="36" Height="36">
-                                                    <TextBlock Text="{Binding ReadingModeButtonIcon}" FontSize="13" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                                </Border>
-                                                <controls:AnimatedTextTransitionControl Text="{Binding ReadingModeButtonText}" Foreground="White" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,12,0"/>
-                                            </StackPanel>
-                                        </Button>
-
-                                        <!-- 4. Удалить -->
-                                        <Button Style="{StaticResource ProfileGlassDangerButton}"
-                                                Command="{Binding DeleteSelectedChatCommand}"
-                                                ToolTip="Удалить чат">
-                                            <StackPanel Orientation="Horizontal">
-                                                <Border Width="36" Height="36">
-                                                    <TextBlock Text="🗑️" FontSize="13" Foreground="#EF4444" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                                </Border>
-                                                <TextBlock Text="Удалить" FontSize="11" FontWeight="SemiBold" Foreground="#EF4444" VerticalAlignment="Center" Margin="0,0,12,0"/>
-                                            </StackPanel>
-                                        </Button>
+                                        <TextBlock Text="Назад" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,4,0,0"/>
                                     </StackPanel>
 
-                                    <!-- Bottom Gradient Overlay with Contact Info & Avatar Counter (кол-во фото) -->
-                                    <Border VerticalAlignment="Bottom" Height="80" IsHitTestVisible="False">
-                                        <Border.Background>
-                                            <LinearGradientBrush StartPoint="0.5,0" EndPoint="0.5,1">
-                                                <GradientStop Color="#000B1017" Offset="0.0"/>
-                                                <GradientStop Color="#CC0B1017" Offset="0.45"/>
-                                                <GradientStop Color="#F50B1017" Offset="1.0"/>
-                                            </LinearGradientBrush>
-                                        </Border.Background>
-                                        <DockPanel VerticalAlignment="Bottom" Margin="14,0,14,10">
-                                            <!-- Avatar Counter Pill on the right: (кол-во фото) -->
-                                            <Border DockPanel.Dock="Right" VerticalAlignment="Center" Margin="8,0,0,0"
-                                                    Background="#B3000000" CornerRadius="10" Padding="8,4"
-                                                    Cursor="Hand" ToolTip="Следующий аватар"
-                                                    Visibility="{Binding SelectedChat.HasAvatar, Converter={StaticResource BoolToVis}}">
+                                    <!-- 2. Просмотр фото (btnViewPhoto) -->
+                                    <StackPanel HorizontalAlignment="Center" Margin="0,0,0,10">
+                                        <Button Style="{StaticResource AndroidProfileActionButton}"
+                                                Command="{Binding OpenPhotoViewerCommand}"
+                                                CommandParameter="{Binding SelectedChat.CurrentAvatarDisplayPath}"
+                                                ToolTip="Просмотр фото">
+                                            <Path Data="{StaticResource IconPhoto}" Fill="{DynamicResource TextPrimaryBrush}" Width="18" Height="18" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Button>
+                                        <TextBlock Text="Фото" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,4,0,0"/>
+                                    </StackPanel>
+
+                                    <!-- 3. Режим чтения / Уведомления (btnReadingMode) -->
+                                    <StackPanel HorizontalAlignment="Center" Margin="0,0,0,10">
+                                        <Button Style="{StaticResource AndroidProfileActionButton}"
+                                                Command="{Binding ToggleReadingModeCommand}"
+                                                ToolTip="{Binding ReadingModeToolTip}">
+                                            <Path Data="{StaticResource IconEye}" Fill="{DynamicResource TextPrimaryBrush}" Width="18" Height="18" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Button>
+                                        <controls:AnimatedTextTransitionControl Text="{Binding ReadingModeButtonText}" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,4,0,0"/>
+                                    </StackPanel>
+
+                                    <!-- 4. Удалить чат (btnDeleteChat) -->
+                                    <StackPanel HorizontalAlignment="Center">
+                                        <Button Style="{StaticResource AndroidProfileDangerActionButton}"
+                                                Command="{Binding DeleteSelectedChatCommand}"
+                                                ToolTip="Удалить чат">
+                                            <Path Data="{StaticResource IconTrash}" Fill="#EF4444" Width="18" Height="18" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Button>
+                                        <TextBlock Text="Удалить" Foreground="#EF4444" FontSize="10" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,4,0,0"/>
+                                    </StackPanel>
+                                </StackPanel>
+
+                                <!-- Right Photo Card (Android photoCard) -->
+                                <Border Grid.Column="1" Height="280" CornerRadius="24" ClipToBounds="True" Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Margin="6,0,0,0">
+                                    <Border.Effect>
+                                        <DropShadowEffect BlurRadius="18" ShadowDepth="4" Direction="270" Opacity="0.35" Color="#000000"/>
+                                    </Border.Effect>
+                                    <Grid>
+                                        <!-- Fallback Initials Display -->
+                                        <Grid Background="{DynamicResource AccentBrush}" Visibility="{Binding SelectedChat.HasAvatar, Converter={StaticResource InverseBoolToVis}}">
+                                            <TextBlock Text="{Binding SelectedChat.Initials}" Foreground="White" FontSize="56" FontWeight="Bold"
+                                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Grid>
+
+                                        <!-- Actual Avatar Photo (Floods the card) -->
+                                        <Image Source="{Binding SelectedChat.CurrentAvatarDisplayPath, Converter={StaticResource NonLockingImgConverter}}" Stretch="UniformToFill"
+                                               RenderOptions.BitmapScalingMode="HighQuality"
+                                               Visibility="{Binding SelectedChat.HasAvatar, Converter={StaticResource BoolToVis}}"/>
+
+                                        <!-- Left / Right Click Areas for fast cycling through avatar history -->
+                                        <Grid Visibility="{Binding SelectedChat.HasMultipleAvatars, Converter={StaticResource BoolToVis}}" Margin="0,25,0,80">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Border Grid.Column="0" Background="Transparent" Cursor="Hand" ToolTip="Предыдущий аватар">
+                                                <Border.InputBindings>
+                                                    <MouseBinding Gesture="LeftClick" Command="{Binding PrevContactAvatarCommand}"/>
+                                                </Border.InputBindings>
+                                            </Border>
+                                            <Border Grid.Column="1" Background="Transparent" Cursor="Hand" ToolTip="Следующий аватар">
                                                 <Border.InputBindings>
                                                     <MouseBinding Gesture="LeftClick" Command="{Binding NextContactAvatarCommand}"/>
                                                 </Border.InputBindings>
-                                                <controls:AnimatedTextTransitionControl Text="{Binding SelectedChat.AvatarCounterText}" Foreground="White" FontSize="11" FontWeight="SemiBold"/>
                                             </Border>
+                                        </Grid>
 
-                                            <!-- Contact Display Name & Status -->
-                                            <StackPanel VerticalAlignment="Center">
-                                                <TextBlock Text="{Binding SelectedChat.DisplayName}" Foreground="White" FontSize="17" FontWeight="Bold" TextTrimming="CharacterEllipsis"/>
-                                                <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
-                                                     <Ellipse Width="8" Height="8" Fill="{Binding SelectedChat.StatusColorHex, Converter={StaticResource HexToBrush}}" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                                                     <controls:AnimatedTextTransitionControl Text="{Binding SelectedChat.StatusText}" Foreground="{Binding SelectedChat.StatusColorHex, Converter={StaticResource HexToBrush}}" FontSize="11" FontWeight="SemiBold"/>
+                                        <!-- Context Menu Area for the Avatar Card -->
+                                        <Border Background="Transparent" IsHitTestVisible="True">
+                                            <Border.ContextMenu>
+                                                <ContextMenu Style="{StaticResource ModernContextMenu}">
+                                                    <MenuItem Header="📷 Сменить аватар" Style="{StaticResource ModernMenuItem}" Command="{Binding ChangeContactAvatarCommand}"/>
+                                                    <MenuItem Header="🗑️ Удалить этот аватар из истории" Style="{StaticResource DangerMenuItem}" Command="{Binding DeleteContactAvatarCommand}" Visibility="{Binding SelectedChat.HasAvatar, Converter={StaticResource BoolToVis}}"/>
+                                                </ContextMenu>
+                                            </Border.ContextMenu>
+                                        </Border>
+
+                                        <!-- Top Segment Indicator Bars (Story style) -->
+                                        <ItemsControl ItemsSource="{Binding SelectedChat.AvatarSegments}"
+                                                      VerticalAlignment="Top" Margin="14,10,14,0"
+                                                      Visibility="{Binding SelectedChat.HasMultipleAvatars, Converter={StaticResource BoolToVis}}"
+                                                      IsHitTestVisible="False">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <UniformGrid Rows="1"/>
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Border Height="3" Margin="2,0" CornerRadius="1.5">
+                                                        <Border.Style>
+                                                            <Style TargetType="Border">
+                                                                <Setter Property="Background" Value="#55FFFFFF"/>
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding IsActive}" Value="True">
+                                                                        <Setter Property="Background" Value="#FFFFFFFF"/>
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </Border.Style>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+
+                                        <!-- Top Right Avatar Counter Pill ("1 из 3") -->
+                                        <Border HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,18,12,0"
+                                                Background="#B3000000" CornerRadius="10" Padding="8,3"
+                                                Cursor="Hand" ToolTip="Следующий аватар"
+                                                Visibility="{Binding SelectedChat.HasMultipleAvatars, Converter={StaticResource BoolToVis}}">
+                                            <Border.InputBindings>
+                                                <MouseBinding Gesture="LeftClick" Command="{Binding NextContactAvatarCommand}"/>
+                                            </Border.InputBindings>
+                                            <controls:AnimatedTextTransitionControl Text="{Binding SelectedChat.AvatarCounterText}" Foreground="White" FontSize="11" FontWeight="SemiBold"/>
+                                        </Border>
+
+                                        <!-- Left Chevron Navigation Button (‹) -->
+                                        <Button Style="{StaticResource ProfileChevronButton}"
+                                                Command="{Binding PrevContactAvatarCommand}"
+                                                HorizontalAlignment="Left" VerticalAlignment="Center"
+                                                Margin="8,0,0,0"
+                                                ToolTip="Предыдущий аватар"
+                                                Visibility="{Binding SelectedChat.HasMultipleAvatars, Converter={StaticResource BoolToVis}}">
+                                            <TextBlock Text="‹" FontSize="20" FontWeight="Bold" Foreground="White" Margin="0,-2,1,0"/>
+                                        </Button>
+
+                                        <!-- Right Chevron Navigation Button (›) -->
+                                        <Button Style="{StaticResource ProfileChevronButton}"
+                                                Command="{Binding NextContactAvatarCommand}"
+                                                HorizontalAlignment="Right" VerticalAlignment="Center"
+                                                Margin="0,0,8,0"
+                                                ToolTip="Следующий аватар"
+                                                Visibility="{Binding SelectedChat.HasMultipleAvatars, Converter={StaticResource BoolToVis}}">
+                                            <TextBlock Text="›" FontSize="20" FontWeight="Bold" Foreground="White" Margin="1,-2,0,0"/>
+                                        </Button>
+
+                                        <!-- Bottom Gradient Overlay with Contact Info -->
+                                        <Border VerticalAlignment="Bottom" Height="80" IsHitTestVisible="False">
+                                            <Border.Background>
+                                                <LinearGradientBrush StartPoint="0.5,0" EndPoint="0.5,1">
+                                                    <GradientStop Color="#000B1017" Offset="0.0"/>
+                                                    <GradientStop Color="#CC0B1017" Offset="0.45"/>
+                                                    <GradientStop Color="#F50B1017" Offset="1.0"/>
+                                                </LinearGradientBrush>
+                                            </Border.Background>
+                                            <StackPanel VerticalAlignment="Bottom" Margin="14,0,14,12">
+                                                <TextBlock Text="{Binding SelectedChat.DisplayName}" Foreground="White" FontSize="16" FontWeight="Bold" TextTrimming="CharacterEllipsis"/>
+                                                <StackPanel Orientation="Horizontal" Margin="0,3,0,0">
+                                                    <Ellipse Width="8" Height="8" Fill="{Binding SelectedChat.StatusColorHex, Converter={StaticResource HexToBrush}}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                                    <controls:AnimatedTextTransitionControl Text="{Binding SelectedChat.StatusText}" Foreground="{Binding SelectedChat.StatusColorHex, Converter={StaticResource HexToBrush}}" FontSize="11" FontWeight="SemiBold"/>
                                                 </StackPanel>
                                             </StackPanel>
-                                        </DockPanel>
-                                    </Border>
-                                </Grid>
-                            </Border>
+                                        </Border>
+                                    </Grid>
+                                </Border>
+                            </Grid>
 
                             <!-- 7.3. Sticky Tab Bar: Медиа | Файлы | Аудио -->
 
