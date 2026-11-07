@@ -82,7 +82,7 @@ public static class WindowManager
                                     FilePath = cp,
                                     Sender = msg.Sender,
                                     FormattedTime = msg.FormattedTime,
-                                    IsVideo = false,
+                                    IsVideo = PhotoViewerWindow.IsVideoPath(cp),
                                     FileName = Path.GetFileName(cp)
                                 });
                             }

@@ -3,6 +3,10 @@ echo ==============================================
 echo   Building Prime Desktop (Windows x64)
 echo ==============================================
 
+if exist "%LOCALAPPDATA%\Microsoft\dotnet\dotnet.exe" (
+    set "DOTNET_ROOT=%LOCALAPPDATA%\Microsoft\dotnet"
+    set "PATH=%LOCALAPPDATA%\Microsoft\dotnet;%PATH%"
+)
 if exist "%USERPROFILE%\.dotnet\dotnet.exe" (
     set "DOTNET_ROOT=%USERPROFILE%\.dotnet"
     set "PATH=%USERPROFILE%\.dotnet;%PATH%"

@@ -612,3 +612,1250 @@ body {
   font-size: 12px;
   padding: 30px 10px;
 }
+
+/* ========================================================
+   Floating Reply & Edit Modifier Bar
+   ======================================================== */
+.input-modifier-bar {
+  position: absolute;
+  bottom: 74px;
+  left: 20px;
+  right: 20px;
+  background: var(--glass-surface);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid var(--glass-border);
+  border-radius: 14px;
+  padding: 8px 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  z-index: 15;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  animation: slideUpFade 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.input-modifier-bar.hidden {
+  display: none !important;
+}
+
+.modifier-icon {
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+}
+
+.modifier-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow: hidden;
+}
+
+.modifier-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.modifier-text {
+  font-size: 12px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ========================================================
+   Context Menu & Reaction Picker
+   ======================================================== */
+.context-menu {
+  position: fixed;
+  z-index: 1000;
+  background: var(--glass-surface);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid var(--glass-border);
+  border-radius: 14px;
+  padding: 6px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+  display: flex;
+  flex-direction: column;
+  min-width: 180px;
+  animation: scaleFadeIn 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.context-menu.hidden {
+  display: none !important;
+}
+
+.context-reactions-bar {
+  display: flex;
+  justify-content: space-around;
+  padding: 4px 6px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+  margin-bottom: 4px;
+}
+
+.quick-rx-btn {
+  font-size: 18px;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+  padding: 2px;
+}
+
+.quick-rx-btn:hover {
+  transform: scale(1.35);
+}
+
+.context-item {
+  padding: 8px 12px;
+  font-size: 12.5px;
+  border-radius: 8px;
+  cursor: pointer;
+  color: var(--text-primary);
+  transition: background 0.15s ease;
+}
+
+.context-item:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.context-item.danger {
+  color: var(--danger);
+}
+
+.context-item.danger:hover {
+  background: rgba(255, 82, 82, 0.15);
+}
+
+.context-divider {
+  height: 1px;
+  background: var(--border-color);
+  margin: 4px 0;
+}
+
+/* ========================================================
+   Reply Quote Box in Message Bubble
+   ======================================================== */
+.reply-quote-box {
+  background: rgba(0, 0, 0, 0.15);
+  border-left: 3px solid var(--accent);
+  padding: 4px 8px;
+  border-radius: 4px;
+  margin-bottom: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.reply-quote-sender {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.reply-quote-text {
+  font-size: 11.5px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ========================================================
+   Reaction Chips under Messages
+   ======================================================== */
+.reaction-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.reaction-chip {
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 2px 7px;
+  font-size: 11.5px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.reaction-chip:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.reaction-chip.active {
+  background: rgba(42, 171, 238, 0.25);
+  border-color: var(--accent);
+}
+
+/* ========================================================
+   OpenGraph Link Preview Cards
+   ======================================================== */
+.link-preview-card {
+  margin-top: 6px;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  overflow: hidden;
+  text-decoration: none;
+  display: flex;
+  flex-direction: column;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.link-preview-card:hover {
+  background: rgba(0, 0, 0, 0.35);
+}
+
+.link-preview-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-primary);
+  padding: 6px 8px 2px 8px;
+}
+
+.link-preview-desc {
+  font-size: 11px;
+  color: var(--text-secondary);
+  padding: 0 8px 4px 8px;
+  line-height: 1.3;
+}
+
+.link-preview-domain {
+  font-size: 10px;
+  color: var(--text-muted);
+  padding: 0 8px 6px 8px;
+}
+
+/* ========================================================
+   Modals (Network Scanner, Settings)
+   ======================================================== */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.15s ease;
+}
+
+.modal-overlay.hidden {
+  display: none !important;
+}
+
+.modal-card {
+  width: 440px;
+  max-width: 90vw;
+  background: var(--bg-card);
+  border: 1px solid var(--glass-border);
+  border-radius: 20px;
+  padding: 20px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-header h3 {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.modal-desc {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.primary-btn {
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  padding: 10px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.primary-btn:hover {
+  background: var(--accent-hover);
+}
+
+.primary-btn.full-width {
+  width: 100%;
+}
+
+.scan-results {
+  max-height: 240px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.peer-card {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.peer-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.peer-name {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.peer-addr {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.settings-body {
+  gap: 14px;
+}
+
+.settings-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.settings-group label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.setting-input, .setting-select {
+  padding: 9px 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  color: var(--text-primary);
+  font-size: 13px;
+}
+
+.checkbox-group label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  color: var(--text-primary);
+}
+
+/* ========================================================
+   Photo Lightbox Overlay
+   ======================================================== */
+.lightbox-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.88);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  z-index: 3000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lightbox-overlay.hidden {
+  display: none !important;
+}
+
+.lightbox-image {
+  max-width: 90vw;
+  max-height: 85vh;
+  border-radius: 12px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.8);
+}
+
+.lightbox-close {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background: rgba(255, 255, 255, 0.15);
+  border: none;
+  color: white;
+  font-size: 18px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+/* Animations */
+@keyframes slideUpFade {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes scaleFadeIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* ========================================================
+   Additional Themes: OLED, Cyberpunk, Emerald
+   ======================================================== */
+body.theme-oled {
+  --bg-primary: #000000;
+  --bg-sidebar: #050505;
+  --bg-card: #0D0D0D;
+  --bg-card-hover: #171717;
+  --glass-surface: rgba(10, 10, 10, 0.85);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --text-primary: #FFFFFF;
+  --text-secondary: #888888;
+  --text-muted: #555555;
+  --bubble-incoming: #121212;
+  --bubble-outgoing: #1E2838;
+  --border-color: rgba(255, 255, 255, 0.06);
+}
+
+body.theme-cyberpunk {
+  --bg-primary: #0A0A12;
+  --bg-sidebar: #0F0F1E;
+  --bg-card: #18182D;
+  --bg-card-hover: #232342;
+  --glass-surface: rgba(20, 20, 40, 0.8);
+  --glass-border: rgba(0, 255, 204, 0.2);
+  --text-primary: #F0F6FC;
+  --text-secondary: #00FFCC;
+  --text-muted: #A370F7;
+  --accent: #FF0055;
+  --accent-hover: #FF2E75;
+  --bubble-incoming: #14142B;
+  --bubble-outgoing: #2B1238;
+  --border-color: rgba(255, 0, 85, 0.2);
+}
+
+body.theme-emerald {
+  --bg-primary: #071510;
+  --bg-sidebar: #0A1E17;
+  --bg-card: #0F2A21;
+  --bg-card-hover: #163C2F;
+  --glass-surface: rgba(10, 30, 23, 0.8);
+  --glass-border: rgba(46, 160, 67, 0.25);
+  --text-primary: #E6F4EA;
+  --text-secondary: #7EE787;
+  --text-muted: #48995B;
+  --accent: #2EA043;
+  --accent-hover: #3FB950;
+  --bubble-incoming: #0F2C22;
+  --bubble-outgoing: #194F3B;
+  --border-color: rgba(46, 160, 67, 0.15);
+}
+
+/* ========================================================
+   Screen Watermark Overlay
+   ======================================================== */
+.screen-watermark {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 999;
+  opacity: 0.06;
+  background-image: repeating-linear-gradient(
+    -45deg,
+    transparent,
+    transparent 120px,
+    var(--text-primary) 120px,
+    var(--text-primary) 122px
+  );
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: 4px;
+  color: var(--text-primary);
+  text-transform: uppercase;
+}
+.screen-watermark.hidden { display: none !important; }
+
+/* ========================================================
+   Wide Modal & Network Tabs
+   ======================================================== */
+.wide-modal {
+  max-width: 620px;
+  width: 90vw;
+}
+
+.network-tabs-bar {
+  display: flex;
+  gap: 6px;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 10px;
+  margin-bottom: 14px;
+}
+
+.net-tab {
+  flex: 1;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid transparent;
+  border-radius: 8px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.net-tab:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-primary);
+}
+
+.net-tab.active {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+}
+
+.net-pane {
+  display: none;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.net-pane.active {
+  display: flex;
+}
+
+.peer-badge-bt {
+  display: inline-block;
+  background: #0078D4;
+  color: white;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  margin-left: 6px;
+}
+
+.peer-badge-lan {
+  display: inline-block;
+  background: #2EA043;
+  color: white;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  margin-left: 6px;
+}
+
+/* ========================================================
+   In-App Privacy Web Browser ("Prime Browser")
+   ======================================================== */
+.browser-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  z-index: 2500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.browser-overlay.hidden { display: none !important; }
+
+.browser-window {
+  width: 95vw;
+  height: 92vh;
+  max-width: 1400px;
+  background: var(--bg-card);
+  border: 1px solid var(--glass-border);
+  border-radius: 14px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.7);
+}
+
+.browser-tabs-strip {
+  display: flex;
+  align-items: center;
+  background: var(--bg-sidebar);
+  padding: 6px 10px 0 10px;
+  border-bottom: 1px solid var(--border-color);
+  gap: 6px;
+}
+
+.browser-tabs-container {
+  display: flex;
+  gap: 4px;
+  flex: 1;
+  overflow-x: auto;
+}
+
+.browser-tab {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 14px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 10px 10px 0 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  max-width: 180px;
+}
+
+.browser-tab.active {
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.browser-tab-title {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.browser-tab-close {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.tab-plus-btn {
+  font-size: 16px;
+  padding: 4px 10px;
+}
+
+.browser-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.browser-url-box {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 5px 12px;
+}
+
+.browser-ssl-icon {
+  font-size: 12px;
+}
+
+.browser-url-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  font-size: 13px;
+  outline: none;
+}
+
+.browser-bookmarks-bar {
+  display: flex;
+  gap: 8px;
+  padding: 4px 12px;
+  background: rgba(0, 0, 0, 0.15);
+  border-bottom: 1px solid var(--border-color);
+  font-size: 11.5px;
+  overflow-x: auto;
+}
+
+.browser-bookmark-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+.browser-bookmark-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-primary);
+}
+
+.browser-viewport {
+  flex: 1;
+  background: white;
+  position: relative;
+}
+
+.browser-iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
+/* ========================================================
+   Photo Editor Modal ("Фоторедактор Прайм")
+   ======================================================== */
+.photo-editor-modal {
+  max-width: 960px;
+  width: 92vw;
+  height: 84vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.photo-editor-body {
+  display: grid;
+  grid-template-columns: 1fr 260px;
+  gap: 16px;
+  flex: 1;
+  overflow: hidden;
+  padding-top: 10px;
+}
+
+.photo-canvas-wrapper {
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  position: relative;
+}
+
+#photo-canvas {
+  max-width: 100%;
+  max-height: 100%;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+  cursor: crosshair;
+}
+
+.photo-tools-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.photo-tools-sidebar h4 {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.tool-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid var(--border-color);
+}
+
+.tool-label {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.tool-row {
+  display: flex;
+  gap: 6px;
+}
+
+.tool-btn {
+  flex: 1;
+  padding: 6px 10px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-size: 11.5px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.tool-btn:hover { background: rgba(255, 255, 255, 0.12); }
+
+.tool-color-palette {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.color-dot {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: transform 0.2s;
+}
+.color-dot.active {
+  border-color: white;
+  transform: scale(1.2);
+}
+
+.tool-slider-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.tool-slider-row label {
+  font-size: 10.5px;
+  color: var(--text-muted);
+}
+.tool-slider-row input[type="range"] {
+  width: 100%;
+}
+
+.photo-editor-actions {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* ========================================================
+   Voice Recording Bar & Waveforms
+   ======================================================== */
+.voice-record-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 16px;
+  background: rgba(255, 69, 58, 0.12);
+  border: 1px solid rgba(255, 69, 58, 0.3);
+  border-radius: 12px;
+  margin: 0 16px 8px 16px;
+  animation: slideUpFade 0.2s ease;
+}
+.voice-record-bar.hidden { display: none !important; }
+
+.record-pulse-dot {
+  width: 10px;
+  height: 10px;
+  background: #FF453A;
+  border-radius: 50%;
+  animation: pulseRecord 1s infinite alternate;
+}
+@keyframes pulseRecord {
+  from { transform: scale(0.8); opacity: 0.6; }
+  to { transform: scale(1.3); opacity: 1; }
+}
+
+.record-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #FF453A;
+}
+
+.record-timer {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-left: auto;
+}
+
+.primary-circle-btn {
+  background: var(--accent) !important;
+  color: white !important;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.waveform-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 10px;
+  min-width: 220px;
+}
+
+.waveform-play-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: white;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.waveform-bars {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  height: 28px;
+  flex: 1;
+  cursor: pointer;
+}
+
+.waveform-bar {
+  width: 3px;
+  background: var(--text-muted);
+  border-radius: 2px;
+  transition: background 0.15s;
+}
+.waveform-bar.played {
+  background: var(--accent);
+}
+
+.waveform-time {
+  font-size: 11px;
+  color: var(--text-secondary);
+  min-width: 34px;
+  text-align: right;
+}
+
+/* ========================================================
+   Circular Video Notes ("Кружочки" Telegram-style)
+   ======================================================== */
+.video-note-bubble {
+  position: relative;
+  width: 200px;
+  height: 200px;
+  border-radius: 50%;
+  overflow: hidden;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  cursor: pointer;
+}
+
+.video-note-circle {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+.video-note-ring {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.video-note-speed {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  background: rgba(0, 0, 0, 0.6);
+  color: white;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 8px;
+}
+
+/* ========================================================
+   Screen PIN Lock Overlay
+   ======================================================== */
+.lock-screen-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(11, 16, 23, 0.95);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  z-index: 5000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.lock-screen-overlay.hidden { display: none !important; }
+
+.lock-card {
+  width: 300px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 12px;
+}
+
+.lock-logo {
+  font-size: 48px;
+  margin-bottom: 4px;
+}
+
+.pin-dots {
+  display: flex;
+  gap: 12px;
+  margin: 12px 0;
+}
+
+.pin-dots .dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid var(--text-secondary);
+  transition: all 0.2s;
+}
+
+.pin-dots .dot.filled {
+  background: var(--accent);
+  border-color: var(--accent);
+  transform: scale(1.1);
+}
+
+.pin-keypad {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  width: 100%;
+  margin-top: 8px;
+}
+
+.pin-btn {
+  height: 60px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  font-size: 20px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+.pin-btn:hover { background: rgba(255, 255, 255, 0.16); }
+.pin-btn:active { transform: scale(0.92); }
+.pin-empty { visibility: hidden; }
+
+/* ========================================================
+   Accent Palette Picker in Settings
+   ======================================================== */
+.accent-palette-picker {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.accent-swatch {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: transform 0.2s;
+}
+.accent-swatch:hover { transform: scale(1.15); }
+.accent-swatch.active { border-color: white; transform: scale(1.2); }
+
+/* ========================================================
+   Toast Notification Card
+   ======================================================== */
+.toast-container {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 4000;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  pointer-events: none;
+}
+
+.toast-card {
+  pointer-events: auto;
+  width: 320px;
+  background: var(--bg-card);
+  border: 1.5px solid var(--accent);
+  border-radius: 14px;
+  padding: 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
+  cursor: pointer;
+  animation: slideInRight 0.3s ease;
+  transition: transform 0.2s;
+}
+.toast-card:hover { transform: translateY(-2px); }
+
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(60px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.toast-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.toast-info {
+  flex: 1;
+  overflow: hidden;
+}
+
+.toast-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.toast-text {
+  font-size: 11.5px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 2px;
+}
+
+.toast-close {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 14px;
+  cursor: pointer;
+  padding: 4px;
+}
+
+/* ========================================================
+   Categorized Emoji Picker Overlay
+   ======================================================== */
+.emoji-picker-overlay {
+  position: absolute;
+  bottom: 64px;
+  right: 20px;
+  z-index: 2000;
+}
+.emoji-picker-overlay.hidden { display: none !important; }
+
+.emoji-picker-card {
+  width: 320px;
+  background: var(--bg-card);
+  border: 1px solid var(--glass-border);
+  border-radius: 14px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
+  overflow: hidden;
+}
+
+.emoji-tabs {
+  display: flex;
+  background: rgba(0, 0, 0, 0.2);
+  border-bottom: 1px solid var(--border-color);
+  padding: 4px 6px;
+}
+
+.emoji-tab {
+  flex: 1;
+  padding: 6px 0;
+  background: transparent;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+  border-radius: 6px;
+}
+.emoji-tab:hover { background: rgba(255, 255, 255, 0.08); }
+.emoji-tab.active { background: rgba(255, 255, 255, 0.15); }
+
+.emoji-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  padding: 10px;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.emoji-item {
+  font-size: 20px;
+  padding: 6px;
+  text-align: center;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: transform 0.15s;
+}
+.emoji-item:hover {
+  background: rgba(255, 255, 255, 0.1);
+  transform: scale(1.25);
+}
+
+.lightbox-edit-btn {
+  position: absolute;
+  bottom: 24px;
+  background: var(--accent);
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+

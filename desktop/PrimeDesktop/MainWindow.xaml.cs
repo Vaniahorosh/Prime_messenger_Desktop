@@ -770,6 +770,33 @@ public partial class MainWindow : Window
         }
     }
 
+    private void ReplyBanner_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is FrameworkElement fe && fe.Tag is string replyId && !string.IsNullOrWhiteSpace(replyId))
+        {
+            var vm = DataContext as ViewModels.MainViewModel;
+            if (vm?.SelectedChat != null)
+            {
+                var targetMsg = vm.SelectedChat.Messages.FirstOrDefault(m => m.Id == replyId);
+                if (targetMsg != null)
+                {
+                    MessagesItemsControl?.UpdateLayout();
+                    var container = MessagesItemsControl?.ItemContainerGenerator.ContainerFromItem(targetMsg) as FrameworkElement;
+                    if (container != null)
+                    {
+                        container.BringIntoView();
+                        var anim = new System.Windows.Media.Animation.DoubleAnimation(0.3, 1.0, TimeSpan.FromMilliseconds(300))
+                        {
+                            AutoReverse = true,
+                            RepeatBehavior = new System.Windows.Media.Animation.RepeatBehavior(2)
+                        };
+                        container.BeginAnimation(UIElement.OpacityProperty, anim);
+                    }
+                }
+            }
+        }
+    }
+
     private static T? FindVisualParent<T>(DependencyObject child) where T : DependencyObject
     {
         DependencyObject parentObject = System.Windows.Media.VisualTreeHelper.GetParent(child);

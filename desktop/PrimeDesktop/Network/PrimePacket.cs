@@ -533,6 +533,8 @@ public class PrimePacket
         public string Caption { get; set; } = string.Empty;
         public bool IsCollage { get; set; }
         public List<byte[]> Items { get; set; } = new();
+        public List<string> ItemExtensions { get; set; } = new();
+        public List<bool> ItemIsVideo { get; set; } = new();
     }
 
     public static ParsedPhotoResult ParsePhotoPayload(byte[] payload)
@@ -575,13 +577,19 @@ public class PrimePacket
                     foreach (var m in itemMetas)
                     {
                         var parts = m.Trim().Split('|');
+                        bool isVid = parts.Length >= 1 && parts[0] == "1";
                         int pSize = parts.Length >= 2 ? int.Parse(parts[1]) : int.Parse(parts[0]);
+                        string dur = parts.Length >= 3 ? parts[2] : "00:00";
+                        string ext = parts.Length >= 4 ? parts[3] : (isVid ? "mp4" : "jpg");
+
                         if (curOffset + pSize <= payload.Length)
                         {
                             byte[] itBytes = new byte[pSize];
                             Buffer.BlockCopy(payload, curOffset, itBytes, 0, pSize);
                             curOffset += pSize;
                             result.Items.Add(itBytes);
+                            result.ItemExtensions.Add(ext);
+                            result.ItemIsVideo.Add(isVid);
                         }
                     }
                 }

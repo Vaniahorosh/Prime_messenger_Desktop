@@ -130,12 +130,23 @@ public class EqualityToVisibilityConverter : IValueConverter
 
 public class NonLockingImageConverter : IValueConverter
 {
+    private static readonly HashSet<string> VideoExtensions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ".mp4", ".mov", ".mkv", ".webm", ".avi", ".3gp", ".wmv", ".flv"
+    };
+
     public object? Convert(object value, Type targetType, object parameter, CultureInfo culture)
     {
         if (value is string path && !string.IsNullOrWhiteSpace(path))
         {
             try
             {
+                string ext = Path.GetExtension(path);
+                if (VideoExtensions.Contains(ext))
+                {
+                    return null;
+                }
+
                 if (File.Exists(path))
                 {
                     byte[] bytes = File.ReadAllBytes(path);
@@ -145,6 +156,25 @@ public class NonLockingImageConverter : IValueConverter
                         var image = new BitmapImage();
                         image.BeginInit();
                         image.CacheOption = BitmapCacheOption.OnLoad;
+
+                        int decodeWidth = 500;
+                        if (parameter is string paramStr)
+                        {
+                            if (int.TryParse(paramStr, out int customWidth) && customWidth > 0)
+                            {
+                                decodeWidth = customWidth;
+                            }
+                            else if ("full".Equals(paramStr, StringComparison.OrdinalIgnoreCase))
+                            {
+                                decodeWidth = 0;
+                            }
+                        }
+
+                        if (decodeWidth > 0)
+                        {
+                            image.DecodePixelWidth = decodeWidth;
+                        }
+
                         image.StreamSource = ms;
                         image.EndInit();
                         image.Freeze();

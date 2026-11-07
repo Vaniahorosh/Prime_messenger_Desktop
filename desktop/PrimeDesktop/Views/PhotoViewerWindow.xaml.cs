@@ -154,7 +154,19 @@ namespace PrimeDesktop.Views
             if (items != null && items.Count > 0)
             {
                 _items = new List<MediaViewerItem>(items);
-                int found = _items.FindIndex(m => m.FilePath.Equals(initialPath, StringComparison.OrdinalIgnoreCase));
+                string normInitial = string.Empty;
+                try { normInitial = Path.GetFullPath(initialPath); } catch { normInitial = initialPath; }
+                int found = _items.FindIndex(m =>
+                {
+                    try
+                    {
+                        return string.Equals(Path.GetFullPath(m.FilePath), normInitial, StringComparison.OrdinalIgnoreCase);
+                    }
+                    catch
+                    {
+                        return m.FilePath.Equals(initialPath, StringComparison.OrdinalIgnoreCase);
+                    }
+                });
                 _currentIndex = found >= 0 ? found : 0;
             }
             else

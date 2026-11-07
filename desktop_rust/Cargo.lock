@@ -2463,6 +2463,7 @@ dependencies = [
  "chrono",
  "dirs 5.0.1",
  "parking_lot",
+ "regex",
  "rusqlite",
  "serde",
  "serde_json",

@@ -211,6 +211,10 @@ public class MainViewModel : ViewModelBase
                 msg.DateHeaderText = string.Empty;
             }
         }
+        if (msg.CollagePaths != null && msg.CollagePaths.Count > 1 && msg.CollageItems.Count == 0)
+        {
+            msg.RefreshCollageProperties();
+        }
         msg.TryLoadLinkPreview();
         msg.UpdateReactionGroups(myDisplayName);
     }
@@ -1663,32 +1667,22 @@ public class MainViewModel : ViewModelBase
         {
             if (param is ChatMessage msg && SelectedChat != null)
             {
-                if (!msg.IsFromMe)
-                {
-                    StatusMessage = "Нельзя удалять чужие сообщения";
-                    return;
-                }
-
                 SelectedChat.Messages.Remove(msg);
-
                 SelectedChat.LastMessage = SelectedChat.Messages.LastOrDefault()?.Text ?? "";
 
-                byte[] delPayload = System.Text.Encoding.UTF8.GetBytes(msg.Id);
-
-                try
-
+                if (msg.IsFromMe)
                 {
-                    string targetAddr = !string.IsNullOrWhiteSpace(SelectedChat.DeviceAddress) ? SelectedChat.DeviceAddress : SelectedChat.PeerId;
-                    await SendNetworkPacketAsync(targetAddr, PacketType.DeleteMessage, delPayload);
-
+                    byte[] delPayload = System.Text.Encoding.UTF8.GetBytes(msg.Id);
+                    try
+                    {
+                        string targetAddr = !string.IsNullOrWhiteSpace(SelectedChat.DeviceAddress) ? SelectedChat.DeviceAddress : SelectedChat.PeerId;
+                        await SendNetworkPacketAsync(targetAddr, PacketType.DeleteMessage, delPayload);
+                    }
+                    catch { }
                 }
 
-                catch { }
-
                 await _storageService.SaveChatsAsync(_allChats);
-
             }
-
         });
 
         ScanDevicesCommand = new RelayCommand(async () => await ScanDevicesAsync());
@@ -2141,7 +2135,11 @@ public class MainViewModel : ViewModelBase
         OpenPhotoViewerCommand = new RelayCommand(param =>
         {
             string? path = param as string;
-            if (param is ChatMessage msg)
+            if (param is CollageItem ci)
+            {
+                path = ci.FilePath;
+            }
+            else if (param is ChatMessage msg)
             {
                 path = msg.FilePath;
             }
@@ -3016,12 +3014,10 @@ public class MainViewModel : ViewModelBase
             var query = SearchQuery.Trim().ToLowerInvariant();
 
             var matches = _allChats.Where(c =>
-
                 c.DisplayName.ToLowerInvariant().Contains(query) ||
-
                 c.Username.ToLowerInvariant().Contains(query) ||
-
-                c.LastMessage.ToLowerInvariant().Contains(query));
+                c.LastMessage.ToLowerInvariant().Contains(query) ||
+                (c.Messages != null && c.Messages.Any(m => !string.IsNullOrEmpty(m.Text) && m.Text.ToLowerInvariant().Contains(query))));
 
             FilteredChats = new ObservableCollection<ChatItem>(matches);
 
@@ -3594,11 +3590,11 @@ public async Task SendTextMessageAsync()
                     Sender = Settings.MyDisplayName,
                     Text = caption,
                     FilePath = collagePaths.FirstOrDefault(),
-                    CollagePaths = collagePaths,
                     Type = PacketType.Photo,
                     IsFromMe = true,
                     FormattedTime = DateTime.Now.ToString("HH:mm")
                 };
+                message.SetCollagePaths(collagePaths);
 
                 PrepareMessage(targetChat, message);
                 targetChat.Messages.Add(message);
@@ -4906,13 +4902,19 @@ public async Task SendTextMessageAsync()
 
                     if (photoResult.IsCollage)
                     {
+                        var cPaths = new List<string>();
                         for (int i = 0; i < photoResult.Items.Count; i++)
                         {
-                            string cPath = Path.Combine(mediaDir, $"collage_{photoResult.MsgId}_{i}.jpg");
+                            string ext = (i < photoResult.ItemExtensions.Count && !string.IsNullOrWhiteSpace(photoResult.ItemExtensions[i]))
+                                ? photoResult.ItemExtensions[i].TrimStart('.')
+                                : (i < photoResult.ItemIsVideo.Count && photoResult.ItemIsVideo[i] ? "mp4" : "jpg");
+                            string cPath = Path.Combine(mediaDir, $"collage_{photoResult.MsgId}_{i}.{ext}");
                             File.WriteAllBytes(cPath, photoResult.Items[i]);
-                            photoMsg.CollagePaths.Add(cPath);
+                            cPaths.Add(cPath);
                         }
-                        photoMsg.FilePath = photoMsg.CollagePaths.FirstOrDefault();
+                        photoMsg.FilePath = cPaths.FirstOrDefault();
+                        photoMsg.FileName = Path.GetFileName(photoMsg.FilePath);
+                        photoMsg.SetCollagePaths(cPaths);
                         chat.LastMessage = string.IsNullOrWhiteSpace(photoResult.Caption) ? "📷 Коллаж" : $"📷 {photoResult.Caption}";
                     }
                     else if (photoResult.Items.Count > 0)

@@ -294,10 +294,168 @@ public class ChatMessage : INotifyPropertyChanged
     }
     public long FileSizeBytes { get; set; }
     public string Duration { get; set; } = "0:00";
-    public List<string> CollagePaths { get; set; } = new();
+
+    private List<string> _collagePaths = new();
+    public List<string> CollagePaths
+    {
+        get => _collagePaths;
+        set
+        {
+            _collagePaths = value != null ? new List<string>(value) : new List<string>();
+            RefreshCollageProperties();
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(IsCollage));
+            OnPropertyChanged(nameof(IsSinglePhoto));
+            OnPropertyChanged(nameof(BubblePadding));
+            OnPropertyChanged(nameof(HasAttachment));
+        }
+    }
 
     [JsonIgnore]
-    public bool IsCollage => CollagePaths != null && CollagePaths.Count > 1;
+    public bool IsCollage => _collagePaths != null && _collagePaths.Count > 1;
+
+    [JsonIgnore]
+    public ObservableCollection<CollageItem> CollageItems { get; } = new();
+
+    public void AddCollagePath(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path)) return;
+        _collagePaths ??= new List<string>();
+        if (!_collagePaths.Contains(path, StringComparer.OrdinalIgnoreCase))
+        {
+            _collagePaths.Add(path);
+        }
+        RefreshCollageProperties();
+        OnPropertyChanged(nameof(CollagePaths));
+        OnPropertyChanged(nameof(IsCollage));
+        OnPropertyChanged(nameof(IsSinglePhoto));
+        OnPropertyChanged(nameof(BubblePadding));
+        OnPropertyChanged(nameof(HasAttachment));
+    }
+
+    public void SetCollagePaths(IEnumerable<string> paths)
+    {
+        _collagePaths = paths != null ? new List<string>(paths) : new List<string>();
+        RefreshCollageProperties();
+        OnPropertyChanged(nameof(CollagePaths));
+        OnPropertyChanged(nameof(IsCollage));
+        OnPropertyChanged(nameof(IsSinglePhoto));
+        OnPropertyChanged(nameof(BubblePadding));
+        OnPropertyChanged(nameof(HasAttachment));
+    }
+
+    public void RefreshCollageProperties()
+    {
+        void DoRefresh()
+        {
+            CollageItems.Clear();
+            if (_collagePaths == null || _collagePaths.Count <= 1)
+            {
+                OnPropertyChanged(nameof(IsCollage));
+                OnPropertyChanged(nameof(IsSinglePhoto));
+                OnPropertyChanged(nameof(BubblePadding));
+                return;
+            }
+
+            int count = _collagePaths.Count;
+
+            if (count == 2)
+            {
+                for (int i = 0; i < 2; i++)
+                {
+                    string p = _collagePaths[i];
+                    CollageItems.Add(new CollageItem
+                    {
+                        FilePath = p,
+                        Index = i,
+                        TotalCount = count,
+                        IsVideo = IsVideoFile(p),
+                        Column = i,
+                        Row = 0,
+                        ColumnSpan = 1,
+                        RowSpan = 1,
+                        ItemHeight = 150.0
+                    });
+                }
+            }
+            else if (count == 3)
+            {
+                string p0 = _collagePaths[0];
+                CollageItems.Add(new CollageItem
+                {
+                    FilePath = p0,
+                    Index = 0,
+                    TotalCount = count,
+                    IsVideo = IsVideoFile(p0),
+                    Column = 0,
+                    Row = 0,
+                    ColumnSpan = 2,
+                    RowSpan = 1,
+                    ItemHeight = 150.0
+                });
+
+                for (int i = 1; i < 3; i++)
+                {
+                    string p = _collagePaths[i];
+                    CollageItems.Add(new CollageItem
+                    {
+                        FilePath = p,
+                        Index = i,
+                        TotalCount = count,
+                        IsVideo = IsVideoFile(p),
+                        Column = i - 1,
+                        Row = 1,
+                        ColumnSpan = 1,
+                        RowSpan = 1,
+                        ItemHeight = 110.0
+                    });
+                }
+            }
+            else
+            {
+                int visibleCount = Math.Min(4, count);
+                for (int i = 0; i < visibleCount; i++)
+                {
+                    string p = _collagePaths[i];
+                    bool isLastAndOverflow = (i == 3 && count > 4);
+                    CollageItems.Add(new CollageItem
+                    {
+                        FilePath = p,
+                        Index = i,
+                        TotalCount = count,
+                        IsVideo = IsVideoFile(p),
+                        Column = i % 2,
+                        Row = i / 2,
+                        ColumnSpan = 1,
+                        RowSpan = 1,
+                        ItemHeight = 115.0,
+                        HasRemainingOverlay = isLastAndOverflow,
+                        RemainingText = isLastAndOverflow ? $"+{count - 3}" : string.Empty
+                    });
+                }
+            }
+
+            OnPropertyChanged(nameof(IsCollage));
+            OnPropertyChanged(nameof(IsSinglePhoto));
+            OnPropertyChanged(nameof(BubblePadding));
+        }
+
+        if (System.Windows.Application.Current?.Dispatcher != null && !System.Windows.Application.Current.Dispatcher.CheckAccess())
+        {
+            System.Windows.Application.Current.Dispatcher.Invoke(DoRefresh);
+        }
+        else
+        {
+            DoRefresh();
+        }
+    }
+
+    private static bool IsVideoFile(string? path)
+    {
+        if (string.IsNullOrWhiteSpace(path)) return false;
+        string ext = System.IO.Path.GetExtension(path).ToLowerInvariant();
+        return ext is ".mp4" or ".mov" or ".mkv" or ".webm" or ".avi" or ".3gp";
+    }
 
     [JsonIgnore]
     public string FormattedFileSize

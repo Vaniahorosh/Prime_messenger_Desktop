@@ -53,6 +53,7 @@ impl PrimePacket {
         let packet_type = PacketType::from(header[0]);
         let length = BigEndian::read_u32(&header[1..5]) as usize;
 
+        // 100 MB safety guard limit to avoid memory exhaustion
         if length > 100 * 1024 * 1024 {
             return Err(io::Error::new(
                 io::ErrorKind::InvalidData,
@@ -136,7 +137,7 @@ impl PrimePacket {
         .into_bytes()
     }
 
-    pub fn parse_handshake_payload(payload: &[u8]) -> (Option<String>, Option<String>, Option<String>, bool) {
+    pub fn parse_handshake_payload(payload: &[u8]) -> (Option<String>, Option<String>, Option<String>, Option<String>, bool) {
         let text = String::from_utf8_lossy(payload);
         let is_ack = text.starts_with("HANDSHAKE_ACK:");
         let prefix = if is_ack { "HANDSHAKE_ACK:" } else { "HANDSHAKE:" };
@@ -149,6 +150,7 @@ impl PrimePacket {
         let mut name = None;
         let mut login = None;
         let mut presence = None;
+        let mut device = None;
 
         for part in data.split(';') {
             let p = part.trim();
@@ -158,10 +160,12 @@ impl PrimePacket {
                 login = Some(val.to_string());
             } else if let Some(val) = p.strip_prefix("presence=") {
                 presence = Some(val.to_string());
+            } else if let Some(val) = p.strip_prefix("device=") {
+                device = Some(val.to_string());
             }
         }
 
-        (name, login, presence, is_ack)
+        (name, login, presence, device, is_ack)
     }
 
     pub fn build_reaction_payload(msg_id: &str, emoji: Option<&str>, author: &str) -> Vec<u8> {
@@ -176,6 +180,34 @@ impl PrimePacket {
         let reaction = parts.get(1).map(|r| r.trim().to_string()).filter(|r| !r.is_empty() && r != "REMOVE");
         let author = parts.get(2).unwrap_or(&"").trim().to_string();
         (msg_id, reaction, author)
+    }
+
+    pub fn build_edit_payload(msg_id: &str, new_text: &str) -> Vec<u8> {
+        format!("{}:::{}", msg_id, new_text).into_bytes()
+    }
+
+    pub fn parse_edit_payload(payload: &[u8]) -> Option<(String, String)> {
+        let raw = String::from_utf8_lossy(payload);
+        let sep = raw.find(":::")?;
+        let msg_id = raw[..sep].to_string();
+        let new_text = raw[sep + 3..].to_string();
+        Some((msg_id, new_text))
+    }
+
+    pub fn build_delete_payload(msg_id: &str) -> Vec<u8> {
+        msg_id.as_bytes().to_vec()
+    }
+
+    pub fn parse_delete_payload(payload: &[u8]) -> String {
+        String::from_utf8_lossy(payload).trim().to_string()
+    }
+
+    pub fn build_read_receipt_payload(msg_id: &str) -> Vec<u8> {
+        msg_id.as_bytes().to_vec()
+    }
+
+    pub fn parse_read_receipt_payload(payload: &[u8]) -> String {
+        String::from_utf8_lossy(payload).trim().to_string()
     }
 
     pub fn build_file_payload(
