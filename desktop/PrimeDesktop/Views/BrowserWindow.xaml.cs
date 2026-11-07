@@ -1171,6 +1171,8 @@ public partial class BrowserWindow : Window
                         TxtAddress.Text = e.Uri;
                         BrowserProgressBar.Visibility = Visibility.Visible;
                         BrowserProgressBar.IsIndeterminate = true;
+                        UpdateRefreshButtonState(true);
+                        UpdateNavigationButtonsState();
                     }
                 });
             };
@@ -1183,6 +1185,7 @@ public partial class BrowserWindow : Window
                     if (tab == ActiveTab)
                     {
                         BrowserProgressBar.Visibility = Visibility.Collapsed;
+                        UpdateRefreshButtonState(false);
                         UpdateNavigationButtonsState();
                     }
                     if (e.IsSuccess && !string.IsNullOrWhiteSpace(tab.Url))
@@ -1697,11 +1700,61 @@ public partial class BrowserWindow : Window
         ShowStartScreen(false);
     }
 
+    private void UpdateRefreshButtonState(bool isLoading)
+    {
+        if (_btnRefresh == null) return;
+        try
+        {
+            if (isLoading)
+            {
+                _btnRefresh.ToolTip = "Остановить загрузку (Esc)";
+                _btnRefresh.Content = new System.Windows.Shapes.Path
+                {
+                    Data = (Geometry)FindResource("IconClose"),
+                    Width = 11,
+                    Height = 11,
+                    Fill = (Brush)FindResource("TextPrimaryBrush"),
+                    Stretch = Stretch.Uniform
+                };
+            }
+            else
+            {
+                _btnRefresh.ToolTip = "Обновить страницу (F5)";
+                _btnRefresh.Content = new System.Windows.Shapes.Path
+                {
+                    Data = (Geometry)FindResource("IconRefresh"),
+                    Width = 13,
+                    Height = 13,
+                    Fill = (Brush)FindResource("TextPrimaryBrush"),
+                    Stretch = Stretch.Uniform
+                };
+            }
+        }
+        catch { }
+    }
+
     private void UpdateNavigationButtonsState()
     {
         try
         {
             if (_btnHome != null) _btnHome.IsEnabled = true;
+
+            if (_isStartScreenVisible)
+            {
+                bool canBackFromStart = ActiveTab?.WebView != null &&
+                    (ActiveTab.WebView.CanGoBack || ActiveTab.WebView.CoreWebView2?.CanGoBack == true);
+                bool canFwdFromStart = ActiveTab?.WebView != null &&
+                    (ActiveTab.WebView.CanGoForward || ActiveTab.WebView.CoreWebView2?.CanGoForward == true);
+
+                if (_btnBack != null) _btnBack.IsEnabled = canBackFromStart;
+                if (_btnForward != null) _btnForward.IsEnabled = canFwdFromStart;
+                if (_btnRefresh != null)
+                {
+                    _btnRefresh.IsEnabled = true;
+                    UpdateRefreshButtonState(false);
+                }
+                return;
+            }
 
             if (ActiveTab?.WebView != null)
             {
@@ -1712,19 +1765,35 @@ public partial class BrowserWindow : Window
                 if (!canFwd && ActiveTab.WebView.CoreWebView2 != null)
                     canFwd = ActiveTab.WebView.CoreWebView2.CanGoForward;
 
-                _btnBack.IsEnabled = canBack;
-                _btnForward.IsEnabled = canFwd;
+                // When on a webpage, if there is no previous web history, the user can still go Back to Start Screen
+                if (!canBack && !string.IsNullOrEmpty(ActiveTab.Url) && !ActiveTab.Url.Equals("about:home", StringComparison.OrdinalIgnoreCase))
+                {
+                    canBack = true;
+                }
+
+                if (_btnBack != null) _btnBack.IsEnabled = canBack;
+                if (_btnForward != null) _btnForward.IsEnabled = canFwd;
+                if (_btnRefresh != null)
+                {
+                    _btnRefresh.IsEnabled = true;
+                    UpdateRefreshButtonState(ActiveTab.IsLoading);
+                }
             }
             else
             {
-                _btnBack.IsEnabled = false;
-                _btnForward.IsEnabled = false;
+                if (_btnBack != null) _btnBack.IsEnabled = false;
+                if (_btnForward != null) _btnForward.IsEnabled = false;
+                if (_btnRefresh != null)
+                {
+                    _btnRefresh.IsEnabled = true;
+                    UpdateRefreshButtonState(false);
+                }
             }
         }
         catch
         {
-            _btnBack.IsEnabled = false;
-            _btnForward.IsEnabled = false;
+            if (_btnBack != null) _btnBack.IsEnabled = false;
+            if (_btnForward != null) _btnForward.IsEnabled = false;
         }
     }
 
@@ -2347,7 +2416,21 @@ public partial class BrowserWindow : Window
     private void BtnBack_Click(object sender, RoutedEventArgs e)
     {
         if (_isToolbarEditMode) return;
-        if (ActiveTab?.WebView != null)
+        if (ActiveTab == null) return;
+
+        if (_isStartScreenVisible)
+        {
+            if (ActiveTab.WebView != null && (ActiveTab.WebView.CanGoBack || ActiveTab.WebView.CoreWebView2?.CanGoBack == true))
+            {
+                ShowStartScreen(false);
+                if (ActiveTab.WebView.CanGoBack) ActiveTab.WebView.GoBack();
+                else ActiveTab.WebView.CoreWebView2?.GoBack();
+                UpdateNavigationButtonsState();
+            }
+            return;
+        }
+
+        if (ActiveTab.WebView != null)
         {
             if (ActiveTab.WebView.CanGoBack)
             {
@@ -2357,13 +2440,33 @@ public partial class BrowserWindow : Window
             {
                 ActiveTab.WebView.CoreWebView2.GoBack();
             }
+            else
+            {
+                // Navigate back to start screen
+                NavigateCurrentTab("about:home");
+            }
+            UpdateNavigationButtonsState();
         }
     }
 
     private void BtnForward_Click(object sender, RoutedEventArgs e)
     {
         if (_isToolbarEditMode) return;
-        if (ActiveTab?.WebView != null)
+        if (ActiveTab == null) return;
+
+        if (_isStartScreenVisible)
+        {
+            if (ActiveTab.WebView != null && (ActiveTab.WebView.CanGoForward || ActiveTab.WebView.CoreWebView2?.CanGoForward == true))
+            {
+                ShowStartScreen(false);
+                if (ActiveTab.WebView.CanGoForward) ActiveTab.WebView.GoForward();
+                else ActiveTab.WebView.CoreWebView2?.GoForward();
+                UpdateNavigationButtonsState();
+            }
+            return;
+        }
+
+        if (ActiveTab.WebView != null)
         {
             if (ActiveTab.WebView.CanGoForward)
             {
@@ -2373,22 +2476,44 @@ public partial class BrowserWindow : Window
             {
                 ActiveTab.WebView.CoreWebView2.GoForward();
             }
+            UpdateNavigationButtonsState();
         }
     }
 
     private void BtnRefresh_Click(object sender, RoutedEventArgs e)
     {
         if (_isToolbarEditMode) return;
+        if (_isStartScreenVisible)
+        {
+            RefreshRecentSites();
+            return;
+        }
+
         if (ActiveTab?.WebView != null)
         {
             if (ActiveTab.IsLoading)
             {
-                ActiveTab.WebView.Stop();
+                try { ActiveTab.WebView.Stop(); } catch { ActiveTab.WebView.CoreWebView2?.Stop(); }
+                ActiveTab.IsLoading = false;
+                UpdateRefreshButtonState(false);
+                BrowserProgressBar.Visibility = Visibility.Collapsed;
             }
             else
             {
-                ActiveTab.WebView.Reload();
+                ActiveTab.IsLoading = true;
+                UpdateRefreshButtonState(true);
+                BrowserProgressBar.Visibility = Visibility.Visible;
+                BrowserProgressBar.IsIndeterminate = true;
+                try
+                {
+                    ActiveTab.WebView.Reload();
+                }
+                catch
+                {
+                    ActiveTab.WebView.CoreWebView2?.Reload();
+                }
             }
+            UpdateNavigationButtonsState();
         }
     }
 
@@ -2645,7 +2770,7 @@ public partial class BrowserWindow : Window
         // Alt + Left: Back
         if (isAlt && e.Key == Key.Left)
         {
-            if (ActiveTab?.WebView?.CanGoBack == true) ActiveTab.WebView.GoBack();
+            BtnBack_Click(_btnBack, new RoutedEventArgs());
             e.Handled = true;
             return;
         }
@@ -2653,7 +2778,23 @@ public partial class BrowserWindow : Window
         // Alt + Right: Forward
         if (isAlt && e.Key == Key.Right)
         {
-            if (ActiveTab?.WebView?.CanGoForward == true) ActiveTab.WebView.GoForward();
+            BtnForward_Click(_btnForward, new RoutedEventArgs());
+            e.Handled = true;
+            return;
+        }
+
+        // F5 or Ctrl + R: Refresh / Reload
+        if (e.Key == Key.F5 || (isCtrl && e.Key == Key.R))
+        {
+            BtnRefresh_Click(_btnRefresh, new RoutedEventArgs());
+            e.Handled = true;
+            return;
+        }
+
+        // Escape: Stop loading if active tab is loading
+        if (e.Key == Key.Escape && ActiveTab?.IsLoading == true)
+        {
+            BtnRefresh_Click(_btnRefresh, new RoutedEventArgs());
             e.Handled = true;
             return;
         }
@@ -2740,9 +2881,6 @@ public partial class BrowserWindow : Window
         {
             TxtAddress.Text = "";
             UpdateSecurityIcon(true);
-            if (_btnBack != null) _btnBack.IsEnabled = false;
-            if (_btnForward != null) _btnForward.IsEnabled = false;
-            if (_btnRefresh != null) _btnRefresh.IsEnabled = false;
 
             RefreshRecentSites();
             UpdateDefaultBrowserRadioButtons();
@@ -2753,6 +2891,8 @@ public partial class BrowserWindow : Window
                 StartSearchTextBox.Focus();
             }));
         }
+
+        UpdateNavigationButtonsState();
     }
 
     private void RefreshRecentSites()

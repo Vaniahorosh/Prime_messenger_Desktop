@@ -148,7 +148,10 @@ public class SystemTrayService : IDisposable
         if (_hwnd != IntPtr.Zero) SetForegroundWindow(_hwnd);
         var menu = new ContextMenu
         {
-            Placement = System.Windows.Controls.Primitives.PlacementMode.MousePoint
+            Placement = System.Windows.Controls.Primitives.PlacementMode.MousePoint,
+            HasDropShadow = false,
+            Background = System.Windows.Media.Brushes.Transparent,
+            BorderThickness = new Thickness(0)
         };
         if (Application.Current.TryFindResource("ModernContextMenu") is Style cmStyle)
         {
