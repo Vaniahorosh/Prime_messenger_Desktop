@@ -916,29 +916,24 @@ public partial class MainWindow : Window
         if (DataContext is not MainViewModel vm || vm.IsCompactWindow) return;
         if (ColSidebar == null) return;
 
-        // If in normal mode and user is dragging towards the left edge:
-        if (!vm.IsSidebarRailMode && (ColSidebar.ActualWidth < 180 || (ColSidebar.ActualWidth < 220 && e.HorizontalChange < -15)))
+        // Smooth width clamping (minimum 72px for Rail, maximum 420px)
+        if (ColSidebar.ActualWidth > 420)
+        {
+            ColSidebar.Width = new GridLength(420);
+        }
+
+        // Wide hysteresis threshold (130px vs 190px) to prevent any jittering/flicker while dragging
+        if (!vm.IsSidebarRailMode && ColSidebar.ActualWidth <= 130)
         {
             vm.IsSidebarRailMode = true;
-            ColSidebar.MinWidth = 72;
-            ColSidebar.MaxWidth = 400;
-            ColSidebar.Width = new GridLength(72);
             if (vm.IsSearchActive)
             {
                 vm.CloseSearchCommand?.Execute(null);
             }
         }
-        // If in rail mode and user is dragging right to expand:
-        else if (vm.IsSidebarRailMode && (ColSidebar.ActualWidth > 100 || e.HorizontalChange > 12))
+        else if (vm.IsSidebarRailMode && ColSidebar.ActualWidth >= 190)
         {
             vm.IsSidebarRailMode = false;
-            ColSidebar.MinWidth = 72;
-            ColSidebar.MaxWidth = 400;
-            ColSidebar.Width = new GridLength(320);
-        }
-        else if (!vm.IsSidebarRailMode && ColSidebar.ActualWidth > 400)
-        {
-            ColSidebar.Width = new GridLength(400);
         }
     }
 
@@ -948,9 +943,11 @@ public partial class MainWindow : Window
         if (ColSidebar == null) return;
 
         ColSidebar.MinWidth = 72;
-        ColSidebar.MaxWidth = 400;
+        ColSidebar.MaxWidth = 420;
 
-        if (ColSidebar.ActualWidth < 180)
+        // Snap on release cleanly without fighting the drag cursor:
+        // Left below 160px -> snap firmly to Rail Mode (72px)
+        if (ColSidebar.ActualWidth < 160)
         {
             vm.IsSidebarRailMode = true;
             ColSidebar.Width = new GridLength(72);
@@ -961,19 +958,10 @@ public partial class MainWindow : Window
         }
         else
         {
+            // Left at or above 160px -> snap firmly to Normal List Mode (240px to 420px)
             vm.IsSidebarRailMode = false;
-            if (ColSidebar.ActualWidth < 220)
-            {
-                ColSidebar.Width = new GridLength(280);
-            }
-            else if (ColSidebar.ActualWidth > 400)
-            {
-                ColSidebar.Width = new GridLength(400);
-            }
-            else
-            {
-                ColSidebar.Width = new GridLength(ColSidebar.ActualWidth);
-            }
+            double finalWidth = Math.Clamp(ColSidebar.ActualWidth, 240, 420);
+            ColSidebar.Width = new GridLength(finalWidth);
         }
     }
 
@@ -982,17 +970,9 @@ public partial class MainWindow : Window
         if (DataContext is not MainViewModel vm || !vm.IsMediaDrawerOpen) return;
         if (ColDrawer == null) return;
 
-        // Drawer trigger: if dragging closer to the right edge of the screen (< 235px), snap closed!
-        if (ColDrawer.ActualWidth > 0 && ColDrawer.ActualWidth < 235)
+        if (ColDrawer.ActualWidth > 460)
         {
-            vm.IsMediaDrawerOpen = false;
-            ColDrawer.MinWidth = 0;
-            ColDrawer.MaxWidth = 0;
-            ColDrawer.Width = new GridLength(0);
-        }
-        else if (ColDrawer.ActualWidth > 440)
-        {
-            ColDrawer.Width = new GridLength(440);
+            ColDrawer.Width = new GridLength(460);
         }
     }
 
@@ -1001,8 +981,8 @@ public partial class MainWindow : Window
         if (DataContext is not MainViewModel vm || !vm.IsMediaDrawerOpen) return;
         if (ColDrawer == null) return;
 
-        // If dropped near the right edge (< 240px), close it!
-        if (ColDrawer.ActualWidth < 240 || ColDrawer.Width.Value < 240)
+        // Drawer trigger: if dropped near the edge (< 220px), snap closed!
+        if (ColDrawer.ActualWidth < 220)
         {
             vm.IsMediaDrawerOpen = false;
             ColDrawer.MinWidth = 0;
@@ -1011,14 +991,10 @@ public partial class MainWindow : Window
         }
         else
         {
-            if (ColDrawer.ActualWidth > 440 || ColDrawer.Width.Value > 440)
-            {
-                ColDrawer.Width = new GridLength(440);
-            }
-            else
-            {
-                ColDrawer.Width = new GridLength(ColDrawer.ActualWidth);
-            }
+            double finalWidth = Math.Clamp(ColDrawer.ActualWidth, 260, 460);
+            ColDrawer.MinWidth = 260;
+            ColDrawer.MaxWidth = 460;
+            ColDrawer.Width = new GridLength(finalWidth);
         }
     }
 
