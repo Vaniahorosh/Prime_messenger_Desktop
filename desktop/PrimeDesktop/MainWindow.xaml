@@ -212,19 +212,21 @@
         <Grid Grid.Row="1" x:Name="MainContentGrid">
 
             <Grid.ColumnDefinitions>
-                <ColumnDefinition x:Name="ColSidebar" Width="320" MinWidth="0" MaxWidth="450"/> <!-- Col 0: Sidebar -->
+                <ColumnDefinition x:Name="ColSidebar" Width="320" MinWidth="72" MaxWidth="400"/> <!-- Col 0: Sidebar (supports 72px rail mode & up to 400px) -->
                 <ColumnDefinition x:Name="ColSplitter1" Width="Auto"/>                             <!-- Col 1: Splitter 1 -->
                 <ColumnDefinition x:Name="ColChatView" Width="*"/>                                <!-- Col 2: Chat View -->
                 <ColumnDefinition x:Name="ColSplitter2" Width="Auto"/>                             <!-- Col 3: Splitter 2 -->
-                <ColumnDefinition x:Name="ColDrawer" MaxWidth="850">                            <!-- Col 4: Profile & Info Drawer -->
+                <ColumnDefinition x:Name="ColDrawer" MaxWidth="440">                               <!-- Col 4: Profile & Info Drawer -->
                     <ColumnDefinition.Style>
                         <Style TargetType="ColumnDefinition">
                             <Setter Property="Width" Value="330"/>
                             <Setter Property="MinWidth" Value="280"/>
+                            <Setter Property="MaxWidth" Value="440"/>
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding IsMediaDrawerOpen}" Value="False">
                                     <Setter Property="Width" Value="0"/>
                                     <Setter Property="MinWidth" Value="0"/>
+                                    <Setter Property="MaxWidth" Value="0"/>
                                 </DataTrigger>
                             </Style.Triggers>
                         </Style>
@@ -246,10 +248,41 @@
                         <RowDefinition Height="Auto"/> <!-- Bottom Status Bar -->
                     </Grid.RowDefinitions>
 
+                    <!-- Mode 1: Compact Rail Profile Avatar (Click to open settings/profile) -->
+                    <Border Grid.Row="0" Panel.ZIndex="10" VerticalAlignment="Top" HorizontalAlignment="Center"
+                            Margin="0,10,0,8" Width="44" Height="44" CornerRadius="{Binding AvatarCornerRadius}"
+                            Cursor="Hand" ToolTip="Мой профиль и настройки"
+                            Visibility="{Binding IsSidebarRailMode, Converter={StaticResource BoolToVis}}">
+                        <Border.InputBindings>
+                            <MouseBinding Gesture="LeftClick" Command="{Binding ToggleSettingsCommand}"/>
+                        </Border.InputBindings>
+                        <Border.Effect>
+                            <DropShadowEffect BlurRadius="16" ShadowDepth="3" Direction="270" Opacity="0.4" Color="#000000"/>
+                        </Border.Effect>
+                        <Grid>
+                            <!-- Initials fallback -->
+                            <Border CornerRadius="{Binding AvatarCornerRadius}" Background="{DynamicResource AccentBrush}"
+                                    Visibility="{Binding Settings.MyAvatarPath, Converter={StaticResource NullToVis}}">
+                                <TextBlock Text="{Binding Settings.MyDisplayName, Converter={StaticResource InitialsConverter}}"
+                                           Foreground="White" FontWeight="Bold" FontSize="15"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+
+                            <!-- Actual avatar -->
+                            <Border CornerRadius="{Binding AvatarCornerRadius}"
+                                    Visibility="{Binding Settings.MyAvatarPath, Converter={StaticResource NotNullToVis}}">
+                                <Border.Background>
+                                    <ImageBrush ImageSource="{Binding Settings.MyAvatarPath, Converter={StaticResource NonLockingImgConverter}}" Stretch="UniformToFill"/>
+                                </Border.Background>
+                            </Border>
+                        </Grid>
+                    </Border>
+
                     <!-- Header with Frosted Glass Profile Bar & Morphing Search Bar (Floats over chats) -->
                     <Border Grid.Row="0" Panel.ZIndex="10" VerticalAlignment="Top" Margin="10,10,10,8" Height="48" CornerRadius="18"
                             Background="{DynamicResource GlassSurfaceBrush}" BorderBrush="{DynamicResource GlassBorderBrush}" BorderThickness="1"
-                            Padding="6,4">
+                            Padding="6,4"
+                            Visibility="{Binding IsSidebarRailMode, Converter={StaticResource InverseBoolToVis}}">
                         <Border.Effect>
                             <DropShadowEffect BlurRadius="22" ShadowDepth="4" Direction="270" Opacity="0.45" Color="#000000"/>
                         </Border.Effect>
@@ -364,6 +397,7 @@
                             <DataTemplate>
 
                                 <Border Padding="10,8" Margin="6,2" CornerRadius="8" Background="Transparent"
+                                        ToolTip="{Binding DisplayName}"
                                         Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=Window}}">
 
                                     <Border.ContextMenu>
@@ -402,7 +436,7 @@
 
                                         <!-- Avatar with State Dot -->
 
-                                        <Grid Grid.Column="0" Margin="0,0,10,0">
+                                        <Grid Grid.Column="0" HorizontalAlignment="Center">
 
                                             <Border Width="42" Height="42" CornerRadius="{Binding DataContext.AvatarCornerRadius, RelativeSource={RelativeSource AncestorType=Window}}" Background="{DynamicResource CardBrush}">
 
@@ -431,13 +465,30 @@
                                                      Fill="{Binding StatusColorHex, Converter={StaticResource HexToBrush}}"
                                                      Visibility="{Binding IsOnlineIndicatorVisible, Converter={StaticResource BoolToVis}}"/>
 
+                                            <!-- Mini Unread Badge on Avatar for Rail Mode -->
+                                            <Border HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,-3,-3,0"
+                                                    Background="{DynamicResource BadgeBrush}" CornerRadius="7" MinWidth="14" Height="14" Padding="3,0"
+                                                    Visibility="{Binding DataContext.IsSidebarRailMode, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BoolToVis}}">
+                                                <Border.Style>
+                                                    <Style TargetType="Border">
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding UnreadCount}" Value="0">
+                                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Border.Style>
+                                                <TextBlock Text="{Binding UnreadCount}" Foreground="White" FontSize="9" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            </Border>
+
                                         </Grid>
 
 
 
                                         <!-- Name & Last Message -->
 
-                                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="10,0,0,0"
+                                                    Visibility="{Binding DataContext.IsSidebarRailMode, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource InverseBoolToVis}}">
 
                                             <TextBlock Text="{Binding DisplayName}" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
 
@@ -448,7 +499,8 @@
 
 
                                         <!-- Time & Unread Badge -->
-                                        <StackPanel Grid.Column="2" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                        <StackPanel Grid.Column="2" HorizontalAlignment="Right" VerticalAlignment="Center"
+                                                    Visibility="{Binding DataContext.IsSidebarRailMode, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource InverseBoolToVis}}">
                                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                                                 <Path Data="{StaticResource IconBellOff}" Fill="{StaticResource TextMutedBrush}" Width="10" Height="10" Stretch="Uniform"
                                                       Margin="0,0,4,0" VerticalAlignment="Center"
@@ -474,7 +526,8 @@
 
 
                     <!-- Status Bar -->
-                    <Border Grid.Row="2" Background="{DynamicResource HeaderBrush}" Padding="12,6" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0">
+                    <Border Grid.Row="2" Background="{DynamicResource HeaderBrush}" Padding="12,6" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0"
+                            Visibility="{Binding IsSidebarRailMode, Converter={StaticResource InverseBoolToVis}}">
 
                         <controls:AnimatedTextTransitionControl Text="{Binding StatusMessage}" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" TextTrimming="CharacterEllipsis"/>
 
@@ -486,11 +539,12 @@
 
             <!-- Column 1: GridSplitter 1 -->
 
-            <GridSplitter Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Stretch"
+            <GridSplitter x:Name="Splitter1" Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Stretch"
 
                           ResizeBehavior="PreviousAndNext" Width="5" Cursor="SizeWE"
 
-                          Background="{DynamicResource BorderBrush}" Opacity="0.5"/>
+                          Background="{DynamicResource BorderBrush}" Opacity="0.5"
+                          DragDelta="Splitter1_DragDelta" DragCompleted="Splitter1_DragCompleted"/>
 
 
 
@@ -1576,12 +1630,13 @@
 
             <!-- Column 3: GridSplitter 2 -->
 
-            <GridSplitter Grid.Column="3" HorizontalAlignment="Center" VerticalAlignment="Stretch"
+            <GridSplitter x:Name="Splitter2" Grid.Column="3" HorizontalAlignment="Center" VerticalAlignment="Stretch"
 
                           ResizeBehavior="PreviousAndNext" Width="5" Cursor="SizeWE"
 
                           Background="{DynamicResource BorderBrush}" Opacity="0.5"
-                          Visibility="{Binding IsMediaDrawerOpen, Converter={StaticResource BoolToVis}}"/>
+                          Visibility="{Binding IsMediaDrawerOpen, Converter={StaticResource BoolToVis}}"
+                          DragDelta="Splitter2_DragDelta" DragCompleted="Splitter2_DragCompleted"/>
 
 
 

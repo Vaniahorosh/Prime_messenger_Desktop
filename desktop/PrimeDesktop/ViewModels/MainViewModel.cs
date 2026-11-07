@@ -1364,6 +1364,23 @@ public class MainViewModel : ViewModelBase
         set => SetProperty(ref _isCompactWindow, value);
     }
 
+    private bool _isSidebarRailMode;
+    public bool IsSidebarRailMode
+    {
+        get => _isSidebarRailMode;
+        set
+        {
+            if (SetProperty(ref _isSidebarRailMode, value))
+            {
+                if (value && IsSearchActive)
+                {
+                    IsSearchActive = false;
+                    SearchQuery = string.Empty;
+                }
+            }
+        }
+    }
+
     private bool _isDiscoveryOpen;
     public bool IsDiscoveryOpen
 

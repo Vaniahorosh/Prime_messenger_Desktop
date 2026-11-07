@@ -138,14 +138,38 @@ public partial class MainWindow : Window
                         if (!vm.IsMediaDrawerOpen)
                         {
                             ColDrawer.MinWidth = 0;
+                            ColDrawer.MaxWidth = 0;
                             ColDrawer.Width = new GridLength(0);
                         }
                         else
                         {
                             ColDrawer.MinWidth = 280;
+                            ColDrawer.MaxWidth = 440;
                             if (ColDrawer.Width.Value < 280)
                             {
                                 ColDrawer.Width = new GridLength(330);
+                            }
+                            else if (ColDrawer.Width.Value > 440)
+                            {
+                                ColDrawer.Width = new GridLength(440);
+                            }
+                        }
+                    }
+                    else if (args.PropertyName == nameof(MainViewModel.IsSidebarRailMode))
+                    {
+                        if (vm.IsSidebarRailMode)
+                        {
+                            ColSidebar.MinWidth = 72;
+                            ColSidebar.MaxWidth = 72;
+                            ColSidebar.Width = new GridLength(72);
+                        }
+                        else
+                        {
+                            ColSidebar.MinWidth = 200;
+                            ColSidebar.MaxWidth = 400;
+                            if (ColSidebar.Width.Value <= 72)
+                            {
+                                ColSidebar.Width = new GridLength(320);
                             }
                         }
                     }
@@ -889,6 +913,106 @@ public partial class MainWindow : Window
         UpdateResponsiveLayout(e.NewSize.Width);
     }
 
+    private void Splitter1_DragDelta(object sender, System.Windows.Controls.Primitives.DragDeltaEventArgs e)
+    {
+        if (DataContext is not MainViewModel vm || vm.IsCompactWindow) return;
+        if (ColSidebar == null) return;
+
+        // If in normal mode and user is dragging towards the left edge:
+        if (!vm.IsSidebarRailMode && ColSidebar.ActualWidth < 190)
+        {
+            vm.IsSidebarRailMode = true;
+            ColSidebar.MinWidth = 72;
+            ColSidebar.MaxWidth = 72;
+            ColSidebar.Width = new GridLength(72);
+            if (vm.IsSearchActive)
+            {
+                vm.CloseSearchCommand?.Execute(null);
+            }
+        }
+        // If in rail mode and user is dragging right to expand:
+        else if (vm.IsSidebarRailMode && (ColSidebar.ActualWidth > 110 || e.HorizontalChange > 25))
+        {
+            vm.IsSidebarRailMode = false;
+            ColSidebar.MinWidth = 200;
+            ColSidebar.MaxWidth = 400;
+            ColSidebar.Width = new GridLength(320);
+        }
+        else if (!vm.IsSidebarRailMode && ColSidebar.ActualWidth > 400)
+        {
+            ColSidebar.Width = new GridLength(400);
+        }
+    }
+
+    private void Splitter1_DragCompleted(object sender, System.Windows.Controls.Primitives.DragCompletedEventArgs e)
+    {
+        if (DataContext is not MainViewModel vm || vm.IsCompactWindow) return;
+        if (ColSidebar == null) return;
+
+        if (ColSidebar.ActualWidth < 190)
+        {
+            vm.IsSidebarRailMode = true;
+            ColSidebar.MinWidth = 72;
+            ColSidebar.MaxWidth = 72;
+            ColSidebar.Width = new GridLength(72);
+            if (vm.IsSearchActive)
+            {
+                vm.CloseSearchCommand?.Execute(null);
+            }
+        }
+        else
+        {
+            vm.IsSidebarRailMode = false;
+            ColSidebar.MinWidth = 200;
+            ColSidebar.MaxWidth = 400;
+            if (ColSidebar.ActualWidth > 400 || ColSidebar.Width.Value > 400)
+            {
+                ColSidebar.Width = new GridLength(400);
+            }
+        }
+    }
+
+    private void Splitter2_DragDelta(object sender, System.Windows.Controls.Primitives.DragDeltaEventArgs e)
+    {
+        if (DataContext is not MainViewModel vm || !vm.IsMediaDrawerOpen) return;
+        if (ColDrawer == null) return;
+
+        // Drawer trigger: if dragging closer to the right edge of the screen (< 235px), snap closed!
+        if (ColDrawer.ActualWidth > 0 && ColDrawer.ActualWidth < 235)
+        {
+            vm.IsMediaDrawerOpen = false;
+            ColDrawer.MinWidth = 0;
+            ColDrawer.MaxWidth = 0;
+            ColDrawer.Width = new GridLength(0);
+        }
+        else if (ColDrawer.ActualWidth > 440)
+        {
+            ColDrawer.Width = new GridLength(440);
+        }
+    }
+
+    private void Splitter2_DragCompleted(object sender, System.Windows.Controls.Primitives.DragCompletedEventArgs e)
+    {
+        if (DataContext is not MainViewModel vm || !vm.IsMediaDrawerOpen) return;
+        if (ColDrawer == null) return;
+
+        // If dropped near the right edge (< 240px), close it!
+        if (ColDrawer.ActualWidth < 240 || ColDrawer.Width.Value < 240)
+        {
+            vm.IsMediaDrawerOpen = false;
+            ColDrawer.MinWidth = 0;
+            ColDrawer.MaxWidth = 0;
+            ColDrawer.Width = new GridLength(0);
+        }
+        else
+        {
+            if (ColDrawer.ActualWidth > 440 || ColDrawer.Width.Value > 440)
+            {
+                ColDrawer.Width = new GridLength(440);
+            }
+        }
+    }
+
     private void UpdateResponsiveLayout(double windowWidth)
     {
         if (DataContext is not MainViewModel vm) return;
@@ -908,19 +1032,21 @@ public partial class MainWindow : Window
             {
                 ColSidebar.Width = new GridLength(0);
                 ColSidebar.MinWidth = 0;
+                ColSidebar.MaxWidth = 0;
                 if (ColSplitter1 != null) ColSplitter1.Width = new GridLength(0);
             }
             else
             {
                 ColSidebar.Width = new GridLength(1, GridUnitType.Star);
                 ColSidebar.MinWidth = 0;
+                ColSidebar.MaxWidth = double.PositiveInfinity;
                 if (ColSplitter1 != null) ColSplitter1.Width = new GridLength(0);
             }
 
             // In compact mode, drawer should not exceed remaining width
             if (ColDrawer != null && vm.IsMediaDrawerOpen)
             {
-                ColDrawer.MaxWidth = Math.Max(260, windowWidth - 60);
+                ColDrawer.MaxWidth = Math.Min(440, Math.Max(260, windowWidth - 60));
             }
         }
         else
@@ -928,11 +1054,35 @@ public partial class MainWindow : Window
             // Normal desktop mode: wide layout
             if (ColSidebar.Width.Value == 0 || ColSidebar.Width.IsStar)
             {
-                ColSidebar.Width = new GridLength(320);
-                ColSidebar.MinWidth = 72;
+                if (vm.IsSidebarRailMode)
+                {
+                    ColSidebar.MinWidth = 72;
+                    ColSidebar.MaxWidth = 72;
+                    ColSidebar.Width = new GridLength(72);
+                }
+                else
+                {
+                    ColSidebar.MinWidth = 200;
+                    ColSidebar.MaxWidth = 400;
+                    ColSidebar.Width = new GridLength(320);
+                }
             }
+            else if (vm.IsSidebarRailMode)
+            {
+                ColSidebar.MinWidth = 72;
+                ColSidebar.MaxWidth = 72;
+            }
+            else
+            {
+                ColSidebar.MinWidth = 200;
+                ColSidebar.MaxWidth = 400;
+            }
+
             if (ColSplitter1 != null) ColSplitter1.Width = GridLength.Auto;
-            if (ColDrawer != null) ColDrawer.MaxWidth = 850;
+            if (ColDrawer != null)
+            {
+                ColDrawer.MaxWidth = Math.Min(440, Math.Max(280, windowWidth * 0.45));
+            }
         }
     }
 }
