@@ -18,13 +18,18 @@ if %ERRORLEVEL% neq 0 (
 
 set ROOT=%~dp0
 cd /d "%ROOT%PrimeDesktop"
-echo Restoring packages and building PrimeDesktop Release...
+echo Restoring packages and building PrimeDesktop Release (Portable)...
+taskkill /F /IM PrimeDesktop.exe >nul 2>nul
+taskkill /F /IM msedgewebview2.exe >nul 2>nul
 dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o "%ROOT%bin\Release"
 
 if %ERRORLEVEL% neq 0 (
     echo [ERROR] PrimeDesktop build failed.
     exit /b 1
 )
+
+if not exist "%ROOT%bin\Portable" mkdir "%ROOT%bin\Portable"
+copy /y "%ROOT%bin\Release\PrimeDesktop.exe" "%ROOT%bin\Portable\PrimeDesktop.exe" >nul
 
 echo.
 echo Cleaning runtime caches before packaging...
@@ -46,7 +51,7 @@ if %ERRORLEVEL% equ 0 (
     echo.
     echo ==============================================
     echo [SUCCESS] Build completed!
-    echo App: %ROOT%bin\Release\PrimeDesktop.exe
+    echo Portable:  %ROOT%bin\Portable\PrimeDesktop.exe
     echo Installer: %ROOT%bin\Installer\PrimeSetup.exe
     echo ==============================================
 ) else (
