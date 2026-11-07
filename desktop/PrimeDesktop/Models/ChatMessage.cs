@@ -533,6 +533,26 @@ public class ChatMessage : INotifyPropertyChanged
     }
 
     [JsonIgnore]
+    private bool _isFirstMessageInChat;
+
+    [JsonIgnore]
+    public bool IsFirstMessageInChat
+    {
+        get => _isFirstMessageInChat;
+        set => SetField(ref _isFirstMessageInChat, value);
+    }
+
+    [JsonIgnore]
+    private bool _isLastMessageInChat;
+
+    [JsonIgnore]
+    public bool IsLastMessageInChat
+    {
+        get => _isLastMessageInChat;
+        set => SetField(ref _isLastMessageInChat, value);
+    }
+
+    [JsonIgnore]
     public DateTime DateTimeLocal
     {
         get

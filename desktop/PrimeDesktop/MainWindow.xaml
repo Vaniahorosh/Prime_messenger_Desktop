@@ -220,7 +220,7 @@
                     <ColumnDefinition.Style>
                         <Style TargetType="ColumnDefinition">
                             <Setter Property="Width" Value="330"/>
-                            <Setter Property="MinWidth" Value="280"/>
+                            <Setter Property="MinWidth" Value="0"/>
                             <Setter Property="MaxWidth" Value="440"/>
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding IsMediaDrawerOpen}" Value="False">
@@ -360,12 +360,13 @@
 
                                         <!-- Clean Search Input: standard caret, no invisible padding/margins! -->
                                         <TextBox Grid.Column="1" x:Name="SearchTextBox" 
+                                                 Style="{StaticResource SeamlessTextBox}"
                                                  Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}" 
                                                  Background="Transparent" BorderThickness="0"
                                                  Foreground="{DynamicResource TextPrimaryBrush}"
                                                  CaretBrush="{DynamicResource TextPrimaryBrush}"
                                                  FontSize="13" VerticalContentAlignment="Center"
-                                                 Padding="0"
+                                                 Padding="2,0"
                                                  FocusVisualStyle="{x:Null}">
                                             <TextBox.InputBindings>
                                                 <KeyBinding Key="Esc" Command="{Binding CloseSearchCommand}"/>
@@ -685,7 +686,7 @@
                                   VirtualizingPanel.ScrollUnit="Pixel">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
-                                <VirtualizingStackPanel Margin="0,74,0,88"/>
+                                <VirtualizingStackPanel Margin="0"/>
                             </ItemsPanelTemplate>
                         </ItemsControl.ItemsPanel>
 
@@ -694,6 +695,9 @@
                             <DataTemplate>
 
                                 <StackPanel HorizontalAlignment="Stretch">
+
+                                    <!-- Top spacer so first message rests below floating header island -->
+                                    <Border Height="74" Visibility="{Binding IsFirstMessageInChat, Converter={StaticResource BoolToVis}}"/>
 
                                     <!-- Centered Date Header Pill matching Android layout_date_header -->
                                     <Border HorizontalAlignment="Center" Margin="0,8,0,6"
@@ -1210,6 +1214,9 @@
 
                                 </Grid>
 
+                                    <!-- Bottom spacer so last message rests above floating input island -->
+                                    <Border Height="90" Visibility="{Binding IsLastMessageInChat, Converter={StaticResource BoolToVis}}"/>
+
                                 </StackPanel>
 
                             </DataTemplate>
@@ -1497,14 +1504,14 @@
                                 </Grid.ColumnDefinitions>
 
                                 <Grid Grid.Column="0" VerticalAlignment="Center">
-                                    <TextBox x:Name="MsgInputTextBox" Style="{StaticResource ModernTextBox}"
-                                             Padding="12,8,12,8" VerticalContentAlignment="Center"
+                                    <TextBox x:Name="MsgInputTextBox" Style="{StaticResource SeamlessTextBox}"
+                                             Padding="4,6,4,6" VerticalContentAlignment="Center"
                                              Text="{Binding InputMessageText, UpdateSourceTrigger=PropertyChanged}"
                                              PreviewKeyDown="MsgInputTextBox_PreviewKeyDown"
                                              VerticalAlignment="Center" MinHeight="38" MaxHeight="100" TextWrapping="Wrap"/>
                                     <TextBlock Text="{Binding InputPlaceholderText}"
                                                Foreground="{DynamicResource TextMutedBrush}"
-                                               FontSize="13" Margin="14,0,0,0"
+                                               FontSize="13" Margin="4,0,0,0"
                                                VerticalAlignment="Center" IsHitTestVisible="False">
                                         <TextBlock.Style>
                                             <Style TargetType="TextBlock">

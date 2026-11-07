@@ -187,6 +187,7 @@ public class MainViewModel : ViewModelBase
             msg.TryLoadLinkPreview();
             msg.UpdateReactionGroups(myDisplayName);
         }
+        chat.UpdateMessageSpacers();
     }
 
     public static void PrepareMessage(ChatItem chat, ChatMessage msg, string myDisplayName = "")

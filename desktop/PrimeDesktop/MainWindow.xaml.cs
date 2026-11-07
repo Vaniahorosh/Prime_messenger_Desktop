@@ -143,9 +143,9 @@ public partial class MainWindow : Window
                         }
                         else
                         {
-                            ColDrawer.MinWidth = 280;
+                            ColDrawer.MinWidth = 0;
                             ColDrawer.MaxWidth = 440;
-                            if (ColDrawer.Width.Value < 280)
+                            if (ColDrawer.Width.Value < 240)
                             {
                                 ColDrawer.Width = new GridLength(330);
                             }
@@ -157,16 +157,14 @@ public partial class MainWindow : Window
                     }
                     else if (args.PropertyName == nameof(MainViewModel.IsSidebarRailMode))
                     {
+                        ColSidebar.MinWidth = 72;
+                        ColSidebar.MaxWidth = 400;
                         if (vm.IsSidebarRailMode)
                         {
-                            ColSidebar.MinWidth = 72;
-                            ColSidebar.MaxWidth = 72;
                             ColSidebar.Width = new GridLength(72);
                         }
                         else
                         {
-                            ColSidebar.MinWidth = 200;
-                            ColSidebar.MaxWidth = 400;
                             if (ColSidebar.Width.Value <= 72)
                             {
                                 ColSidebar.Width = new GridLength(320);
@@ -919,11 +917,11 @@ public partial class MainWindow : Window
         if (ColSidebar == null) return;
 
         // If in normal mode and user is dragging towards the left edge:
-        if (!vm.IsSidebarRailMode && ColSidebar.ActualWidth < 190)
+        if (!vm.IsSidebarRailMode && (ColSidebar.ActualWidth < 180 || (ColSidebar.ActualWidth < 220 && e.HorizontalChange < -15)))
         {
             vm.IsSidebarRailMode = true;
             ColSidebar.MinWidth = 72;
-            ColSidebar.MaxWidth = 72;
+            ColSidebar.MaxWidth = 400;
             ColSidebar.Width = new GridLength(72);
             if (vm.IsSearchActive)
             {
@@ -931,10 +929,10 @@ public partial class MainWindow : Window
             }
         }
         // If in rail mode and user is dragging right to expand:
-        else if (vm.IsSidebarRailMode && (ColSidebar.ActualWidth > 110 || e.HorizontalChange > 25))
+        else if (vm.IsSidebarRailMode && (ColSidebar.ActualWidth > 100 || e.HorizontalChange > 12))
         {
             vm.IsSidebarRailMode = false;
-            ColSidebar.MinWidth = 200;
+            ColSidebar.MinWidth = 72;
             ColSidebar.MaxWidth = 400;
             ColSidebar.Width = new GridLength(320);
         }
@@ -949,11 +947,12 @@ public partial class MainWindow : Window
         if (DataContext is not MainViewModel vm || vm.IsCompactWindow) return;
         if (ColSidebar == null) return;
 
-        if (ColSidebar.ActualWidth < 190)
+        ColSidebar.MinWidth = 72;
+        ColSidebar.MaxWidth = 400;
+
+        if (ColSidebar.ActualWidth < 180)
         {
             vm.IsSidebarRailMode = true;
-            ColSidebar.MinWidth = 72;
-            ColSidebar.MaxWidth = 72;
             ColSidebar.Width = new GridLength(72);
             if (vm.IsSearchActive)
             {
@@ -963,11 +962,17 @@ public partial class MainWindow : Window
         else
         {
             vm.IsSidebarRailMode = false;
-            ColSidebar.MinWidth = 200;
-            ColSidebar.MaxWidth = 400;
-            if (ColSidebar.ActualWidth > 400 || ColSidebar.Width.Value > 400)
+            if (ColSidebar.ActualWidth < 220)
+            {
+                ColSidebar.Width = new GridLength(280);
+            }
+            else if (ColSidebar.ActualWidth > 400)
             {
                 ColSidebar.Width = new GridLength(400);
+            }
+            else
+            {
+                ColSidebar.Width = new GridLength(ColSidebar.ActualWidth);
             }
         }
     }
@@ -1009,6 +1014,10 @@ public partial class MainWindow : Window
             if (ColDrawer.ActualWidth > 440 || ColDrawer.Width.Value > 440)
             {
                 ColDrawer.Width = new GridLength(440);
+            }
+            else
+            {
+                ColDrawer.Width = new GridLength(ColDrawer.ActualWidth);
             }
         }
     }
@@ -1052,35 +1061,25 @@ public partial class MainWindow : Window
         else
         {
             // Normal desktop mode: wide layout
+            ColSidebar.MinWidth = 72;
+            ColSidebar.MaxWidth = 400;
+
             if (ColSidebar.Width.Value == 0 || ColSidebar.Width.IsStar)
             {
                 if (vm.IsSidebarRailMode)
                 {
-                    ColSidebar.MinWidth = 72;
-                    ColSidebar.MaxWidth = 72;
                     ColSidebar.Width = new GridLength(72);
                 }
                 else
                 {
-                    ColSidebar.MinWidth = 200;
-                    ColSidebar.MaxWidth = 400;
                     ColSidebar.Width = new GridLength(320);
                 }
-            }
-            else if (vm.IsSidebarRailMode)
-            {
-                ColSidebar.MinWidth = 72;
-                ColSidebar.MaxWidth = 72;
-            }
-            else
-            {
-                ColSidebar.MinWidth = 200;
-                ColSidebar.MaxWidth = 400;
             }
 
             if (ColSplitter1 != null) ColSplitter1.Width = GridLength.Auto;
             if (ColDrawer != null)
             {
+                ColDrawer.MinWidth = 0;
                 ColDrawer.MaxWidth = Math.Min(440, Math.Max(280, windowWidth * 0.45));
             }
         }

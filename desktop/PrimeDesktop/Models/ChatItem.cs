@@ -312,6 +312,24 @@ public class ChatItem : INotifyPropertyChanged
 
     public ObservableCollection<ChatMessage> Messages { get; } = new();
 
+    public ChatItem()
+    {
+        Messages.CollectionChanged += (s, e) => UpdateMessageSpacers();
+    }
+
+    public void UpdateMessageSpacers()
+    {
+        if (Messages == null || Messages.Count == 0) return;
+        for (int i = 0; i < Messages.Count; i++)
+        {
+            var msg = Messages[i];
+            bool isFirst = (i == 0);
+            bool isLast = (i == Messages.Count - 1);
+            if (msg.IsFirstMessageInChat != isFirst) msg.IsFirstMessageInChat = isFirst;
+            if (msg.IsLastMessageInChat != isLast) msg.IsLastMessageInChat = isLast;
+        }
+    }
+
     public string DisplayName
     {
         get => _displayName;
