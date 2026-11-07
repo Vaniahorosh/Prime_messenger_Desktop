@@ -774,6 +774,18 @@ public class ChatMessage : INotifyPropertyChanged
                             EffectiveFileName.EndsWith(".wma", StringComparison.OrdinalIgnoreCase));
 
     [JsonIgnore]
+    public string AudioDisplayName
+    {
+        get
+        {
+            if (IsVoice) return "Голосовое сообщение";
+            if (!string.IsNullOrEmpty(FileName)) return FileName;
+            if (!string.IsNullOrEmpty(EffectiveFileName)) return EffectiveFileName;
+            return "Аудиозапись";
+        }
+    }
+
+    [JsonIgnore]
     public bool IsVideo => !IsVideoNote && HasAttachment && !string.IsNullOrEmpty(EffectiveFileName) &&
                            (EffectiveFileName.EndsWith(".mp4", StringComparison.OrdinalIgnoreCase) ||
                             EffectiveFileName.EndsWith(".mkv", StringComparison.OrdinalIgnoreCase) ||

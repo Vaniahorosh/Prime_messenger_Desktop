@@ -137,6 +137,12 @@ public class MainViewModel : ViewModelBase
                     OnPropertyChanged(nameof(SharedFiles));
                     OnPropertyChanged(nameof(SharedFileList));
                     OnPropertyChanged(nameof(SharedAudio));
+                    OnPropertyChanged(nameof(SharedMediaCount));
+                    OnPropertyChanged(nameof(SharedFilesCount));
+                    OnPropertyChanged(nameof(SharedAudioCount));
+                    OnPropertyChanged(nameof(HasSharedMedia));
+                    OnPropertyChanged(nameof(HasSharedFiles));
+                    OnPropertyChanged(nameof(HasSharedAudio));
 
                     _ = _storageService.SaveChatsAsync(_allChats);
 
@@ -1405,13 +1411,22 @@ public class MainViewModel : ViewModelBase
     private int _selectedProfileTab = 0;
 
     public int SelectedProfileTab
-
     {
         get => _selectedProfileTab;
-
-        set => SetProperty(ref _selectedProfileTab, value);
-
+        set
+        {
+            if (SetProperty(ref _selectedProfileTab, value))
+            {
+                OnPropertyChanged(nameof(IsMediaTabSelected));
+                OnPropertyChanged(nameof(IsFilesTabSelected));
+                OnPropertyChanged(nameof(IsAudioTabSelected));
+            }
+        }
     }
+
+    public bool IsMediaTabSelected => SelectedProfileTab == 0;
+    public bool IsFilesTabSelected => SelectedProfileTab == 1;
+    public bool IsAudioTabSelected => SelectedProfileTab == 2;
 
     private int _profileGridColumns = 3;
     public int ProfileGridColumns
@@ -1529,9 +1544,13 @@ public class MainViewModel : ViewModelBase
     public System.Collections.Generic.IEnumerable<ChatMessage> SharedAudio =>
         SelectedChat?.Messages.Where(m => (m.IsVoice || m.IsMusic) && !m.IsPhoto && !m.IsVideo && !m.IsVideoNote) ?? Enumerable.Empty<ChatMessage>();
 
-    public bool HasSharedMedia => SharedMediaList.Any();
-    public bool HasSharedFiles => SharedFileList.Any();
-    public bool HasSharedAudio => SharedAudio.Any();
+    public int SharedMediaCount => SharedMediaList.Count();
+    public int SharedFilesCount => SharedFileList.Count();
+    public int SharedAudioCount => SharedAudio.Count();
+
+    public bool HasSharedMedia => SharedMediaCount > 0;
+    public bool HasSharedFiles => SharedFilesCount > 0;
+    public bool HasSharedAudio => SharedAudioCount > 0;
 
     public MainViewModel()
     {
@@ -5020,6 +5039,12 @@ public async Task SendTextMessageAsync()
                     OnPropertyChanged(nameof(SharedFiles));
                     OnPropertyChanged(nameof(SharedFileList));
                     OnPropertyChanged(nameof(SharedAudio));
+                    OnPropertyChanged(nameof(SharedMediaCount));
+                    OnPropertyChanged(nameof(SharedFilesCount));
+                    OnPropertyChanged(nameof(SharedAudioCount));
+                    OnPropertyChanged(nameof(HasSharedMedia));
+                    OnPropertyChanged(nameof(HasSharedFiles));
+                    OnPropertyChanged(nameof(HasSharedAudio));
 
                     _ = Task.Run(async () =>
                     {
