@@ -1,0 +1,1063 @@
+using System.Windows.Threading;
+using System;
+using System.IO;
+using System.Linq;
+using System.Runtime.InteropServices;
+using System.Windows;
+using System.Windows.Input;
+using System.Windows.Interop;
+using System.Windows.Media.Imaging;
+using PrimeDesktop.Models;
+using PrimeDesktop.Services;
+using PrimeDesktop.ViewModels;
+using Application = System.Windows.Application;
+
+namespace PrimeDesktop;
+
+public partial class MainWindow : Window
+{
+    public static SystemTrayService? TrayService { get; private set; }
+    private bool _isExplicitExit = false;
+
+    public void ForceClose()
+    {
+        _isExplicitExit = true;
+        (DataContext as MainViewModel)?.FlushStorageSync();
+        Close();
+    }
+
+    public MainWindow()
+    {
+        InitializeComponent();
+        App.Log("MainWindow Initialized");
+        Closing += (s, e) =>
+        {
+            if (!_isExplicitExit)
+            {
+                e.Cancel = true;
+                Hide();
+                ShowTrayMinimizedNotificationIfNeeded();
+            }
+            else
+            {
+                (DataContext as MainViewModel)?.FlushStorageSync();
+            }
+            App.Log($"MainWindow Closing (Cancel={e.Cancel})");
+        };
+        Closed += (s, e) => App.Log("MainWindow Closed");
+        StateChanged += MainWindow_StateChanged;
+        SizeChanged += MainWindow_SizeChanged;
+        Loaded += MainWindow_Loaded;
+
+        TrayService = new SystemTrayService(this);
+        if (MsgInputTextBox != null)
+        {
+            DataObject.AddPastingHandler(MsgInputTextBox, OnMsgInputTextBoxPasting);
+        }
+        if (ChatEmojiPicker != null)
+        {
+            ChatEmojiPicker.EmojiSelected += ChatEmojiPicker_EmojiSelected;
+        }
+
+        if (ExpandedReactionsView != null)
+        {
+            ExpandedReactionsView.CloseRequested += (s, e) =>
+            {
+                if (ReactionsFullPopup != null) ReactionsFullPopup.IsOpen = false;
+            };
+            ExpandedReactionsView.ReactionSelected += async (s, emoji) =>
+            {
+                if (ReactionsFullPopup != null) ReactionsFullPopup.IsOpen = false;
+                var target = _reactionsTargetMessage;
+                if (target == null && DataContext is MainViewModel vmMsg)
+                {
+                    target = vmMsg.ContextMenuMessage;
+                }
+                if (target != null && DataContext is MainViewModel vm)
+                {
+                    await vm.SendReactionAsync(target, emoji);
+                }
+            };
+        }
+
+        if (ReactionsFullPopup != null)
+        {
+            ReactionsFullPopup.PreviewKeyDown += (s, e) =>
+            {
+                if (e.Key == Key.Escape)
+                {
+                    ReactionsFullPopup.IsOpen = false;
+                    e.Handled = true;
+                }
+            };
+        }
+
+        // Close full reactions popup on clicking outside, window deactivation or movement
+        PreviewMouseDown += (s, e) =>
+        {
+            if (ReactionsFullPopup != null && ReactionsFullPopup.IsOpen)
+            {
+                ReactionsFullPopup.IsOpen = false;
+            }
+        };
+
+        Deactivated += (s, e) =>
+        {
+            if (ReactionsFullPopup != null && ReactionsFullPopup.IsOpen)
+            {
+                ReactionsFullPopup.IsOpen = false;
+            }
+        };
+
+        LocationChanged += (s, e) =>
+        {
+            if (ReactionsFullPopup != null && ReactionsFullPopup.IsOpen)
+            {
+                ReactionsFullPopup.IsOpen = false;
+            }
+        };
+
+        if (MessagesScrollViewer != null)
+        {
+            MessagesScrollViewer.ScrollChanged += MessagesScrollViewer_ScrollChanged;
+        }
+        Loaded += (s, e) =>
+        {
+            App.Log("MainWindow Loaded");
+            ThemeManager.ApplyWindowDwm(this);
+            if (DataContext is MainViewModel vm)
+            {
+                if (vm.Settings.EnableScreenshotProtection)
+                {
+                    SecurityManager.SetScreenshotProtection(this, true);
+                }
+                vm.PropertyChanged += (sender, args) =>
+                {
+                    if (args.PropertyName == nameof(MainViewModel.IsMediaDrawerOpen))
+                    {
+                        if (!vm.IsMediaDrawerOpen)
+                        {
+                            ColDrawer.MinWidth = 0;
+                            ColDrawer.MaxWidth = 0;
+                            ColDrawer.Width = new GridLength(0);
+                        }
+                        else
+                        {
+                            ColDrawer.MinWidth = 0;
+                            ColDrawer.MaxWidth = 440;
+                            if (ColDrawer.Width.Value < 240)
+                            {
+                                ColDrawer.Width = new GridLength(330);
+                            }
+                            else if (ColDrawer.Width.Value > 440)
+                            {
+                                ColDrawer.Width = new GridLength(440);
+                            }
+                        }
+                    }
+                    else if (args.PropertyName == nameof(MainViewModel.IsSidebarRailMode))
+                    {
+                        ColSidebar.MinWidth = 72;
+                        ColSidebar.MaxWidth = 400;
+                        if (vm.IsSidebarRailMode)
+                        {
+                            ColSidebar.Width = new GridLength(72);
+                        }
+                        else
+                        {
+                            if (ColSidebar.Width.Value <= 72)
+                            {
+                                ColSidebar.Width = new GridLength(320);
+                            }
+                        }
+                    }
+                    else if (args.PropertyName == nameof(MainViewModel.IsSearchActive))
+                    {
+                        AnimateSearch(vm.IsSearchActive);
+                    }
+                    else if (args.PropertyName == nameof(MainViewModel.SelectedChat))
+                    {
+                        OnSelectedChatChanged(vm.SelectedChat);
+                    }
+                };
+
+                if (vm.SelectedChat != null)
+                {
+                    OnSelectedChatChanged(vm.SelectedChat);
+                }
+            }
+        };
+
+        PreviewKeyDown += (s, e) =>
+        {
+            if (Keyboard.Modifiers.HasFlag(ModifierKeys.Control) && e.Key == Key.V)
+            {
+                var focused = FocusManager.GetFocusedElement(this);
+                if (focused != MsgInputTextBox && focused is not System.Windows.Controls.TextBox)
+                {
+                    if (TryPasteMediaFromClipboard())
+                    {
+                        MsgInputTextBox?.Focus();
+                        e.Handled = true;
+                        return;
+                    }
+                }
+            }
+
+            if (e.Key == Key.Escape)
+            {
+                if (ReactionsFullPopup != null && ReactionsFullPopup.IsOpen)
+                {
+                    ReactionsFullPopup.IsOpen = false;
+                    e.Handled = true;
+                    return;
+                }
+
+                if (DataContext is MainViewModel vm)
+                {
+                    if (vm.IsPhotoViewerOpen)
+                    {
+                        vm.IsPhotoViewerOpen = false;
+                        e.Handled = true;
+                    }
+                    else if (vm.IsSearchActive)
+                    {
+                        vm.IsSearchActive = false;
+                        e.Handled = true;
+                    }
+                    else if (vm.IsSettingsOpen)
+                    {
+                        vm.IsSettingsOpen = false;
+                        e.Handled = true;
+                    }
+                    else if (vm.IsMediaDrawerOpen)
+                    {
+                        vm.IsMediaDrawerOpen = false;
+                        e.Handled = true;
+                    }
+                    else if (vm.HasSelectedChat)
+                    {
+                        vm.CloseActiveChatCommand.Execute(null);
+                        e.Handled = true;
+                    }
+                }
+            }
+        };
+    }
+
+    public void AnimateSearch(bool isOpening)
+    {
+        if (LeftSlidingGroup == null || SearchMorphContainer == null || BtnSearchTrigger == null || 
+            SearchActiveControls == null || BtnSearchClose == null || LeftGroupTransform == null || CloseBtnScale == null)
+            return;
+
+        var ease = new System.Windows.Media.Animation.CubicEase
+        {
+            EasingMode = isOpening ? System.Windows.Media.Animation.EasingMode.EaseOut : System.Windows.Media.Animation.EasingMode.EaseInOut
+        };
+        var duration = TimeSpan.FromMilliseconds(250);
+
+        // 1. Left items (Avatar, Name, Device Discovery) slide left and fade out
+        var leftTranslate = new System.Windows.Media.Animation.DoubleAnimation(isOpening ? -300 : 0, duration) { EasingFunction = ease };
+        var leftOpacity = new System.Windows.Media.Animation.DoubleAnimation(isOpening ? 0.0 : 1.0, duration) { EasingFunction = ease };
+
+        LeftGroupTransform.BeginAnimation(System.Windows.Media.TranslateTransform.XProperty, leftTranslate);
+        LeftSlidingGroup.BeginAnimation(UIElement.OpacityProperty, leftOpacity);
+        LeftSlidingGroup.IsHitTestVisible = !isOpening;
+
+        // 2. SearchMorphContainer width animation:
+        // Anchored at Right, expands from 34px to the full width of Row 0
+        double fullWidth = 292;
+        if (SearchMorphContainer.Parent is FrameworkElement parent && parent.ActualWidth > 50)
+        {
+            fullWidth = parent.ActualWidth;
+        }
+
+        var widthAnim = new System.Windows.Media.Animation.DoubleAnimation(isOpening ? fullWidth : 34, duration) { EasingFunction = ease };
+        SearchMorphContainer.BeginAnimation(FrameworkElement.WidthProperty, widthAnim);
+
+        // 3. Trigger button fades out when opening, fades in when closing
+        var triggerOpacity = new System.Windows.Media.Animation.DoubleAnimation(isOpening ? 0.0 : 1.0, TimeSpan.FromMilliseconds(160)) { EasingFunction = ease };
+        BtnSearchTrigger.BeginAnimation(UIElement.OpacityProperty, triggerOpacity);
+        BtnSearchTrigger.IsHitTestVisible = !isOpening;
+
+        // 4. Search input controls fade in when opening, fade out when closing
+        var controlsOpacity = new System.Windows.Media.Animation.DoubleAnimation(isOpening ? 1.0 : 0.0, TimeSpan.FromMilliseconds(200))
+        {
+            BeginTime = isOpening ? TimeSpan.FromMilliseconds(70) : TimeSpan.Zero,
+            EasingFunction = ease
+        };
+        SearchActiveControls.BeginAnimation(UIElement.OpacityProperty, controlsOpacity);
+        SearchActiveControls.IsHitTestVisible = isOpening;
+
+        // 5. Close button (✕) fades in on the right with subtle pop scale
+        var closeOpacity = new System.Windows.Media.Animation.DoubleAnimation(isOpening ? 1.0 : 0.0, TimeSpan.FromMilliseconds(180))
+        {
+            BeginTime = isOpening ? TimeSpan.FromMilliseconds(100) : TimeSpan.Zero,
+            EasingFunction = ease
+        };
+        var closeScale = new System.Windows.Media.Animation.DoubleAnimation(isOpening ? 1.0 : 0.4, TimeSpan.FromMilliseconds(180))
+        {
+            BeginTime = isOpening ? TimeSpan.FromMilliseconds(100) : TimeSpan.Zero,
+            EasingFunction = ease
+        };
+
+        BtnSearchClose.BeginAnimation(UIElement.OpacityProperty, closeOpacity);
+        CloseBtnScale.BeginAnimation(System.Windows.Media.ScaleTransform.ScaleXProperty, closeScale);
+        CloseBtnScale.BeginAnimation(System.Windows.Media.ScaleTransform.ScaleYProperty, closeScale);
+
+        if (isOpening)
+        {
+            Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Input, () =>
+            {
+                SearchTextBox?.Focus();
+                SearchTextBox?.SelectAll();
+            });
+        }
+    }
+
+    private void MainWindow_StateChanged(object? sender, EventArgs e)
+    {
+        if (IconMaximize == null || IconRestore == null || BtnMaximize == null) return;
+
+        if (WindowState == WindowState.Maximized)
+        {
+            IconMaximize.Visibility = Visibility.Collapsed;
+            IconRestore.Visibility = Visibility.Visible;
+            BtnMaximize.ToolTip = "Восстановить";
+        }
+        else
+        {
+            IconMaximize.Visibility = Visibility.Visible;
+            IconRestore.Visibility = Visibility.Collapsed;
+            BtnMaximize.ToolTip = "Развернуть";
+        }
+    }
+
+    protected override void OnSourceInitialized(EventArgs e)
+    {
+        base.OnSourceInitialized(e);
+        ThemeManager.ApplyWindowDwm(this);
+        var handle = new WindowInteropHelper(this).Handle;
+        var source = HwndSource.FromHwnd(handle);
+        source?.AddHook(WindowProc);
+    }
+
+    private IntPtr WindowProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+    {
+        if (msg == App.WM_SHOWME && App.WM_SHOWME != 0)
+        {
+            TrayService?.RestoreWindow();
+            handled = true;
+        }
+        else if (msg == WM_GETMINMAXINFO)
+        {
+            WmGetMinMaxInfo(hwnd, lParam);
+            handled = true;
+        }
+        return IntPtr.Zero;
+    }
+
+    private static void WmGetMinMaxInfo(IntPtr hwnd, IntPtr lParam)
+    {
+        var mmi = Marshal.PtrToStructure<MINMAXINFO>(lParam);
+        var monitor = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST);
+        if (monitor != IntPtr.Zero)
+        {
+            var monitorInfo = new MONITORINFO();
+            GetMonitorInfo(monitor, monitorInfo);
+
+            mmi.ptMaxPosition.x = monitorInfo.rcWork.left - monitorInfo.rcMonitor.left;
+            mmi.ptMaxPosition.y = monitorInfo.rcWork.top - monitorInfo.rcMonitor.top;
+            mmi.ptMaxSize.x = monitorInfo.rcWork.right - monitorInfo.rcWork.left;
+            mmi.ptMaxSize.y = monitorInfo.rcWork.bottom - monitorInfo.rcWork.top;
+            mmi.ptMaxTrackSize.x = mmi.ptMaxSize.x;
+            mmi.ptMaxTrackSize.y = mmi.ptMaxSize.y;
+        }
+        Marshal.StructureToPtr(mmi, lParam, true);
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct POINT
+    {
+        public int x;
+        public int y;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct MINMAXINFO
+    {
+        public POINT ptReserved;
+        public POINT ptMaxSize;
+        public POINT ptMaxPosition;
+        public POINT ptMinTrackSize;
+        public POINT ptMaxTrackSize;
+    }
+
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto)]
+    private class MONITORINFO
+    {
+        public int cbSize = Marshal.SizeOf(typeof(MONITORINFO));
+        public RECT rcMonitor = new RECT();
+        public RECT rcWork = new RECT();
+        public int dwFlags = 0;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct RECT
+    {
+        public int left;
+        public int top;
+        public int right;
+        public int bottom;
+    }
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr MonitorFromWindow(IntPtr hwnd, uint dwFlags);
+
+    [DllImport("user32.dll", CharSet = CharSet.Auto)]
+    private static extern bool GetMonitorInfo(IntPtr hMonitor, [In, Out] MONITORINFO lpmi);
+
+    private const uint MONITOR_DEFAULTTONEAREST = 0x00000002;
+    private const int WM_GETMINMAXINFO = 0x0024;
+
+    private void TitleBar_MouseDown(object sender, MouseButtonEventArgs e)
+    {
+        if (e.ChangedButton == MouseButton.Left)
+        {
+            if (e.ClickCount == 2)
+            {
+                BtnMaximize_Click(sender, e);
+                return;
+            }
+
+            if (WindowState == WindowState.Maximized)
+            {
+                var mousePos = PointToScreen(e.GetPosition(this));
+                var ratio = e.GetPosition(this).X / Math.Max(ActualWidth, 1);
+                WindowState = WindowState.Normal;
+                Left = mousePos.X - (ActualWidth * ratio);
+                Top = mousePos.Y - 18;
+            }
+
+            DragMove();
+        }
+    }
+
+    private void BtnMinimize_Click(object sender, RoutedEventArgs e)
+    {
+        WindowState = WindowState.Minimized;
+    }
+
+    private void BtnMaximize_Click(object sender, RoutedEventArgs e)
+    {
+        WindowState = (WindowState == WindowState.Maximized) ? WindowState.Normal : WindowState.Maximized;
+    }
+
+    private void BtnClose_Click(object sender, RoutedEventArgs e)
+    {
+        Hide();
+        ShowTrayMinimizedNotificationIfNeeded();
+    }
+
+    private void ShowTrayMinimizedNotificationIfNeeded()
+    {
+        if (DataContext is ViewModels.MainViewModel vm && vm.Settings != null)
+        {
+            if (!vm.Settings.HasShownTrayNotification)
+            {
+                vm.Settings.HasShownTrayNotification = true;
+                _ = vm.ApplyAndSaveSettingsAsync();
+                TrayService?.ShowNotification("Прайм Мессенджер", "Приложение свернуто в системный трей.");
+            }
+        }
+    }
+
+    protected override void OnClosed(EventArgs e)
+    {
+        (DataContext as MainViewModel)?.FlushStorageSync();
+        TrayService?.Dispose();
+        base.OnClosed(e);
+    }
+
+    private void MsgInputTextBox_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+    {
+        if (Keyboard.Modifiers.HasFlag(ModifierKeys.Control))
+        {
+            if (e.Key == Key.V)
+            {
+                if (TryPasteMediaFromClipboard())
+                {
+                    e.Handled = true;
+                    return;
+                }
+            }
+            if (e.Key == Key.B)
+            {
+                ApplySelectionFormatting("<b>", "</b>");
+                e.Handled = true;
+                return;
+            }
+            if (e.Key == Key.I)
+            {
+                ApplySelectionFormatting("<i>", "</i>");
+                e.Handled = true;
+                return;
+            }
+            if (e.Key == Key.F && Keyboard.Modifiers.HasFlag(ModifierKeys.Shift))
+            {
+                if (DataContext is MainViewModel vm)
+                {
+                    vm.ToggleRichFormattingCommand.Execute(null);
+                }
+                e.Handled = true;
+                return;
+            }
+        }
+
+        if (e.Key == Key.Enter)
+        {
+            if (Keyboard.Modifiers.HasFlag(ModifierKeys.Shift))
+            {
+                int caret = MsgInputTextBox.CaretIndex;
+                MsgInputTextBox.Text = MsgInputTextBox.Text.Insert(caret, Environment.NewLine);
+                MsgInputTextBox.CaretIndex = caret + Environment.NewLine.Length;
+                e.Handled = true;
+            }
+            else
+            {
+                if (DataContext is MainViewModel vm && vm.SendMessageCommand.CanExecute(null))
+                {
+                    vm.SendMessageCommand.Execute(null);
+                }
+                e.Handled = true;
+            }
+        }
+    }
+
+    private void BtnEmojiPickerTrigger_Click(object sender, RoutedEventArgs e)
+    {
+        EmojiPickerPopup.IsOpen = !EmojiPickerPopup.IsOpen;
+    }
+
+    private bool _isEmojiPickerForReaction = false;
+    private Models.ChatMessage? _activeReactionTargetMessage = null;
+
+    private void ChatEmojiPicker_EmojiSelected(object? sender, string emoji)
+    {
+        if (_isEmojiPickerForReaction)
+        {
+            _isEmojiPickerForReaction = false;
+            EmojiPickerPopup.IsOpen = false;
+            EmojiPickerPopup.Placement = System.Windows.Controls.Primitives.PlacementMode.Top;
+            if (_activeReactionTargetMessage != null && DataContext is MainViewModel vm)
+            {
+                _ = vm.SendReactionAsync(_activeReactionTargetMessage, emoji);
+            }
+            return;
+        }
+
+        int caret = MsgInputTextBox.CaretIndex;
+        string current = MsgInputTextBox.Text ?? string.Empty;
+        if (caret < 0 || caret > current.Length) caret = current.Length;
+        MsgInputTextBox.Text = current.Insert(caret, emoji);
+        MsgInputTextBox.CaretIndex = caret + emoji.Length;
+        MsgInputTextBox.Focus();
+        EmojiPickerPopup.IsOpen = false;
+    }
+
+    private void ApplySelectionFormatting(string openTag, string closeTag)
+    {
+        int start = MsgInputTextBox.SelectionStart;
+        int len = MsgInputTextBox.SelectionLength;
+        string selected = MsgInputTextBox.SelectedText;
+        if (string.IsNullOrEmpty(selected))
+        {
+            selected = "текст";
+        }
+        string replacement = $"{openTag}{selected}{closeTag}";
+        MsgInputTextBox.SelectedText = replacement;
+        MsgInputTextBox.SelectionStart = start + openTag.Length;
+        MsgInputTextBox.SelectionLength = selected.Length;
+        if (DataContext is MainViewModel vm)
+        {
+            vm.IsRichFormattingActive = true;
+        }
+    }
+
+    private void MessageBorder_ContextMenuOpening(object sender, System.Windows.Controls.ContextMenuEventArgs e)
+    {
+        if (sender is FrameworkElement fe && fe.DataContext is Models.ChatMessage msg)
+        {
+            if (DataContext is MainViewModel vm)
+            {
+                vm.ContextMenuMessage = msg;
+            }
+        }
+    }
+
+    private Models.ChatMessage? _reactionsTargetMessage;
+
+    private void BtnOpenMoreReactions_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement fe)
+        {
+            Models.ChatMessage? msg = fe.Tag as Models.ChatMessage;
+            if (msg == null && DataContext is MainViewModel vmMsg)
+            {
+                msg = vmMsg.ContextMenuMessage;
+            }
+
+            _reactionsTargetMessage = msg;
+
+            var cm = FindVisualParent<System.Windows.Controls.ContextMenu>(fe);
+            if (cm != null) cm.IsOpen = false;
+
+            Dispatcher.BeginInvoke(DispatcherPriority.Input, new Action(() =>
+            {
+                if (ExpandedReactionsView != null)
+                {
+                    ExpandedReactionsView.ResetSearch();
+                }
+                if (ReactionsFullPopup != null)
+                {
+                    ReactionsFullPopup.IsOpen = true;
+                    ExpandedReactionsView?.FocusSearch();
+                }
+            }));
+        }
+    }
+
+    private void ReactionButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement fe)
+        {
+            Models.ChatMessage? msg = fe.Tag as Models.ChatMessage;
+            if (msg == null && fe is System.Windows.Controls.Button btnTag && btnTag.Tag is Models.ChatMessage mTag)
+            {
+                msg = mTag;
+            }
+            if (msg == null && DataContext is MainViewModel vmMsg)
+            {
+                msg = vmMsg.ContextMenuMessage;
+            }
+
+            if (msg != null && DataContext is MainViewModel vm)
+            {
+                vm.ContextMenuMessage = msg;
+                if (fe is System.Windows.Controls.Button btn && btn.CommandParameter is string emoji)
+                {
+                    _ = vm.SendReactionAsync(msg, emoji);
+                }
+            }
+
+            var cm = FindVisualParent<System.Windows.Controls.ContextMenu>(fe);
+            if (cm != null) cm.IsOpen = false;
+        }
+    }
+
+    private void ReactionScrollViewer_PreviewMouseWheel(object sender, System.Windows.Input.MouseWheelEventArgs e)
+    {
+        if (sender is System.Windows.Controls.ScrollViewer sv)
+        {
+            sv.ScrollToHorizontalOffset(sv.HorizontalOffset - (e.Delta * 0.8));
+            e.Handled = true;
+        }
+    }
+
+    private void ReactionChip_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement fe && fe.DataContext is Models.ReactionGroup rg && fe.Tag is Models.ChatMessage msg)
+        {
+            if (DataContext is MainViewModel vm)
+            {
+                string? emojiToSend = rg.IsSelectedByMe ? null : rg.Emoji;
+                _ = vm.SendReactionAsync(msg, emojiToSend);
+            }
+        }
+    }
+
+    private void BtnChatHeaderMore_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement fe && fe.ContextMenu != null)
+        {
+            fe.ContextMenu.PlacementTarget = fe;
+            fe.ContextMenu.Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom;
+            fe.ContextMenu.IsOpen = true;
+        }
+    }
+
+    private void ProfileDrawer_SizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        if (DataContext is MainViewModel vm && e.NewSize.Width > 0)
+        {
+            vm.UpdateDrawerGridColumns(e.NewSize.Width);
+        }
+    }
+
+    private System.Collections.Specialized.NotifyCollectionChangedEventHandler? _messagesChangedHandler;
+    private Models.ChatItem? _currentlyTrackedChat;
+
+    private void OnSelectedChatChanged(Models.ChatItem? newChat)
+    {
+        if (_currentlyTrackedChat != null && _messagesChangedHandler != null)
+        {
+            _currentlyTrackedChat.Messages.CollectionChanged -= _messagesChangedHandler;
+        }
+
+        _currentlyTrackedChat = newChat;
+
+        if (_currentlyTrackedChat != null)
+        {
+            _messagesChangedHandler = (s, e) =>
+            {
+                if (e.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Add)
+                {
+                    Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Loaded, () =>
+                    {
+                        if (MessagesScrollViewer == null) return;
+                        double dist = MessagesScrollViewer.ScrollableHeight - MessagesScrollViewer.VerticalOffset;
+                        bool isFromMe = false;
+                        if (e.NewItems != null && e.NewItems.Count > 0 && e.NewItems[0] is Models.ChatMessage cm)
+                        {
+                            isFromMe = cm.IsFromMe;
+                        }
+
+                        if (dist < 150 || isFromMe)
+                        {
+                            MessagesScrollViewer.ScrollToBottom();
+                        }
+                    });
+                }
+            };
+            _currentlyTrackedChat.Messages.CollectionChanged += _messagesChangedHandler;
+
+            Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Loaded, () =>
+            {
+                MessagesScrollViewer?.ScrollToBottom();
+            });
+        }
+    }
+
+    private void MessagesScrollViewer_ScrollChanged(object sender, System.Windows.Controls.ScrollChangedEventArgs e)
+    {
+        if (BtnScrollToBottom == null || MessagesScrollViewer == null) return;
+        double distanceFromBottom = MessagesScrollViewer.ScrollableHeight - MessagesScrollViewer.VerticalOffset;
+        BtnScrollToBottom.Visibility = distanceFromBottom > 120 ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    private void BtnScrollToBottom_Click(object sender, RoutedEventArgs e)
+    {
+        MessagesScrollViewer?.ScrollToBottom();
+    }
+
+    private void LinkPreviewCard_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is FrameworkElement fe && fe.Tag is string url && !string.IsNullOrWhiteSpace(url))
+        {
+            try
+            {
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = url,
+                    UseShellExecute = true
+                });
+            }
+            catch (Exception ex)
+            {
+                App.Log($"[LinkPreview] Failed to open URL: {ex.Message}");
+            }
+        }
+    }
+
+    private static T? FindVisualParent<T>(DependencyObject child) where T : DependencyObject
+    {
+        DependencyObject parentObject = System.Windows.Media.VisualTreeHelper.GetParent(child);
+        if (parentObject == null) return null;
+        if (parentObject is T parent) return parent;
+        return FindVisualParent<T>(parentObject);
+    }
+
+    private void ChatArea_DragOver(object sender, DragEventArgs e)
+    {
+        if (e.Data.GetDataPresent(DataFormats.FileDrop))
+        {
+            e.Effects = DragDropEffects.Copy;
+            e.Handled = true;
+        }
+        else
+        {
+            e.Effects = DragDropEffects.None;
+        }
+    }
+
+    private void ChatArea_Drop(object sender, DragEventArgs e)
+    {
+        if (e.Data.GetDataPresent(DataFormats.FileDrop))
+        {
+            string[]? files = e.Data.GetData(DataFormats.FileDrop) as string[];
+            if (files != null && files.Length > 0 && DataContext is MainViewModel vm && vm.HasSelectedChat)
+            {
+                vm.StageFilePaths(files);
+                e.Handled = true;
+            }
+        }
+    }
+
+    private void OnMsgInputTextBoxPasting(object sender, DataObjectPastingEventArgs e)
+    {
+        if (TryPasteMediaFromClipboard())
+        {
+            e.CancelCommand();
+            e.Handled = true;
+        }
+    }
+
+    private bool TryPasteMediaFromClipboard()
+    {
+        if (DataContext is not MainViewModel vm || !vm.HasSelectedChat)
+            return false;
+
+        try
+        {
+            IDataObject? dataObj = null;
+            try { dataObj = Clipboard.GetDataObject(); } catch { }
+
+            // 1. Files copied in Windows Explorer (Ctrl+C on file)
+            if (Clipboard.ContainsFileDropList())
+            {
+                var fileDrop = Clipboard.GetFileDropList();
+                if (fileDrop != null && fileDrop.Count > 0)
+                {
+                    var files = fileDrop.Cast<string>().Where(File.Exists).ToArray();
+                    if (files.Length > 0)
+                    {
+                        vm.StageFilePaths(files);
+                        MsgInputTextBox?.Focus();
+                        return true;
+                    }
+                }
+            }
+            else if (dataObj != null && dataObj.GetDataPresent(DataFormats.FileDrop))
+            {
+                if (dataObj.GetData(DataFormats.FileDrop) is string[] files && files.Length > 0)
+                {
+                    var valid = files.Where(File.Exists).ToArray();
+                    if (valid.Length > 0)
+                    {
+                        vm.StageFilePaths(valid);
+                        MsgInputTextBox?.Focus();
+                        return true;
+                    }
+                }
+            }
+
+            // 2. Image (Snipping tool, PrintScreen, copied web picture, bitmap in clipboard)
+            if (Clipboard.ContainsImage() || (dataObj != null && dataObj.GetDataPresent(DataFormats.Bitmap)))
+            {
+                BitmapSource? image = null;
+                try { image = Clipboard.GetImage(); } catch { }
+                if (image == null && dataObj != null && dataObj.GetDataPresent(DataFormats.Bitmap))
+                {
+                    image = dataObj.GetData(DataFormats.Bitmap) as BitmapSource;
+                }
+
+                if (image != null)
+                {
+                    string tempDir = Path.Combine(Path.GetTempPath(), "PrimeDesktop", "Clipboard");
+                    Directory.CreateDirectory(tempDir);
+                    string tempFile = Path.Combine(tempDir, $"Screenshot_{DateTime.Now:yyyyMMdd_HHmmss}_{Guid.NewGuid():N}.png");
+
+                    using (var fileStream = new FileStream(tempFile, FileMode.Create, FileAccess.Write, FileShare.None))
+                    {
+                        var encoder = new PngBitmapEncoder();
+                        encoder.Frames.Add(BitmapFrame.Create(image));
+                        encoder.Save(fileStream);
+                    }
+
+                    vm.StageFilePaths(new[] { tempFile }, PacketType.Photo);
+                    MsgInputTextBox?.Focus();
+                    return true;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            App.Log($"[Clipboard] Failed to paste media from clipboard: {ex.Message}");
+        }
+
+        return false;
+    }
+
+    private void MainWindow_Loaded(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is MainViewModel vm)
+        {
+            vm.PropertyChanged += (s, args) =>
+            {
+                if (args.PropertyName == nameof(MainViewModel.SelectedChat) ||
+                    args.PropertyName == nameof(MainViewModel.HasSelectedChat) ||
+                    args.PropertyName == nameof(MainViewModel.IsMediaDrawerOpen))
+                {
+                    UpdateResponsiveLayout(ActualWidth);
+                }
+            };
+            UpdateResponsiveLayout(ActualWidth);
+        }
+    }
+
+    private void MainWindow_SizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        UpdateResponsiveLayout(e.NewSize.Width);
+    }
+
+    private void Splitter1_DragDelta(object sender, System.Windows.Controls.Primitives.DragDeltaEventArgs e)
+    {
+        if (DataContext is not MainViewModel vm || vm.IsCompactWindow) return;
+        if (ColSidebar == null) return;
+
+        // Smooth width clamping (minimum 72px for Rail, maximum 420px)
+        if (ColSidebar.ActualWidth > 420)
+        {
+            ColSidebar.Width = new GridLength(420);
+        }
+
+        // Wide hysteresis threshold (130px vs 190px) to prevent any jittering/flicker while dragging
+        if (!vm.IsSidebarRailMode && ColSidebar.ActualWidth <= 130)
+        {
+            vm.IsSidebarRailMode = true;
+            if (vm.IsSearchActive)
+            {
+                vm.CloseSearchCommand?.Execute(null);
+            }
+        }
+        else if (vm.IsSidebarRailMode && ColSidebar.ActualWidth >= 190)
+        {
+            vm.IsSidebarRailMode = false;
+        }
+    }
+
+    private void Splitter1_DragCompleted(object sender, System.Windows.Controls.Primitives.DragCompletedEventArgs e)
+    {
+        if (DataContext is not MainViewModel vm || vm.IsCompactWindow) return;
+        if (ColSidebar == null) return;
+
+        ColSidebar.MinWidth = 72;
+        ColSidebar.MaxWidth = 420;
+
+        // Snap on release cleanly without fighting the drag cursor:
+        // Left below 160px -> snap firmly to Rail Mode (72px)
+        if (ColSidebar.ActualWidth < 160)
+        {
+            vm.IsSidebarRailMode = true;
+            ColSidebar.Width = new GridLength(72);
+            if (vm.IsSearchActive)
+            {
+                vm.CloseSearchCommand?.Execute(null);
+            }
+        }
+        else
+        {
+            // Left at or above 160px -> snap firmly to Normal List Mode (240px to 420px)
+            vm.IsSidebarRailMode = false;
+            double finalWidth = Math.Clamp(ColSidebar.ActualWidth, 240, 420);
+            ColSidebar.Width = new GridLength(finalWidth);
+        }
+    }
+
+    private void Splitter2_DragDelta(object sender, System.Windows.Controls.Primitives.DragDeltaEventArgs e)
+    {
+        if (DataContext is not MainViewModel vm || !vm.IsMediaDrawerOpen) return;
+        if (ColDrawer == null) return;
+
+        if (ColDrawer.ActualWidth > 460)
+        {
+            ColDrawer.Width = new GridLength(460);
+        }
+    }
+
+    private void Splitter2_DragCompleted(object sender, System.Windows.Controls.Primitives.DragCompletedEventArgs e)
+    {
+        if (DataContext is not MainViewModel vm || !vm.IsMediaDrawerOpen) return;
+        if (ColDrawer == null) return;
+
+        // Drawer trigger: if dropped near the edge (< 220px), snap closed!
+        if (ColDrawer.ActualWidth < 220)
+        {
+            vm.IsMediaDrawerOpen = false;
+            ColDrawer.MinWidth = 0;
+            ColDrawer.MaxWidth = 0;
+            ColDrawer.Width = new GridLength(0);
+        }
+        else
+        {
+            double finalWidth = Math.Clamp(ColDrawer.ActualWidth, 260, 460);
+            ColDrawer.MinWidth = 260;
+            ColDrawer.MaxWidth = 460;
+            ColDrawer.Width = new GridLength(finalWidth);
+        }
+    }
+
+    private void UpdateResponsiveLayout(double windowWidth)
+    {
+        if (DataContext is not MainViewModel vm) return;
+
+        bool isCompact = windowWidth < 740;
+        if (vm.IsCompactWindow != isCompact)
+        {
+            vm.IsCompactWindow = isCompact;
+        }
+
+        if (ColSidebar == null || ColChatView == null) return;
+
+        if (isCompact)
+        {
+            // Compact mode: show either sidebar or chat, not both
+            if (vm.HasSelectedChat)
+            {
+                ColSidebar.Width = new GridLength(0);
+                ColSidebar.MinWidth = 0;
+                ColSidebar.MaxWidth = 0;
+                if (ColSplitter1 != null) ColSplitter1.Width = new GridLength(0);
+            }
+            else
+            {
+                ColSidebar.Width = new GridLength(1, GridUnitType.Star);
+                ColSidebar.MinWidth = 0;
+                ColSidebar.MaxWidth = double.PositiveInfinity;
+                if (ColSplitter1 != null) ColSplitter1.Width = new GridLength(0);
+            }
+
+            // In compact mode, drawer should not exceed remaining width
+            if (ColDrawer != null && vm.IsMediaDrawerOpen)
+            {
+                ColDrawer.MaxWidth = Math.Min(440, Math.Max(260, windowWidth - 60));
+            }
+        }
+        else
+        {
+            // Normal desktop mode: wide layout
+            ColSidebar.MinWidth = 72;
+            ColSidebar.MaxWidth = 400;
+
+            if (ColSidebar.Width.Value == 0 || ColSidebar.Width.IsStar)
+            {
+                if (vm.IsSidebarRailMode)
+                {
+                    ColSidebar.Width = new GridLength(72);
+                }
+                else
+                {
+                    ColSidebar.Width = new GridLength(320);
+                }
+            }
+
+            if (ColSplitter1 != null) ColSplitter1.Width = GridLength.Auto;
+            if (ColDrawer != null)
+            {
+                ColDrawer.MinWidth = 0;
+                ColDrawer.MaxWidth = Math.Min(440, Math.Max(280, windowWidth * 0.45));
+            }
+        }
+    }
+}

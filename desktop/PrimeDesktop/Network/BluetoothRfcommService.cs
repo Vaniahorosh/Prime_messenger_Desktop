@@ -1,0 +1,868 @@
+using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
+using Windows.Devices.Bluetooth;
+using Windows.Devices.Bluetooth.Rfcomm;
+using Windows.Devices.Enumeration;
+using Windows.Devices.Radios;
+using Windows.Networking.Sockets;
+using Windows.Storage.Streams;
+using PrimeDesktop.Models;
+using PrimeDesktop.Services;
+
+namespace PrimeDesktop.Network;
+
+/// <summary>
+/// Native Windows Bluetooth Classic RFCOMM service.
+/// Provides 100% anonymized peer communication matching Prime Messenger on Android.
+/// Features async non-blocking I/O, write serialization (SemaphoreSlim), smart KeepAlive,
+/// role arbitration, and auto-retry reconnection matching Android's BluetoothConnectionManager.
+/// </summary>
+public class BluetoothRfcommService : IPrimeNetworkService
+{
+    public static readonly Guid PrimeServiceUuid = Guid.Parse("fa87c0d0-afac-11de-8a39-0800200c9a66");
+
+    public event Action<string, DeviceConnectionState, string>? ConnectionStateChanged;
+    public event Action<string, PacketType, byte[]>? PacketReceived;
+    public event Action<string, string>? ErrorOccurred;
+    public event Action<string, PacketType, long, long>? TransferProgressChanged;
+
+    private StreamSocketListener? _serverListener;
+    private RfcommServiceProvider? _rfcommProvider;
+
+    // Strict internal mapping between Opaque Peer ID and physical hardware address
+    private readonly ConcurrentDictionary<string, string> _peerToHardwareAddress = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<string, string> _hardwareAddressToPeer = new(StringComparer.OrdinalIgnoreCase);
+
+    private readonly ConcurrentDictionary<string, StreamSocket> _activeSockets = new();
+    private readonly ConcurrentDictionary<string, Stream> _activeStreams = new();
+    private readonly ConcurrentDictionary<string, SemaphoreSlim> _writeLocks = new();
+    private readonly ConcurrentDictionary<string, DateTime> _lastActivityTime = new();
+
+    private readonly ConcurrentDictionary<string, CancellationTokenSource> _readCancellation = new();
+    private readonly ConcurrentDictionary<string, CancellationTokenSource> _keepAliveCancellation = new();
+
+    // Auto-retry state matching Android BluetoothConnectionManager
+    private readonly ConcurrentDictionary<string, int> _retryCounts = new();
+    private readonly ConcurrentDictionary<string, bool> _manuallyDisconnected = new();
+    private readonly ConcurrentDictionary<string, SemaphoreSlim> _connectLocks = new();
+
+    public string MyDisplayName { get; set; } = Environment.MachineName;
+    public string MyUsername { get; set; } = "prime_desktop";
+
+    public static string NormalizeMacAddress(string? addressOrId)
+    {
+        if (string.IsNullOrWhiteSpace(addressOrId)) return string.Empty;
+
+        string cleaned = addressOrId.Trim().Trim('(', ')', '[', ']');
+
+        int lastHyphen = cleaned.LastIndexOf('-');
+        if (lastHyphen >= 0 && lastHyphen < cleaned.Length - 1 && cleaned.Contains('#'))
+        {
+            cleaned = cleaned.Substring(lastHyphen + 1);
+        }
+
+        string hexOnly = cleaned.Replace(":", "").Replace("-", "");
+        if (hexOnly.Length == 12 && ulong.TryParse(hexOnly, System.Globalization.NumberStyles.HexNumber, null, out ulong mac))
+        {
+            return $"{((mac >> 40) & 0xFF):X2}:{((mac >> 32) & 0xFF):X2}:{((mac >> 24) & 0xFF):X2}:{((mac >> 16) & 0xFF):X2}:{((mac >> 8) & 0xFF):X2}:{(mac & 0xFF):X2}";
+        }
+
+        return cleaned.ToUpperInvariant();
+    }
+
+    public string ResolveHardwareAddress(string peerIdOrAddress)
+    {
+        if (_peerToHardwareAddress.TryGetValue(peerIdOrAddress, out var mapped))
+        {
+            return mapped;
+        }
+        return NormalizeMacAddress(peerIdOrAddress);
+    }
+
+    public void RegisterPeerAddress(string peerId, string rawHardwareAddress)
+    {
+        string norm = NormalizeMacAddress(rawHardwareAddress);
+        if (!string.IsNullOrEmpty(norm) && !string.IsNullOrEmpty(peerId))
+        {
+            _peerToHardwareAddress[peerId] = norm;
+            _hardwareAddressToPeer[norm] = peerId;
+        }
+    }
+
+    public string ResolvePeerId(string hardwareAddressOrPeerId)
+    {
+        if (string.IsNullOrWhiteSpace(hardwareAddressOrPeerId)) return string.Empty;
+        if (hardwareAddressOrPeerId.StartsWith("peer_", StringComparison.OrdinalIgnoreCase))
+            return hardwareAddressOrPeerId;
+
+        string norm = NormalizeMacAddress(hardwareAddressOrPeerId);
+        if (_hardwareAddressToPeer.TryGetValue(norm, out var peerId))
+        {
+            return peerId;
+        }
+        if (_hardwareAddressToPeer.TryGetValue(hardwareAddressOrPeerId, out var peerId2))
+        {
+            return peerId2;
+        }
+        return GetOrCreatePeerId(norm);
+    }
+
+    private string GetOrCreatePeerId(string rawHardwareAddress)
+    {
+        string norm = NormalizeMacAddress(rawHardwareAddress);
+        string peerId = _hardwareAddressToPeer.GetOrAdd(norm, addr => DeviceAnonymizer.GetOpaquePeerId(addr));
+        _peerToHardwareAddress[peerId] = norm;
+        return peerId;
+    }
+
+    private void RecordActivity(string rawAddress)
+    {
+        _lastActivityTime[NormalizeMacAddress(rawAddress)] = DateTime.UtcNow;
+    }
+
+    /// <summary>
+    /// Role arbitration matching Android BluetoothConnectionManager.isClientInitiator
+    /// Prevents simultaneous RFCOMM connection collisions.
+    /// </summary>
+    public static bool IsClientInitiator(string localName, string remoteName)
+    {
+        if (string.IsNullOrWhiteSpace(localName) || string.IsNullOrWhiteSpace(remoteName)) return true;
+        string loc = localName.Trim().ToUpperInvariant();
+        string rem = remoteName.Trim().ToUpperInvariant();
+        int comp = string.Compare(loc, rem, StringComparison.Ordinal);
+        if (comp != 0) return comp > 0;
+        return JavaStringHashCode(loc) >= JavaStringHashCode(rem);
+    }
+
+    private static int JavaStringHashCode(string s)
+    {
+        int h = 0;
+        for (int i = 0; i < s.Length; i++)
+        {
+            h = unchecked(31 * h + s[i]);
+        }
+        return h;
+    }
+
+    private Radio? _bluetoothRadio;
+    private bool _isRadioMonitoringStarted;
+
+    private async Task EnsureRadioMonitoringAsync()
+    {
+        if (_isRadioMonitoringStarted) return;
+        _isRadioMonitoringStarted = true;
+
+        try
+        {
+            var adapter = await BluetoothAdapter.GetDefaultAsync();
+            if (adapter != null)
+            {
+                _bluetoothRadio = await adapter.GetRadioAsync();
+                if (_bluetoothRadio != null)
+                {
+                    _bluetoothRadio.StateChanged += (s, e) =>
+                    {
+                        App.Log($"[Bluetooth] Radio StateChanged: {_bluetoothRadio.State}");
+                        if (_bluetoothRadio.State == RadioState.On)
+                        {
+                            if (_serverListener == null)
+                            {
+                                App.Log("[Bluetooth] Radio turned on, starting RFCOMM server...");
+                                _ = StartServerAsync();
+                            }
+                        }
+                        else if (_bluetoothRadio.State == RadioState.Off)
+                        {
+                            App.Log("[Bluetooth] Radio turned off by user, stopping RFCOMM server...");
+                            _ = StopServerAsync();
+                        }
+                    };
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            App.Log($"[Bluetooth] EnsureRadioMonitoringAsync error: {ex.Message}");
+        }
+    }
+
+    public async Task StartServerAsync()
+    {
+        _ = EnsureRadioMonitoringAsync();
+        try
+        {
+            _rfcommProvider = await RfcommServiceProvider.CreateAsync(RfcommServiceId.FromUuid(PrimeServiceUuid));
+            _serverListener = new StreamSocketListener();
+            _serverListener.ConnectionReceived += OnConnectionReceived;
+
+            await _serverListener.BindServiceNameAsync(
+                _rfcommProvider.ServiceId.AsString(),
+                SocketProtectionLevel.BluetoothEncryptionAllowNullAuthentication);
+
+            // Populate SDP Service Record (0x25 = SDP Text String with 1-byte length)
+            using (var writer = new DataWriter())
+            {
+                writer.WriteByte(0x25); // SDP String type: Type 4, 1-byte length follows
+                writer.WriteByte((byte)"PrimeChat".Length);
+                writer.WriteString("PrimeChat");
+                _rfcommProvider.SdpRawAttributes.Add(0x0100, writer.DetachBuffer());
+            }
+
+            _rfcommProvider.StartAdvertising(_serverListener, true);
+            App.Log("[Bluetooth] RFCOMM Server started advertising.");
+        }
+        catch (Exception ex)
+        {
+            App.Log($"[Bluetooth ERROR] Failed to start server: {ex.Message}");
+            ErrorOccurred?.Invoke("LocalServer", $"Failed to start Bluetooth RFCOMM server: {ex.Message}");
+        }
+    }
+
+    public Task StopServerAsync()
+    {
+        try
+        {
+            _rfcommProvider?.StopAdvertising();
+            _rfcommProvider = null;
+
+            _serverListener?.Dispose();
+            _serverListener = null;
+
+            foreach (var kvp in _activeSockets)
+            {
+                DisconnectInternal(kvp.Key);
+            }
+        }
+        catch { }
+        return Task.CompletedTask;
+    }
+
+    private void OnConnectionReceived(StreamSocketListener sender, StreamSocketListenerConnectionReceivedEventArgs args)
+    {
+        var socket = args.Socket;
+        string rawAddress = NormalizeMacAddress(socket.Information.RemoteAddress.CanonicalName);
+        string peerId = GetOrCreatePeerId(rawAddress);
+        string friendlyName = DeviceAnonymizer.SanitizeDisplayName(socket.Information.RemoteHostName?.DisplayName, rawAddress);
+
+        App.Log($"[Bluetooth] ConnectionReceived from '{rawAddress}' ({socket.Information.RemoteAddress.CanonicalName})");
+
+        _peerToHardwareAddress[peerId] = rawAddress;
+        _hardwareAddressToPeer[rawAddress] = peerId;
+
+        _manuallyDisconnected.TryRemove(rawAddress, out _);
+        _manuallyDisconnected.TryRemove(peerId, out _);
+        _retryCounts.TryRemove(rawAddress, out _);
+
+        // If an active stream already exists, keep the active connection and ignore redundant incoming socket
+        if (_activeSockets.TryGetValue(rawAddress, out var existingSocket) && _activeStreams.ContainsKey(rawAddress))
+        {
+            App.Log($"[Bluetooth] ConnectionReceived: active connection already exists for '{rawAddress}', keeping active and closing redundant incoming socket.");
+            try { socket.Dispose(); } catch { }
+            ConnectionStateChanged?.Invoke(peerId, DeviceConnectionState.Connected, friendlyName);
+            return;
+        }
+
+        // Clean up any stale active socket for this device
+        if (existingSocket != null)
+        {
+            App.Log($"[Bluetooth] Disconnecting previous stale socket for '{rawAddress}'");
+            DisconnectInternal(rawAddress);
+        }
+
+        _activeSockets[rawAddress] = socket;
+        var inStream = socket.InputStream.AsStreamForRead();
+        var outStream = socket.OutputStream.AsStreamForWrite();
+        _activeStreams[rawAddress] = new BidirectionalStream(inStream, outStream);
+        RecordActivity(rawAddress);
+
+        ConnectionStateChanged?.Invoke(peerId, DeviceConnectionState.Connected, friendlyName);
+
+        // Start bidirectional KeepAlive
+        StartKeepAlive(peerId, rawAddress);
+
+        // Send Initial Handshake & Presence
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                byte[] handshake = PrimePacket.BuildHandshakePayload(MyDisplayName, MyUsername, isAck: false);
+                await SendPacketAsync(peerId, PacketType.Text, handshake);
+                await SendPacketAsync(peerId, PacketType.Presence, System.Text.Encoding.UTF8.GetBytes("ONLINE"));
+                App.Log($"[Bluetooth] Sent initial handshake to '{peerId}' ({rawAddress})");
+            }
+            catch (Exception ex)
+            {
+                App.Log($"[Bluetooth ERROR] Failed to send initial handshake to '{peerId}': {ex.Message}");
+            }
+        });
+
+        StartReading(peerId, rawAddress, inStream, socket);
+    }
+
+    public Task<bool> ConnectAsync(string peerIdOrAddress) => ConnectAsync(peerIdOrAddress, forceClient: false);
+
+    public async Task<bool> ConnectAsync(string peerIdOrAddress, bool forceClient)
+    {
+        string rawAddress = ResolveHardwareAddress(peerIdOrAddress);
+        string peerId = GetOrCreatePeerId(rawAddress);
+        App.Log($"[Bluetooth] ConnectAsync called: '{peerIdOrAddress}' -> raw='{rawAddress}', peerId='{peerId}', forceClient={forceClient}");
+        _manuallyDisconnected.TryRemove(rawAddress, out _);
+        _manuallyDisconnected.TryRemove(peerId, out _);
+
+        // If already connected, do not re-connect
+        if (_activeSockets.ContainsKey(rawAddress) && _activeStreams.ContainsKey(rawAddress))
+        {
+            App.Log($"[Bluetooth] ConnectAsync: Already connected to '{rawAddress}'");
+            return true;
+        }
+
+        var connectLock = _connectLocks.GetOrAdd(rawAddress, _ => new SemaphoreSlim(1, 1));
+        if (!await connectLock.WaitAsync(0))
+        {
+            App.Log($"[Bluetooth] ConnectAsync: Connection already in progress for '{rawAddress}', skipping redundant call.");
+            return false;
+        }
+
+        try
+        {
+            if (_activeSockets.ContainsKey(rawAddress) && _activeStreams.ContainsKey(rawAddress))
+            {
+                App.Log($"[Bluetooth] ConnectAsync: Connected while waiting for lock to '{rawAddress}'");
+                return true;
+            }
+
+            ConnectionStateChanged?.Invoke(peerId, DeviceConnectionState.Connecting, "Установка связи...");
+
+            BluetoothDevice? device = null;
+            if (ulong.TryParse(rawAddress.Replace(":", "").Replace("-", ""), System.Globalization.NumberStyles.HexNumber, null, out ulong mac))
+            {
+                device = await BluetoothDevice.FromBluetoothAddressAsync(mac);
+            }
+            else
+            {
+                device = await BluetoothDevice.FromIdAsync(peerIdOrAddress);
+            }
+
+            if (device == null)
+            {
+                App.Log($"[Bluetooth ERROR] Device not found for '{rawAddress}'");
+                ConnectionStateChanged?.Invoke(peerId, DeviceConnectionState.Disconnected, "Устройство не найдено");
+                ErrorOccurred?.Invoke(peerId, "Bluetooth device not found.");
+                return false;
+            }
+
+            // Always standardize rawAddress from the resolved BluetoothDevice
+            string normMac = NormalizeMacAddress(device.BluetoothAddress.ToString("X12"));
+            if (!string.IsNullOrEmpty(normMac))
+            {
+                rawAddress = normMac;
+                _peerToHardwareAddress[peerId] = rawAddress;
+                _hardwareAddressToPeer[rawAddress] = peerId;
+            }
+
+            // Automatic pairing if not already paired
+            if (device.DeviceInformation?.Pairing != null &&
+                !device.DeviceInformation.Pairing.IsPaired &&
+                device.DeviceInformation.Pairing.CanPair)
+            {
+                App.Log($"[Bluetooth] Device '{rawAddress}' is not paired. Requesting pairing...");
+                ConnectionStateChanged?.Invoke(peerId, DeviceConnectionState.Connecting, "Сопряжение с устройством...");
+                var pairResult = await device.DeviceInformation.Pairing.PairAsync(DevicePairingProtectionLevel.None);
+                App.Log($"[Bluetooth] Pairing result for '{rawAddress}': {pairResult.Status}");
+                if (pairResult.Status != DevicePairingResultStatus.Paired && pairResult.Status != DevicePairingResultStatus.AlreadyPaired)
+                {
+                    ConnectionStateChanged?.Invoke(peerId, DeviceConnectionState.Disconnected, "Ошибка сопряжения");
+                    return false;
+                }
+            }
+
+            // Role arbitration matching Android BluetoothConnectionManager
+            if (!forceClient && !IsClientInitiator(MyDisplayName, device.Name))
+            {
+                App.Log($"[Bluetooth] Role arbitration: Local='{MyDisplayName}' vs Remote='{device.Name}' -> Acting as server, waiting 3.5s...");
+                ConnectionStateChanged?.Invoke(peerId, DeviceConnectionState.Connecting, "Ожидание входящего подключения...");
+                await Task.Delay(3500);
+
+                if (_activeSockets.ContainsKey(rawAddress) && _activeStreams.ContainsKey(rawAddress))
+                {
+                    App.Log($"[Bluetooth] Connected via incoming socket while waiting.");
+                    return true;
+                }
+
+                if (_manuallyDisconnected.ContainsKey(rawAddress) || _manuallyDisconnected.ContainsKey(peerId))
+                {
+                    return false;
+                }
+                App.Log($"[Bluetooth] 3.5s timeout expired, proceeding as client initiator...");
+            }
+
+            // Query RFCOMM services with Uncached mode first to avoid stale cached RFCOMM channels
+            App.Log($"[Bluetooth] Querying RFCOMM services for '{rawAddress}' (Uncached)...");
+            var rfcommServices = await device.GetRfcommServicesForIdAsync(
+                RfcommServiceId.FromUuid(PrimeServiceUuid),
+                BluetoothCacheMode.Uncached);
+
+            if (rfcommServices.Services.Count == 0)
+            {
+                await Task.Delay(600);
+                rfcommServices = await device.GetRfcommServicesForIdAsync(
+                    RfcommServiceId.FromUuid(PrimeServiceUuid),
+                    BluetoothCacheMode.Uncached);
+            }
+
+            if (rfcommServices.Services.Count == 0)
+            {
+                App.Log($"[Bluetooth] Uncached query returned 0 services, trying Cached...");
+                rfcommServices = await device.GetRfcommServicesForIdAsync(
+                    RfcommServiceId.FromUuid(PrimeServiceUuid),
+                    BluetoothCacheMode.Cached);
+            }
+
+            if (rfcommServices.Services.Count == 0)
+            {
+                App.Log($"[Bluetooth ERROR] Prime Messenger service not found on '{rawAddress}'");
+                ConnectionStateChanged?.Invoke(peerId, DeviceConnectionState.Disconnected, device.Name);
+                ErrorOccurred?.Invoke(peerId, "Prime Messenger service not available on device.");
+                return false;
+            }
+
+            // If already connected during SDP discovery, keep active connection
+            if (_activeSockets.ContainsKey(rawAddress) && _activeStreams.ContainsKey(rawAddress))
+            {
+                App.Log($"[Bluetooth] ConnectAsync: connection already active for '{rawAddress}', skipping duplicate socket connection.");
+                return true;
+            }
+
+            var service = rfcommServices.Services[0];
+            App.Log($"[Bluetooth] Connecting StreamSocket to '{service.ConnectionHostName?.DisplayName}' : '{service.ConnectionServiceName}'...");
+            var socket = new StreamSocket();
+            await socket.ConnectAsync(service.ConnectionHostName, service.ConnectionServiceName, SocketProtectionLevel.BluetoothEncryptionAllowNullAuthentication);
+            App.Log($"[Bluetooth] StreamSocket connected successfully!");
+
+            // If an incoming connection completed while ConnectAsync was awaiting, keep incoming
+            if (_activeSockets.ContainsKey(rawAddress) && _activeStreams.ContainsKey(rawAddress))
+            {
+                App.Log($"[Bluetooth] ConnectAsync: incoming connection arrived while connecting to '{rawAddress}', closing duplicate outgoing socket.");
+                try { socket.Dispose(); } catch { }
+                return true;
+            }
+
+            string addressKey = rawAddress;
+            _peerToHardwareAddress[peerId] = addressKey;
+            _hardwareAddressToPeer[addressKey] = peerId;
+
+            _activeSockets[addressKey] = socket;
+            var inStream = socket.InputStream.AsStreamForRead();
+            var outStream = socket.OutputStream.AsStreamForWrite();
+            _activeStreams[addressKey] = new BidirectionalStream(inStream, outStream);
+            RecordActivity(addressKey);
+            _retryCounts.TryRemove(addressKey, out _);
+
+            string friendlyName = DeviceAnonymizer.SanitizeDisplayName(device.Name, rawAddress);
+            ConnectionStateChanged?.Invoke(peerId, DeviceConnectionState.Connected, friendlyName);
+
+            // Start KeepAlive heartbeat
+            StartKeepAlive(peerId, addressKey);
+
+            // Send handshake & presence
+            byte[] handshake = PrimePacket.BuildHandshakePayload(MyDisplayName, MyUsername, isAck: false);
+            await SendPacketAsync(peerId, PacketType.Text, handshake);
+            await SendPacketAsync(peerId, PacketType.Presence, System.Text.Encoding.UTF8.GetBytes("ONLINE"));
+
+            StartReading(peerId, addressKey, inStream, socket);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            ConnectionStateChanged?.Invoke(peerId, DeviceConnectionState.Disconnected, "Ошибка подключения");
+            ErrorOccurred?.Invoke(peerId, $"Bluetooth connection error: {ex.Message}");
+            return false;
+        }
+        finally
+        {
+            connectLock.Release();
+        }
+    }
+
+    public Task DisconnectAsync(string peerId)
+    {
+        string rawAddress = ResolveHardwareAddress(peerId);
+
+        _manuallyDisconnected[rawAddress] = true;
+        _manuallyDisconnected[peerId] = true;
+        _retryCounts.TryRemove(rawAddress, out _);
+        _retryCounts.TryRemove(peerId, out _);
+
+        DisconnectInternal(rawAddress);
+        ConnectionStateChanged?.Invoke(peerId, DeviceConnectionState.Disconnected, "Отключено");
+        return Task.CompletedTask;
+    }
+
+    public bool IsConnected(string deviceAddressOrIp)
+    {
+        string rawAddress = ResolveHardwareAddress(deviceAddressOrIp);
+        return _activeStreams.ContainsKey(rawAddress) && _activeSockets.ContainsKey(rawAddress);
+    }
+
+    public void ForgetDevice(string peerIdOrAddress)
+    {
+        string rawAddress = ResolveHardwareAddress(peerIdOrAddress);
+
+        _peerToHardwareAddress.TryRemove(peerIdOrAddress, out _);
+        _hardwareAddressToPeer.TryRemove(rawAddress, out _);
+        _manuallyDisconnected[rawAddress] = true;
+        _manuallyDisconnected[peerIdOrAddress] = true;
+        _retryCounts.TryRemove(rawAddress, out _);
+        _retryCounts.TryRemove(peerIdOrAddress, out _);
+
+        DisconnectInternal(rawAddress);
+    }
+
+    private void DisconnectInternal(string rawAddress)
+    {
+        StopKeepAlive(rawAddress);
+
+        if (_readCancellation.TryRemove(rawAddress, out var cts))
+        {
+            try { cts.Cancel(); cts.Dispose(); } catch { }
+        }
+
+        if (_activeStreams.TryRemove(rawAddress, out var stream))
+        {
+            try { stream.Dispose(); } catch { }
+        }
+
+        if (_activeSockets.TryRemove(rawAddress, out var socket))
+        {
+            try { socket.Dispose(); } catch { }
+        }
+
+        if (_writeLocks.TryRemove(rawAddress, out var sem))
+        {
+            try { sem.Dispose(); } catch { }
+        }
+
+        _lastActivityTime.TryRemove(rawAddress, out _);
+    }
+
+    private void StartKeepAlive(string peerId, string rawAddress)
+    {
+        StopKeepAlive(rawAddress);
+        var cts = new CancellationTokenSource();
+        _keepAliveCancellation[rawAddress] = cts;
+
+        Task.Run(async () =>
+        {
+            byte[] empty = Array.Empty<byte>();
+            while (!cts.IsCancellationRequested)
+            {
+                try
+                {
+                    await Task.Delay(3500, cts.Token);
+                    if (!_activeStreams.ContainsKey(rawAddress)) break;
+
+                    // Smart KeepAlive: ping only if idle for > 6 seconds to prevent flooding
+                    if (_lastActivityTime.TryGetValue(rawAddress, out var lastActive))
+                    {
+                        if ((DateTime.UtcNow - lastActive).TotalSeconds < 6.0)
+                        {
+                            continue;
+                        }
+                    }
+
+                    await SendPacketAsync(peerId, PacketType.Ping, empty);
+                }
+                catch
+                {
+                    break;
+                }
+            }
+        }, cts.Token);
+    }
+
+    private void StopKeepAlive(string rawAddress)
+    {
+        if (_keepAliveCancellation.TryRemove(rawAddress, out var cts))
+        {
+            try { cts.Cancel(); cts.Dispose(); } catch { }
+        }
+    }
+
+    public Task SendPacketAsync(string targetPeerId, PacketType type, byte[] payload)
+        => SendPacketAsync(targetPeerId, type, payload, null);
+
+    public async Task SendPacketAsync(string targetPeerId, PacketType type, byte[] payload, Action<long, long>? progressCallback)
+    {
+        string rawAddress = ResolveHardwareAddress(targetPeerId);
+
+        if (!_activeStreams.TryGetValue(rawAddress, out var stream))
+        {
+            throw new InvalidOperationException($"Not connected to peer: {targetPeerId}");
+        }
+
+        var sem = _writeLocks.GetOrAdd(rawAddress, _ => new SemaphoreSlim(1, 1));
+        await sem.WaitAsync().ConfigureAwait(false);
+        try
+        {
+            await PrimePacket.WriteToStreamAsync(stream, type, payload, CancellationToken.None, progressCallback).ConfigureAwait(false);
+            RecordActivity(rawAddress);
+        }
+        finally
+        {
+            sem.Release();
+        }
+    }
+
+    public Task<List<ChatItem>> DiscoverDevicesAsync() => DiscoverDevicesAsync(includeUnpaired: true);
+
+    public async Task<List<ChatItem>> DiscoverDevicesAsync(bool includeUnpaired)
+    {
+        var result = new List<ChatItem>();
+        var seenMacs = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        try
+        {
+            // 1. Paired devices (instant, from Windows paired list)
+            string pairedSelector = BluetoothDevice.GetDeviceSelectorFromPairingState(true);
+            var pairedDevices = await DeviceInformation.FindAllAsync(pairedSelector);
+            foreach (var dev in pairedDevices)
+            {
+                await ProcessDiscoveredDeviceAsync(dev, result, seenMacs);
+            }
+
+            // 2. Unpaired nearby devices (inquiry - only if requested, e.g. during manual user scan)
+            if (includeUnpaired)
+            {
+                try
+                {
+                    string unpairedSelector = BluetoothDevice.GetDeviceSelectorFromPairingState(false);
+                    var unpairedOp = DeviceInformation.FindAllAsync(unpairedSelector);
+                    var timeoutTask = Task.Delay(5000);
+                    var completedTask = await Task.WhenAny(unpairedOp.AsTask(), timeoutTask);
+
+                    if (completedTask != timeoutTask)
+                    {
+                        var unpairedDevices = await unpairedOp;
+                        foreach (var dev in unpairedDevices)
+                        {
+                            await ProcessDiscoveredDeviceAsync(dev, result, seenMacs);
+                        }
+                    }
+                    else
+                    {
+                        unpairedOp.Cancel();
+                        App.Log("[Bluetooth] Unpaired device inquiry timed out after 5s.");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    App.Log($"[Bluetooth] Unpaired device discovery warning: {ex.Message}");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            ErrorOccurred?.Invoke("Discovery", $"Device scan failed: {ex.Message}");
+        }
+        return result;
+    }
+
+    private async Task ProcessDiscoveredDeviceAsync(DeviceInformation dev, List<ChatItem> result, HashSet<string> seenMacs)
+    {
+        if (string.IsNullOrWhiteSpace(dev.Name) || DeviceAnonymizer.IsDisallowedPeripherals(dev.Name))
+        {
+            return;
+        }
+
+        BluetoothDevice? btDev = null;
+        try
+        {
+            btDev = await BluetoothDevice.FromIdAsync(dev.Id);
+            if (btDev != null)
+            {
+                var cod = btDev.ClassOfDevice;
+                if (cod != null)
+                {
+                    var major = cod.MajorClass;
+                    if (major == BluetoothMajorClass.AudioVideo ||
+                        major == BluetoothMajorClass.Wearable ||
+                        major == BluetoothMajorClass.Peripheral ||
+                        major == BluetoothMajorClass.Imaging ||
+                        major == BluetoothMajorClass.Toy ||
+                        major == BluetoothMajorClass.Health)
+                    {
+                        return;
+                    }
+                }
+            }
+        }
+        catch { }
+
+        string normMac = btDev != null
+            ? NormalizeMacAddress(btDev.BluetoothAddress.ToString("X12"))
+            : NormalizeMacAddress(dev.Id);
+
+        if (string.IsNullOrEmpty(normMac) || !seenMacs.Add(normMac))
+        {
+            return;
+        }
+
+        string peerId = GetOrCreatePeerId(normMac);
+        string cleanName = DeviceAnonymizer.SanitizeDisplayName(dev.Name, normMac);
+        string cleanUser = DeviceAnonymizer.SanitizeUsername(null, normMac);
+
+        result.Add(new ChatItem
+        {
+            Id = peerId,
+            PeerId = peerId,
+            DeviceAddress = normMac,
+            DisplayName = cleanName,
+            Username = cleanUser,
+            IsBluetoothDevice = true,
+            ConnectionState = DeviceConnectionState.Disconnected
+        });
+    }
+
+    private void StartReading(string peerId, string rawAddress, Stream inStream, StreamSocket socket)
+    {
+        var cts = new CancellationTokenSource();
+        _readCancellation[rawAddress] = cts;
+
+        Task.Run(async () =>
+        {
+            try
+            {
+                while (!cts.IsCancellationRequested)
+                {
+                    var packet = await PrimePacket.ReadFromStreamAsync(inStream, cts.Token, (type, current, total) =>
+                    {
+                        TransferProgressChanged?.Invoke(peerId, type, current, total);
+                    });
+                    if (packet == null) break;
+
+                    RecordActivity(rawAddress);
+                    App.Log($"[Bluetooth] Received packet {packet.Type} ({packet.Payload?.Length ?? 0} bytes) from '{peerId}' ({rawAddress})");
+
+                    // Automatically reply to PING with ACK to maintain link
+                    if (packet.Type == PacketType.Ping)
+                    {
+                        _ = Task.Run(async () =>
+                        {
+                            try { await SendPacketAsync(peerId, PacketType.Ack, Array.Empty<byte>()); } catch { }
+                        });
+                    }
+
+                    try
+                    {
+                        PacketReceived?.Invoke(peerId, packet.Type, packet.Payload ?? Array.Empty<byte>());
+                    }
+                    catch (Exception handlerEx)
+                    {
+                        App.Log($"[Bluetooth ERROR] PacketReceived handler threw exception for '{peerId}': {handlerEx.Message}");
+                    }
+                }
+            }
+            catch (OperationCanceledException) { }
+            catch (Exception ex)
+            {
+                App.Log($"[Bluetooth ERROR] Read exception for '{rawAddress}': {ex.Message}");
+                ErrorOccurred?.Invoke(peerId, $"Read error: {ex.Message}");
+            }
+            finally
+            {
+                App.Log($"[Bluetooth] Read loop finished for '{rawAddress}', checking active socket...");
+                if (_activeSockets.TryGetValue(rawAddress, out var curSocket) && curSocket == socket)
+                {
+                    App.Log($"[Bluetooth] Active socket disconnected, closing connection for '{rawAddress}'");
+                    DisconnectInternal(rawAddress);
+                    ConnectionStateChanged?.Invoke(peerId, DeviceConnectionState.Disconnected, "не в сети");
+
+                    // Auto-retry connection only if connection dropped unexpectedly
+                    _ = TriggerAutoRetryAsync(peerId, rawAddress);
+                }
+                else
+                {
+                    App.Log($"[Bluetooth] Read loop ended for superseded socket for '{rawAddress}', leaving active connection intact.");
+                }
+            }
+        }, cts.Token);
+    }
+
+    private async Task TriggerAutoRetryAsync(string peerId, string rawAddress)
+    {
+        if (_manuallyDisconnected.ContainsKey(rawAddress) || _manuallyDisconnected.ContainsKey(peerId))
+            return;
+
+        if (_activeSockets.ContainsKey(rawAddress) && _activeStreams.ContainsKey(rawAddress))
+            return;
+
+        int count = _retryCounts.AddOrUpdate(rawAddress, 1, (_, c) => c + 1);
+        if (count > 4)
+        {
+            _retryCounts.TryRemove(rawAddress, out _);
+            return;
+        }
+
+        int delayMs = count switch
+        {
+            1 => 2500,
+            2 => 5000,
+            3 => 8000,
+            _ => 15000
+        };
+
+        await Task.Delay(delayMs);
+        if (!_activeSockets.ContainsKey(rawAddress) &&
+            !_manuallyDisconnected.ContainsKey(rawAddress) &&
+            !_manuallyDisconnected.ContainsKey(peerId))
+        {
+            _ = ConnectAsync(peerId);
+        }
+    }
+
+    private class BidirectionalStream : Stream
+    {
+        private readonly Stream _inStream;
+        private readonly Stream _outStream;
+
+        public BidirectionalStream(Stream inStream, Stream outStream)
+        {
+            _inStream = inStream;
+            _outStream = outStream;
+        }
+
+        public override bool CanRead => _inStream.CanRead;
+        public override bool CanSeek => false;
+        public override bool CanWrite => _outStream.CanWrite;
+        public override long Length => throw new NotSupportedException();
+        public override long Position { get => throw new NotSupportedException(); set => throw new NotSupportedException(); }
+
+        public override void Flush() => _outStream.Flush();
+        public override Task FlushAsync(CancellationToken cancellationToken) => _outStream.FlushAsync(cancellationToken);
+
+        public override int Read(byte[] buffer, int offset, int count) => _inStream.Read(buffer, offset, count);
+        public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken) => _inStream.ReadAsync(buffer, offset, count, cancellationToken);
+        public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default) => _inStream.ReadAsync(buffer, cancellationToken);
+
+        public override void Write(byte[] buffer, int offset, int count) => _outStream.Write(buffer, offset, count);
+        public override Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken) => _outStream.WriteAsync(buffer, offset, count, cancellationToken);
+        public override ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default) => _outStream.WriteAsync(buffer, cancellationToken);
+
+        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+        public override void SetLength(long value) => throw new NotSupportedException();
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                try { _inStream.Dispose(); } catch { }
+                try { _outStream.Dispose(); } catch { }
+            }
+            base.Dispose(disposing);
+        }
+    }
+}
