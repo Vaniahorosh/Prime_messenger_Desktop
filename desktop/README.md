@@ -1,41 +1,73 @@
 # Prime Desktop (Windows)
 
-Официальная десктопная версия мессенджера **«Прайм»** для Windows 10/11, созданная на **C# (.NET 8 WPF)** — основном нативном стеке для операционной системы Windows.
+Официальная десктопная версия мессенджера **«Прайм»** для Windows 10/11.
+
+Построена на **единой гибридной архитектуре**:
+* **UI и мультимедиа:** C# (.NET 8 WPF) с эффектом матового стекла (Frosted Glassmorphism), поддержкой WinRT Bluetooth, встроенным веб-браузером WebView2 и аудиоплеером.
+* **Нативное ядро:** Rust (`PrimeNative` -> `prime_native.dll`), обеспечивающее ультрабыстрое и безопасное сквозное шифрование AES-256-GCM, хеширование Blake3 / SHA-256 и эффективное кадрирование пакетов PrimePacket.
+
+---
 
 ## Ключевые возможности:
 * **Прямая связь по Bluetooth RFCOMM:**
   * Подключение напрямую к смартфонам с Prime Messenger по протоколу Bluetooth RFCOMM (UUID: `fa87c0d0-afac-11de-8a39-0800200c9a66`). Полная совместимость пакетов (0x01–0x0F).
   * Автономная P2P работа без сторонних серверов.
   * Отображение понятных имён устройств без раскрытия аппаратных MAC-адресов.
+* **Локальная сеть LAN:**
+  * Автоматический поиск устройств через UDP-бродкаст (порт 8988).
+  * Быстрый обмен сообщениями и файлами по прямому TCP-соединению (порт 8989).
 * **Десктопный дизайн (Fluent / Dark Mode):**
   * 2-панельный интерфейс: список диалогов с поиском слева и переписка по центру.
+  * Интеллектуальный коллаж фото и галерея вложений.
   * Поддержка цитирования сообщений (`:::REPLY:::`).
-  * Передача изображений (`📷`) и файлов (`📎`).
+  * Передача изображений, файлов и голосовых заметок.
   * Индикаторы набора текста («Печатает...») и статусы доставки.
   * Управление мышью и хоткеи: `Enter` — отправка, `Shift + Enter` — новая строка.
 
-## Структура проекта:
+---
+
+## Структура каталога `desktop/`:
 ```text
 desktop/
 ├── PrimeDesktop.sln            # Решение для Visual Studio
-├── build.bat                   # Скрипт быстрой сборки
-└── PrimeDesktop/
-    ├── PrimeDesktop.csproj     # Конфигурация проекта (WPF, .NET 8, WinRT)
-    ├── MainWindow.xaml         # Разметка окна в стиле Windows 11
-    ├── MainWindow.xaml.cs      # Логика окна и горячие клавиши
-    ├── Models/                 # Модели ChatItem, ChatMessage, PacketType
-    ├── Network/                # Bluetooth RFCOMM служба
-    ├── Services/               # Хранилище SQLite/JSON и менеджер тем
-    ├── ViewModels/             # MVVM архитектура (MainViewModel)
-    └── Resources/              # Цветовая палитра и стили компонентов
+├── build.bat                   # Единый скрипт полной сборки
+│
+├── PrimeNative/                # Нативное ядро на Rust (cdylib)
+│   ├── Cargo.toml              # Конфигурация крейта и зависимости
+│   └── src/                    # Модули AES-256-GCM, Blake3, кадрирования
+│
+├── PrimeDesktop/               # WPF-клиент (.NET 8)
+│   ├── PrimeDesktop.csproj     # Конфигурация проекта (WPF, .NET 8, WinRT)
+│   ├── MainWindow.xaml         # Разметка окна в стиле Windows 11
+│   ├── MainWindow.xaml.cs      # Логика окна, сплиттеры и анимации
+│   ├── Controls/               # Пользовательские контролы (коллаж фото, аудио)
+│   ├── Models/                 # Модели ChatItem, ChatMessage, PacketType
+│   ├── Network/                # Сетевые службы Bluetooth RFCOMM и LAN (TCP/UDP)
+│   ├── Services/               # PrimeNativeCore (P/Invoke), SQLite и менеджер тем
+│   ├── ViewModels/             # MVVM архитектура (MainViewModel)
+│   ├── Resources/              # Цветовая палитра и стили компонентов
+│   └── prime_native.dll        # Библиотека нативного ядра
+│
+├── PrimeSetup/                 # Графический мастер установки
+└── bin/
+    ├── Portable/PrimeDesktop.exe
+    └── Installer/PrimeSetup.exe
 ```
 
+---
+
 ## Как собрать и запустить:
-1. **Через Visual Studio 2022 / 2024:**
-   * Откройте файл `desktop/PrimeDesktop.sln` и нажмите **F5** (или `Ctrl + F5`).
-2. **Через командную строку (.NET 8 SDK):**
-   * Запустите `desktop/build.bat` или выполните:
-   ```cmd
-   cd desktop/PrimeDesktop
-   dotnet run
-   ```
+
+### 1. Автоматическая сборка (релиз):
+Запустите скрипт:
+```cmd
+build.bat
+```
+Скрипт скомпилирует Rust-ядро (если установлен Rust), соберет автономный портативный клиент `PrimeDesktop.exe` и графический установщик `PrimeSetup.exe`.
+
+### 2. Запуск в режиме разработки:
+```cmd
+cd PrimeDesktop
+dotnet run
+```
+или откройте `PrimeDesktop.sln` в **Visual Studio 2022** и нажмите **F5**.

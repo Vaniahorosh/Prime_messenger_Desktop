@@ -51,6 +51,11 @@ namespace PrimeDesktop.Services
             if (string.IsNullOrWhiteSpace(rawHardwareIdentifier))
                 return "peer_unknown";
 
+            if (PrimeNativeCore.IsAvailable)
+            {
+                return PrimeNativeCore.AnonymizePeerId(rawHardwareIdentifier);
+            }
+
             string clean = rawHardwareIdentifier.Trim().ToUpperInvariant();
             using var sha = SHA256.Create();
             byte[] hash = sha.ComputeHash(Encoding.UTF8.GetBytes(clean));

@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 use regex::Regex;
 use sha2::{Digest, Sha256};
 use std::sync::LazyLock;
@@ -43,42 +41,4 @@ pub fn get_opaque_peer_id(raw_hardware_id: &str) -> String {
     let hex = format!("{:x}", result);
     let short_id = if hex.len() >= 8 { &hex[..8] } else { &hex };
     format!("peer_{}", short_id)
-}
-
-/// Normalizes MAC address string to standard uppercase format (XX:XX:XX:XX:XX:XX)
-pub fn normalize_mac_address(address_or_id: &str) -> String {
-    let mut cleaned = address_or_id.trim().trim_matches(|c| c == '(' || c == ')' || c == '[' || c == ']').to_string();
-
-    if let Some(pos) = cleaned.rfind('-') {
-        if cleaned.contains('#') && pos < cleaned.len() - 1 {
-            cleaned = cleaned[pos + 1..].to_string();
-        }
-    }
-
-    let hex_only: String = cleaned.chars().filter(|c| c.is_ascii_hexdigit()).collect();
-    if hex_only.len() == 12 {
-        if let Ok(val) = u64::from_str_radix(&hex_only, 16) {
-            return format!(
-                "{:02X}:{:02X}:{:02X}:{:02X}:{:02X}:{:02X}",
-                (val >> 40) & 0xFF,
-                (val >> 32) & 0xFF,
-                (val >> 24) & 0xFF,
-                (val >> 16) & 0xFF,
-                (val >> 8) & 0xFF,
-                val & 0xFF
-            );
-        }
-    }
-
-    cleaned.to_uppercase()
-}
-
-/// Masks physical hardware addresses in strings with anonymized peer tags.
-pub fn mask_hardware_addresses(input: &str) -> String {
-    EMBEDDED_IDENTIFIER_REGEX
-        .replace_all(input, |caps: &regex::Captures| {
-            let matched = caps.get(0).map_or("", |m| m.as_str());
-            get_opaque_peer_id(matched)
-        })
-        .to_string()
 }
