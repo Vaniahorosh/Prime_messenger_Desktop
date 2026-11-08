@@ -26,7 +26,7 @@
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                     <TextBlock x:Name="TxtEditorHeaderTitle" Text="🎨 Фоторедактор Прайм" FontSize="15" FontWeight="Bold" Foreground="#F0F6FC"/>
-                    <TextBlock x:Name="TxtEditorHeaderSubtitle" Text="v0.1" FontSize="11" Foreground="#4D9FFF" Margin="8,0,0,0" VerticalAlignment="Center"/>
+                    <TextBlock x:Name="TxtEditorHeaderSubtitle" Text="v0.3" FontSize="11" Foreground="#4D9FFF" Margin="8,0,0,0" VerticalAlignment="Center"/>
                 </StackPanel>
             </DockPanel>
         </Border>

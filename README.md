@@ -2,8 +2,39 @@
   <img src="desktop/PrimeDesktop/Assets/prime_logo.png" alt="Prime Desktop Logo" width="130" />
   <h1>Prime Desktop</h1>
   <p><b>Децентрализованный офлайн-мессенджер для Windows 10/11</b></p>
-  <p><i>Единая гибридная архитектура: C# (.NET 8 WPF) + высокопроизводительное нативное ядро на Rust</i></p>
+  <p><i>Версия: <b>v0.3 Desk</b> | Единая гибридная архитектура: C# (.NET 8 WPF) + Rust Native Core</i></p>
+
+  <p>
+    <a href="https://github.com/Vaniahorosh/Prime_messenger_Desktop/releases/latest/download/PrimeSetup.exe">
+      <img src="https://img.shields.io/badge/Скачать%20установщик-PrimeSetup.exe%20(v0.3%20Desk)-0078D7?style=for-the-badge&logo=windows&logoColor=white" alt="Скачать PrimeSetup.exe" height="42" />
+    </a>
+    &nbsp;
+    <a href="https://github.com/Vaniahorosh/Prime_messenger_Desktop/releases/latest/download/PrimeDesktop.exe">
+      <img src="https://img.shields.io/badge/Скачать%20Portable-PrimeDesktop.exe-2ea44f?style=for-the-badge&logo=windows&logoColor=white" alt="Скачать PrimeDesktop.exe" height="42" />
+    </a>
+  </p>
+  <p>
+    <a href="https://github.com/Vaniahorosh/Prime_messenger_Desktop/releases/latest">
+      <img src="https://img.shields.io/github/v/release/Vaniahorosh/Prime_messenger_Desktop?label=Последний%20релиз&color=0078D7" alt="GitHub release" />
+    </a>
+    &nbsp;
+    <img src="https://img.shields.io/badge/Платформа-Windows%2010%20%2F%2011%20x64-blue" alt="Платформа" />
+    &nbsp;
+    <img src="https://img.shields.io/badge/Архитектура-C%23%20WPF%20%2B%20Rust-orange" alt="Архитектура" />
+  </p>
 </div>
+
+---
+
+## 📥 Быстрая загрузка последней версии
+
+Для установки мессенджера выберите подходящий вариант:
+
+| Вариант | Ссылка на скачивание | Описание |
+| :--- | :--- | :--- |
+| 📦 **Установщик (Рекомендуется)** | [**Скачать PrimeSetup.exe**](https://github.com/Vaniahorosh/Prime_messenger_Desktop/releases/latest/download/PrimeSetup.exe) | Графический мастер установки, выбор каталога, создание ярлыков на рабочем столе и в меню «Пуск». |
+| 🚀 **Портативная версия** | [**Скачать PrimeDesktop.exe**](https://github.com/Vaniahorosh/Prime_messenger_Desktop/releases/latest/download/PrimeDesktop.exe) | Автономный запуск в один клик без установки, подходит для внешних дисков и флешек. |
+| 📋 **Все релизы** | [**Страница GitHub Releases**](https://github.com/Vaniahorosh/Prime_messenger_Desktop/releases/latest) | История версий, списки изменений и контрольные суммы. |
 
 ---
 
@@ -36,26 +67,6 @@
 
 ---
 
-## 📦 Варианты поставки
-
-Клиент собирается в двух готовых форматах (каталог `desktop/bin/`):
-
-1. **Портативная версия (Portable)**:
-   - Исполняемый файл: `desktop/bin/Portable/PrimeDesktop.exe`
-   - Полностью автономная (Self-Contained) сборка.
-   - Не требует установки в операционную систему и прав администратора.
-   - Не требует предварительной установки .NET Runtime.
-   - Подходит для запуска с внешних USB-накопителей или любой локальной папки.
-
-2. **Версия с установщиком (Installer)**:
-   - Исполняемый файл: `desktop/bin/Installer/PrimeSetup.exe`
-   - Удобный графический мастер установки.
-   - Позволяет выбрать каталог для размещения программы.
-   - Создаёт ярлыки на рабочем столе и в меню «Пуск».
-   - Автоматически распаковывает все компоненты и регистрирует приложение.
-
----
-
 ## ✨ Основные возможности
 
 ### Одноранговая сеть и протокол
@@ -85,7 +96,7 @@
 ```text
 Prime_messenger_Desktop/
 │
-├── README.md                          # Основная документация проекта
+├── README.md                          # Основная документация проекта и ссылки на загрузку
 ├── PROTOCOL.md                        # Спецификация сетевого протокола PrimePacket
 ├── SETUP_LAPTOP.md                    # Инструкция по установке и настройке рабочего места
 │

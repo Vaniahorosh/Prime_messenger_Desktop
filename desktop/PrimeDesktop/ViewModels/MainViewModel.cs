@@ -1898,7 +1898,7 @@ public class MainViewModel : ViewModelBase
 
         CheckUpdatesCommand = new RelayCommand(() =>
         {
-            StatusMessage = "У вас установлена актуальная версия Prime Messenger v0.2 Desk";
+            StatusMessage = "У вас установлена актуальная версия Prime Messenger v0.3 Desk";
         });
 
         ToggleThemeCommand = new RelayCommand(() =>

@@ -34,7 +34,7 @@ public partial class PhotoEditorWindow : Window
         {
             Title = "Редактор фото — Prime Desktop";
             TxtEditorHeaderTitle.Text = "🎨 Фоторедактор Прайм";
-            TxtEditorHeaderSubtitle.Text = "v0.1";
+            TxtEditorHeaderSubtitle.Text = "v0.3";
             BtnApply.Content = "✓ Применить и отправить";
             BtnSaveDisk.Visibility = Visibility.Visible;
 
