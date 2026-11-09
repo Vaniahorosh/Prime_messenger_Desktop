@@ -44,6 +44,10 @@ if %ERRORLEVEL% neq 0 (
 
 if not exist "%ROOT%bin\Portable" mkdir "%ROOT%bin\Portable"
 copy /y "%ROOT%bin\Release\PrimeDesktop.exe" "%ROOT%bin\Portable\PrimeDesktop.exe" >nul
+if exist "%ROOT%PrimeDesktop\prime_native.dll" (
+    copy /y "%ROOT%PrimeDesktop\prime_native.dll" "%ROOT%bin\Portable\prime_native.dll" >nul
+    copy /y "%ROOT%PrimeDesktop\prime_native.dll" "%ROOT%bin\Release\prime_native.dll" >nul
+)
 
 echo.
 echo Cleaning runtime caches before packaging...
