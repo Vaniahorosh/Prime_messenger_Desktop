@@ -1491,9 +1491,6 @@
                                             BorderThickness="1"
                                             CornerRadius="14"
                                             Padding="6,6">
-                                        <Border.Effect>
-                                            <DropShadowEffect BlurRadius="20" ShadowDepth="4" Direction="270" Opacity="0.35" Color="#000000"/>
-                                        </Border.Effect>
                                         <StackPanel Orientation="Horizontal">
                                             <!-- 1. Медиа (фото и видео) -->
                                             <Button Style="{StaticResource ModernTrayItemButton}"
@@ -2673,9 +2670,6 @@
         <!-- Full Reactions Picker Flyout Popup -->
         <Popup x:Name="ReactionsFullPopup" StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade" Placement="MousePoint">
             <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="14" Padding="8">
-                <Border.Effect>
-                    <DropShadowEffect BlurRadius="24" ShadowDepth="6" Direction="270" Opacity="0.55" Color="#000000"/>
-                </Border.Effect>
                 <controls:ExpandedReactionsControl x:Name="ExpandedReactionsView" Width="340" MaxHeight="350"/>
             </Border>
         </Popup>
