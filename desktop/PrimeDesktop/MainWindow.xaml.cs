@@ -220,6 +220,21 @@ public partial class MainWindow : Window
                         vm.IsPhotoViewerOpen = false;
                         e.Handled = true;
                     }
+                    else if (vm.IsEditingMessage)
+                    {
+                        vm.CancelEditCommand.Execute(null);
+                        e.Handled = true;
+                    }
+                    else if (vm.HasReply)
+                    {
+                        vm.CancelReplyCommand.Execute(null);
+                        e.Handled = true;
+                    }
+                    else if (vm.HasPendingAttachment)
+                    {
+                        vm.CancelPendingAttachmentCommand.Execute(null);
+                        e.Handled = true;
+                    }
                     else if (vm.IsSearchActive)
                     {
                         vm.IsSearchActive = false;
@@ -515,6 +530,21 @@ public partial class MainWindow : Window
             }
         }
 
+        if (e.Key == Key.Up && string.IsNullOrEmpty(MsgInputTextBox.Text) && !Keyboard.Modifiers.HasFlag(ModifierKeys.Control))
+        {
+            if (DataContext is MainViewModel vm && vm.SelectedChat != null && !vm.IsEditingMessage)
+            {
+                var lastMyMsg = vm.SelectedChat.Messages.LastOrDefault(m => m.IsFromMe && !string.IsNullOrWhiteSpace(m.Text));
+                if (lastMyMsg != null)
+                {
+                    vm.EditMessageCommand.Execute(lastMyMsg);
+                    MsgInputTextBox.CaretIndex = MsgInputTextBox.Text.Length;
+                    e.Handled = true;
+                    return;
+                }
+            }
+        }
+
         if (e.Key == Key.Enter)
         {
             if (Keyboard.Modifiers.HasFlag(ModifierKeys.Shift))
@@ -780,21 +810,55 @@ public partial class MainWindow : Window
                 var targetMsg = vm.SelectedChat.Messages.FirstOrDefault(m => m.Id == replyId);
                 if (targetMsg != null)
                 {
-                    MessagesItemsControl?.UpdateLayout();
-                    var container = MessagesItemsControl?.ItemContainerGenerator.ContainerFromItem(targetMsg) as FrameworkElement;
-                    if (container != null)
+                    int index = vm.SelectedChat.Messages.IndexOf(targetMsg);
+                    if (index >= 0)
                     {
-                        container.BringIntoView();
-                        var anim = new System.Windows.Media.Animation.DoubleAnimation(0.3, 1.0, TimeSpan.FromMilliseconds(300))
+                        var vsp = FindVisualChild<System.Windows.Controls.VirtualizingStackPanel>(MessagesItemsControl);
+                        if (vsp != null)
                         {
-                            AutoReverse = true,
-                            RepeatBehavior = new System.Windows.Media.Animation.RepeatBehavior(2)
-                        };
-                        container.BeginAnimation(UIElement.OpacityProperty, anim);
+                            var method = typeof(System.Windows.Controls.VirtualizingStackPanel).GetMethod("BringIndexIntoView",
+                                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public);
+                            method?.Invoke(vsp, new object[] { index });
+                        }
+                        else if (MessagesScrollViewer != null && vm.SelectedChat.Messages.Count > 0)
+                        {
+                            double ratio = (double)index / vm.SelectedChat.Messages.Count;
+                            MessagesScrollViewer.ScrollToVerticalOffset(ratio * MessagesScrollViewer.ScrollableHeight);
+                        }
+
+                        Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Loaded, () =>
+                        {
+                            MessagesItemsControl?.UpdateLayout();
+                            var container = MessagesItemsControl?.ItemContainerGenerator.ContainerFromItem(targetMsg) as FrameworkElement;
+                            if (container != null)
+                            {
+                                container.BringIntoView();
+                                var anim = new System.Windows.Media.Animation.DoubleAnimation(0.25, 1.0, TimeSpan.FromMilliseconds(280))
+                                {
+                                    AutoReverse = true,
+                                    RepeatBehavior = new System.Windows.Media.Animation.RepeatBehavior(2)
+                                };
+                                container.BeginAnimation(UIElement.OpacityProperty, anim);
+                            }
+                        });
                     }
                 }
             }
         }
+    }
+
+    private static T? FindVisualChild<T>(DependencyObject? parent) where T : DependencyObject
+    {
+        if (parent == null) return null;
+        int count = System.Windows.Media.VisualTreeHelper.GetChildrenCount(parent);
+        for (int i = 0; i < count; i++)
+        {
+            var child = System.Windows.Media.VisualTreeHelper.GetChild(parent, i);
+            if (child is T typedChild) return typedChild;
+            var subChild = FindVisualChild<T>(child);
+            if (subChild != null) return subChild;
+        }
+        return null;
     }
 
     private static T? FindVisualParent<T>(DependencyObject child) where T : DependencyObject

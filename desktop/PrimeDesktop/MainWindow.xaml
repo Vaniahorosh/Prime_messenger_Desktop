@@ -871,6 +871,11 @@
                                                           Style="{StaticResource ModernMenuItem}"
                                                           Command="{Binding PlacementTarget.Tag.CopyMessageCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
                                                           CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                                                <MenuItem Header="💾 Сохранить как..."
+                                                          Style="{StaticResource ModernMenuItem}"
+                                                          Command="{Binding PlacementTarget.Tag.SaveAttachmentCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                                          CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                                          Visibility="{Binding PlacementTarget.DataContext.HasAttachment, RelativeSource={RelativeSource AncestorType=ContextMenu}, Converter={StaticResource BoolToVis}}"/>
                                                 <MenuItem Header="↗️ Переслать"
                                                           Style="{StaticResource ModernMenuItem}"
                                                           Command="{Binding PlacementTarget.Tag.ForwardMessageCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"

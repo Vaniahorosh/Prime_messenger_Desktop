@@ -219,6 +219,18 @@ public class MainViewModel : ViewModelBase
         msg.UpdateReactionGroups(myDisplayName);
     }
 
+    public static string FormatMessageSummary(ChatMessage? msg)
+    {
+        if (msg == null) return string.Empty;
+        if (msg.IsCollage) return string.IsNullOrWhiteSpace(msg.Text) ? "📷 Коллаж" : $"📷 {msg.Text}";
+        if (msg.IsPhoto) return string.IsNullOrWhiteSpace(msg.Text) ? "📷 Фотография" : $"📷 {msg.Text}";
+        if (msg.IsVideoNote) return "📹 Видеосообщение";
+        if (msg.IsSingleVideo) return string.IsNullOrWhiteSpace(msg.Text) ? $"🎥 {msg.FileName ?? "Видео"}" : $"🎥 {msg.Text}";
+        if (msg.IsVoice) return $"🎤 Голосовое сообщение ({msg.Duration})";
+        if (msg.HasFileAttachmentCard) return string.IsNullOrWhiteSpace(msg.Text) ? $"📎 {msg.FileName ?? "Файл"}" : $"📎 {msg.Text}";
+        return msg.Text ?? string.Empty;
+    }
+
     public bool HasSelectedChat => SelectedChat != null;
 
     public string SearchQuery
@@ -1313,6 +1325,8 @@ public class MainViewModel : ViewModelBase
 
     public ICommand ForwardMessageCommand { get; }
 
+    public ICommand SaveAttachmentCommand { get; }
+
     public ICommand OpenPhotoEditorCommand { get; }
 
     public ICommand OpenFileAttachmentCommand { get; }
@@ -1668,7 +1682,9 @@ public class MainViewModel : ViewModelBase
             if (param is ChatMessage msg && SelectedChat != null)
             {
                 SelectedChat.Messages.Remove(msg);
-                SelectedChat.LastMessage = SelectedChat.Messages.LastOrDefault()?.Text ?? "";
+                var lastMsg = SelectedChat.Messages.LastOrDefault();
+                SelectedChat.LastMessage = FormatMessageSummary(lastMsg);
+                SelectedChat.LastMessageTime = lastMsg?.FormattedTime ?? "";
 
                 if (msg.IsFromMe)
                 {
@@ -2473,15 +2489,82 @@ public class MainViewModel : ViewModelBase
         });
 
         ForwardMessageCommand = new RelayCommand(param =>
-
         {
             if (param is ChatMessage msg)
-
             {
-                InputMessageText = $"[Переслано от {msg.Sender}]: {msg.Text}";
+                if (msg.IsCollage && msg.CollagePaths != null && msg.CollagePaths.Count > 1)
+                {
+                    var validCollage = msg.CollagePaths.Where(File.Exists).ToList();
+                    if (validCollage.Count > 0)
+                    {
+                        long totalSize = 0;
+                        foreach (var fn in validCollage) { try { totalSize += new FileInfo(fn).Length; } catch { } }
+                        PendingAttachment = new PendingAttachment
+                        {
+                            Type = PacketType.Photo,
+                            IsCollage = validCollage.Count > 1,
+                            PrimaryFilePath = validCollage[0],
+                            FilePaths = validCollage,
+                            Title = $"[Переслано] Коллаж ({validCollage.Count})",
+                            Subtitle = PendingAttachment.FormatFileSize(totalSize),
+                            HasImageThumbnail = true
+                        };
+                    }
+                }
+                else if (!string.IsNullOrEmpty(msg.FilePath) && File.Exists(msg.FilePath))
+                {
+                    long size = 0;
+                    try { size = new FileInfo(msg.FilePath).Length; } catch { }
+                    PendingAttachment = new PendingAttachment
+                    {
+                        Type = msg.Type,
+                        IsCollage = false,
+                        PrimaryFilePath = msg.FilePath,
+                        FilePaths = new List<string> { msg.FilePath },
+                        Title = $"[Переслано] {msg.FileName ?? Path.GetFileName(msg.FilePath)}",
+                        Subtitle = PendingAttachment.FormatFileSize(size),
+                        HasImageThumbnail = msg.IsPhoto || msg.IsVideo
+                    };
+                }
 
+                if (!string.IsNullOrWhiteSpace(msg.Text))
+                {
+                    InputMessageText = string.IsNullOrEmpty(msg.FilePath) && (msg.CollagePaths == null || msg.CollagePaths.Count == 0)
+                        ? $"[Переслано от {msg.Sender}]: {msg.Text}"
+                        : msg.Text;
+                }
+                StatusMessage = "Сообщение готово к отправке / пересылке";
             }
+        });
 
+        SaveAttachmentCommand = new RelayCommand(param =>
+        {
+            string? path = null;
+            if (param is CollageItem ci) path = ci.FilePath;
+            else if (param is ChatMessage msg) path = msg.FilePath;
+            else if (param is string s) path = s;
+
+            if (string.IsNullOrEmpty(path) || !File.Exists(path)) return;
+
+            var sfd = new Microsoft.Win32.SaveFileDialog
+            {
+                FileName = Path.GetFileName(path),
+                InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.MyPictures),
+                Filter = "Все файлы (*.*)|*.*"
+            };
+
+            if (sfd.ShowDialog() == true)
+            {
+                try
+                {
+                    File.Copy(path, sfd.FileName, true);
+                    StatusMessage = $"✓ Файл сохранен: {Path.GetFileName(sfd.FileName)}";
+                }
+                catch (Exception ex)
+                {
+                    StatusMessage = $"Ошибка сохранения: {ex.Message}";
+                }
+            }
         });
 
         OpenPhotoEditorCommand = new RelayCommand(async param =>
@@ -2790,8 +2873,33 @@ public class MainViewModel : ViewModelBase
                continue;
            }
            c.DeduplicateAvatarHistory();
-                    foreach (var m in c.Messages)
+                    ChatMessage? prevMsg = null;
+                    for (int mi = 0; mi < c.Messages.Count; mi++)
                     {
+                        var m = c.Messages[mi];
+                        if (mi == 0)
+                        {
+                            m.ShowDateHeader = true;
+                            m.DateHeaderText = ChatMessage.FormatDateHeader(m.DateTimeLocal);
+                        }
+                        else if (prevMsg != null && prevMsg.DateTimeLocal.Date != m.DateTimeLocal.Date)
+                        {
+                            m.ShowDateHeader = true;
+                            m.DateHeaderText = ChatMessage.FormatDateHeader(m.DateTimeLocal);
+                        }
+                        else
+                        {
+                            m.ShowDateHeader = false;
+                            m.DateHeaderText = string.Empty;
+                        }
+                        prevMsg = m;
+
+                        if (m.CollagePaths != null && m.CollagePaths.Count > 1 && m.CollageItems.Count == 0)
+                        {
+                            m.RefreshCollageProperties();
+                        }
+                        m.TryLoadLinkPreview();
+
                         if (m.IsVideoNote)
                         {
                             string f = (m.FileName ?? m.FilePath ?? "").ToLowerInvariant();
@@ -2830,6 +2938,13 @@ public class MainViewModel : ViewModelBase
                             }
                         }
                         m.UpdateReactionGroups(Settings?.MyDisplayName ?? "Я");
+                    }
+
+                    if (string.IsNullOrWhiteSpace(c.LastMessage) && c.Messages.Count > 0)
+                    {
+                        var lastItem = c.Messages[c.Messages.Count - 1];
+                        c.LastMessage = FormatMessageSummary(lastItem);
+                        c.LastMessageTime = lastItem.FormattedTime;
                     }
                     // Filter out obsolete system chat
                     if (c.PeerId.Equals("peer_prime_support", StringComparison.OrdinalIgnoreCase) ||
@@ -3131,7 +3246,10 @@ public async Task SendTextMessageAsync()
 
             targetMsg.IsEdited = true;
 
-            targetChat.LastMessage = text;
+            if (targetMsg == targetChat.Messages.LastOrDefault())
+            {
+                targetChat.LastMessage = text;
+            }
 
             byte[] editPayload = System.Text.Encoding.UTF8.GetBytes($"{targetMsg.Id}:::{text}");
 
@@ -3174,7 +3292,7 @@ public async Task SendTextMessageAsync()
 
             ReplyToSender = reply?.Sender,
 
-            ReplyToText = reply?.Text
+            ReplyToText = !string.IsNullOrWhiteSpace(reply?.Text) ? reply.Text : FormatMessageSummary(reply)
 
         };
 
@@ -3229,25 +3347,22 @@ public async Task SendTextMessageAsync()
 
         var fileBytes = await File.ReadAllBytesAsync(filePath);
 
-        var msg = new ChatMessage
+        var reply = ReplyMessage;
+        ReplyMessage = null;
 
+        var msg = new ChatMessage
         {
             Sender = Settings.MyDisplayName,
-
             FilePath = filePath,
-
             FileName = Path.GetFileName(filePath),
-
             FileSizeBytes = fileBytes.Length,
-
             Duration = duration,
-
             IsFromMe = true,
-
             Type = PacketType.Voice,
-
-            FormattedTime = DateTime.Now.ToString("HH:mm")
-
+            FormattedTime = DateTime.Now.ToString("HH:mm"),
+            ReplyToId = reply?.Id,
+            ReplyToSender = reply?.Sender,
+            ReplyToText = !string.IsNullOrWhiteSpace(reply?.Text) ? reply.Text : FormatMessageSummary(reply)
         };
 
         PrepareMessage(targetChat, msg);
@@ -3406,13 +3521,13 @@ public async Task SendTextMessageAsync()
             var validFiles = fileNames.Where(File.Exists).ToArray();
             if (validFiles.Length == 0) return;
 
-            bool isAllImages = validFiles.All(f =>
+            bool isAllMedia = validFiles.All(f =>
             {
                 string ext = Path.GetExtension(f).ToLowerInvariant();
-                return ext == ".jpg" || ext == ".jpeg" || ext == ".png" || ext == ".webp" || ext == ".bmp";
+                return ext is ".jpg" or ".jpeg" or ".png" or ".webp" or ".bmp" or ".mp4" or ".mov" or ".mkv" or ".webm" or ".avi" or ".3gp";
             });
 
-            bool isPhoto = (forcedType == PacketType.Photo) || isAllImages;
+            bool isPhoto = (forcedType == PacketType.Photo) || isAllMedia;
 
             if (isPhoto && PendingAttachment != null && PendingAttachment.Type == PacketType.Photo)
             {
@@ -3432,29 +3547,36 @@ public async Task SendTextMessageAsync()
                     try { totalSize += new FileInfo(fn).Length; } catch { }
                 }
 
+                string firstExt = Path.GetExtension(combined[0]).ToLowerInvariant();
+                bool firstIsImg = firstExt is ".jpg" or ".jpeg" or ".png" or ".webp" or ".bmp";
+
                 PendingAttachment = new PendingAttachment
                 {
                     Type = PacketType.Photo,
                     IsCollage = combined.Count > 1,
                     PrimaryFilePath = combined[0],
                     FilePaths = combined,
-                    Title = combined.Count > 1 ? $"Коллаж ({combined.Count} фото)" : FormatAttachmentTitle(combined[0]),
+                    Title = combined.Count > 1 ? $"Коллаж ({combined.Count} медиа)" : FormatAttachmentTitle(combined[0]),
                     Subtitle = PendingAttachment.FormatFileSize(totalSize),
-                    HasImageThumbnail = true
+                    HasImageThumbnail = firstIsImg,
+                    Icon = firstIsImg ? "📷" : "🎥"
                 };
 
-                StatusMessage = $"Вложение обновлено: {combined.Count} фото. Добавьте подпись и нажмите Отправить.";
+                StatusMessage = $"Вложение обновлено: {combined.Count} медиа. Добавьте подпись и нажмите Отправить.";
                 return;
             }
 
             if (isPhoto && validFiles.Length > 1)
             {
-                // Multi-photo collage
+                // Multi-media collage
                 long totalSize = 0;
                 foreach (var fn in validFiles)
                 {
                     try { totalSize += new FileInfo(fn).Length; } catch { }
                 }
+
+                string firstExt = Path.GetExtension(validFiles[0]).ToLowerInvariant();
+                bool firstIsImg = firstExt is ".jpg" or ".jpeg" or ".png" or ".webp" or ".bmp";
 
                 PendingAttachment = new PendingAttachment
                 {
@@ -3462,9 +3584,10 @@ public async Task SendTextMessageAsync()
                     IsCollage = true,
                     PrimaryFilePath = validFiles[0],
                     FilePaths = validFiles.ToList(),
-                    Title = $"Коллаж ({validFiles.Length} фото)",
+                    Title = $"Коллаж ({validFiles.Length} медиа)",
                     Subtitle = PendingAttachment.FormatFileSize(totalSize),
-                    HasImageThumbnail = true
+                    HasImageThumbnail = firstIsImg,
+                    Icon = firstIsImg ? "📷" : "🎥"
                 };
             }
             else if (isPhoto)
@@ -3569,17 +3692,24 @@ public async Task SendTextMessageAsync()
 
         try
         {
+            var reply = ReplyMessage;
+            ReplyMessage = null;
+
             if (pending.IsCollage && pending.FilePaths.Count > 1)
             {
-                // Process each collage image via ImageProcessingService
+                // Process each collage item
                 var items = new List<(byte[] data, string ext, bool isVideo)>();
                 var collagePaths = new List<string>();
 
                 foreach (var fn in pending.FilePaths)
                 {
                     if (!File.Exists(fn)) continue;
-                    byte[] optimized = await ImageProcessingService.OptimizeImageForTransferAsync(fn, 2048, 82);
-                    items.Add((optimized, "jpg", false));
+                    string ext = Path.GetExtension(fn).TrimStart('.').ToLowerInvariant();
+                    bool isVid = ext is "mp4" or "mov" or "mkv" or "webm" or "avi" or "3gp";
+                    byte[] data = isVid 
+                        ? await File.ReadAllBytesAsync(fn) 
+                        : await ImageProcessingService.OptimizeImageForTransferAsync(fn, 2048, 82);
+                    items.Add((data, string.IsNullOrEmpty(ext) ? "jpg" : ext, isVid));
                     collagePaths.Add(fn);
                 }
 
@@ -3592,7 +3722,10 @@ public async Task SendTextMessageAsync()
                     FilePath = collagePaths.FirstOrDefault(),
                     Type = PacketType.Photo,
                     IsFromMe = true,
-                    FormattedTime = DateTime.Now.ToString("HH:mm")
+                    FormattedTime = DateTime.Now.ToString("HH:mm"),
+                    ReplyToId = reply?.Id,
+                    ReplyToSender = reply?.Sender,
+                    ReplyToText = !string.IsNullOrWhiteSpace(reply?.Text) ? reply.Text : FormatMessageSummary(reply)
                 };
                 message.SetCollagePaths(collagePaths);
 
@@ -3660,7 +3793,10 @@ public async Task SendTextMessageAsync()
                     FileSizeBytes = optimizedBytes.Length,
                     Type = PacketType.Photo,
                     IsFromMe = true,
-                    FormattedTime = DateTime.Now.ToString("HH:mm")
+                    FormattedTime = DateTime.Now.ToString("HH:mm"),
+                    ReplyToId = reply?.Id,
+                    ReplyToSender = reply?.Sender,
+                    ReplyToText = !string.IsNullOrWhiteSpace(reply?.Text) ? reply.Text : FormatMessageSummary(reply)
                 };
 
                 PrepareMessage(targetChat, singleMsg);
@@ -3733,7 +3869,10 @@ public async Task SendTextMessageAsync()
                     IsVideoNote = isVideoNote,
                     VideoNoteRadiusPercent = Settings.VideoNoteRadiusPercent,
                     IsFromMe = true,
-                    FormattedTime = DateTime.Now.ToString("HH:mm")
+                    FormattedTime = DateTime.Now.ToString("HH:mm"),
+                    ReplyToId = reply?.Id,
+                    ReplyToSender = reply?.Sender,
+                    ReplyToText = !string.IsNullOrWhiteSpace(reply?.Text) ? reply.Text : FormatMessageSummary(reply)
                 };
 
                 PrepareMessage(targetChat, singleMsg);
@@ -5136,7 +5275,7 @@ public async Task SendTextMessageAsync()
                     {
                         chat.Messages.Remove(msgToDelete);
                         var newLast = chat.Messages.LastOrDefault();
-                        chat.LastMessage = newLast?.Text ?? "";
+                        chat.LastMessage = FormatMessageSummary(newLast);
                         chat.LastMessageTime = newLast?.FormattedTime ?? "";
                         _ = _storageService.SaveChatsAsync(_allChats);
                     }
