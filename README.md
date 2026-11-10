@@ -1,7 +1,7 @@
 <div align="center">
   <img src="desktop/PrimeDesktop/Assets/prime_logo.png" alt="Prime Desktop Logo" width="120" />
   <h1>Prime Desktop</h1>
-  <p><b>Децентрализованный офлайн-мессенджер для Windows 10/11</b></p>
+  <p><b>Всегда будь в Прайме теперь и для Windows 10/11!</b></p>
   <p>Версия: <b>v0.3 Desk</b> | Единая гибридная архитектура: C# (.NET 8 WPF) + Rust Native Core</p>
   <p>
     <a href="https://github.com/Vaniahorosh/Prime_messenger_Desktop/releases/latest/download/PrimeSetup.exe"><img src="https://img.shields.io/badge/Скачать%20установщик-PrimeSetup.exe-0078D7?style=flat-square&logo=windows&logoColor=white" height="34" alt="Скачать установщик PrimeSetup.exe" /></a>
