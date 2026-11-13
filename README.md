@@ -1,6 +1,6 @@
 <div align="center">
   <img src="desktop/PrimeDesktop/Assets/prime_logo.png" alt="Prime Desktop Logo" width="120" />
-  <h1>Prime Desktop</h1>
+  <h1>Prime Desktop (BETA)</h1>
   <p><b>Всегда будь в Прайме теперь и для Windows 10/11!</b></p>
   <p>Версия: <b>v0.3 Desk</b> | Единая гибридная архитектура: C# (.NET 8 WPF) + Rust Native Core</p>
   <p>
