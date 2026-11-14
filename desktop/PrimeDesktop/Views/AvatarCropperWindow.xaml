@@ -25,7 +25,7 @@
             <!-- Title Bar -->
             <Grid Grid.Row="0" Margin="0,0,0,14" MouseDown="TitleBar_MouseDown" Background="Transparent">
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                    <TextBlock Text="👤" FontSize="15" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                    <Path Data="{StaticResource IconPhoto}" Fill="{DynamicResource TextSecondaryBrush}" Width="15" Height="15" Stretch="Uniform" Margin="0,0,8,0" VerticalAlignment="Center"/>
                     <TextBlock Text="Настройка аватара профиля" FontSize="15" FontWeight="Bold" Foreground="#FFFFFF" VerticalAlignment="Center"/>
                 </StackPanel>
                 <Button Content="✕" Width="30" Height="30" HorizontalAlignment="Right" Click="BtnCancel_Click"
@@ -91,7 +91,7 @@
             </Border>
 
             <!-- Interaction Hint -->
-            <TextBlock Grid.Row="2" Text="💡 Зажмите ЛКМ для перемещения • Ctrl + колесико для масштаба"
+            <TextBlock Grid.Row="2" Text="Перемещение мышью • Масштаб колесиком"
                        FontSize="11" Foreground="#8B949E" HorizontalAlignment="Center" Margin="0,10,0,8"/>
 
             <!-- Toolbar: Zoom & Rotate -->
@@ -123,7 +123,7 @@
                 </Button>
 
                 <!-- Reset -->
-                <Button Content="🔄 Сброс" Height="32" Padding="10,0" Click="BtnReset_Click" ToolTip="Сбросить масштаб и положение"
+                <Button Content="Сбросить" Height="32" Padding="10,0" Click="BtnReset_Click" ToolTip="Сбросить масштаб и положение"
                         Background="#16202E" Foreground="#8B949E" BorderBrush="#25354C" BorderThickness="1"
                         FontSize="12" Cursor="Hand">
                     <Button.Resources><Style TargetType="Border"><Setter Property="CornerRadius" Value="8"/></Style></Button.Resources>
@@ -141,7 +141,7 @@
                         Height="38" Width="110" HorizontalAlignment="Left" FontSize="13" Cursor="Hand">
                     <Button.Resources><Style TargetType="Border"><Setter Property="CornerRadius" Value="8"/></Style></Button.Resources>
                 </Button>
-                <Button Grid.Column="1" Content="✓ Применить" Click="BtnApply_Click"
+                <Button Grid.Column="1" Content="Применить" Click="BtnApply_Click"
                         Background="#4D9FFF" Foreground="#FFFFFF" FontWeight="Bold"
                         Height="38" Width="130" BorderThickness="0" FontSize="13" Cursor="Hand">
                     <Button.Resources><Style TargetType="Border"><Setter Property="CornerRadius" Value="8"/></Style></Button.Resources>

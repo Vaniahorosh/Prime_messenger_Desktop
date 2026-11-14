@@ -435,18 +435,18 @@
 
                                     <Border.ContextMenu>
                                         <ContextMenu Style="{StaticResource ModernContextMenu}">
-                                            <MenuItem Header="🔕 Отключить уведомления"
+                                            <MenuItem Header="Отключить уведомления"
                                                       Style="{StaticResource ModernMenuItem}"
                                                       Command="{Binding PlacementTarget.Tag.ToggleMuteChatCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
                                                       CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
                                                       Visibility="{Binding PlacementTarget.DataContext.IsMuted, RelativeSource={RelativeSource AncestorType=ContextMenu}, Converter={StaticResource InverseBoolToVis}}"/>
-                                            <MenuItem Header="🔔 Включить уведомления"
+                                            <MenuItem Header="Включить уведомления"
                                                       Style="{StaticResource ModernMenuItem}"
                                                       Command="{Binding PlacementTarget.Tag.ToggleMuteChatCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
                                                       CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
                                                       Visibility="{Binding PlacementTarget.DataContext.IsMuted, RelativeSource={RelativeSource AncestorType=ContextMenu}, Converter={StaticResource BoolToVis}}"/>
                                             <Separator Background="#223145" Margin="4,3"/>
-                                            <MenuItem Header="🗑️ Удалить этот чат"
+                                            <MenuItem Header="Удалить чат"
                                                       Style="{StaticResource DangerMenuItem}"
                                                       Command="{Binding PlacementTarget.Tag.DeleteChatCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
                                                       CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
@@ -622,11 +622,11 @@
                                 <Path Data="{StaticResource IconMoreVertical}" Fill="{StaticResource TextMutedBrush}" Width="14" Height="14" Stretch="Uniform"/>
                                 <Button.ContextMenu>
                                     <ContextMenu Style="{StaticResource ModernContextMenu}">
-                                        <MenuItem Header="🔕 Отключить уведомления"
+                                        <MenuItem Header="Отключить уведомления"
                                                   Style="{StaticResource ModernMenuItem}"
                                                   Command="{Binding ToggleMuteChatCommand}" CommandParameter="{Binding SelectedChat}"
                                                   Visibility="{Binding SelectedChat.IsMuted, Converter={StaticResource InverseBoolToVis}}"/>
-                                        <MenuItem Header="🔔 Включить уведомления"
+                                        <MenuItem Header="Включить уведомления"
                                                   Style="{StaticResource ModernMenuItem}"
                                                   Command="{Binding ToggleMuteChatCommand}" CommandParameter="{Binding SelectedChat}"
                                                   Visibility="{Binding SelectedChat.IsMuted, Converter={StaticResource BoolToVis}}"/>
@@ -634,7 +634,7 @@
                                                   Style="{StaticResource ModernMenuItem}"
                                                   Command="{Binding ToggleMediaDrawerCommand}"/>
                                         <Separator Background="#223145" Margin="4,3"/>
-                                        <MenuItem Header="🗑️ Удалить чат"
+                                        <MenuItem Header="Удалить чат"
                                                   Style="{StaticResource DangerMenuItem}"
                                                   Command="{Binding DeleteSelectedChatCommand}"/>
                                     </ContextMenu>
@@ -867,11 +867,11 @@
                                                           Style="{StaticResource ModernMenuItem}"
                                                           Command="{Binding PlacementTarget.Tag.ReplyToMessageCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
                                                           CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
-                                                <MenuItem Header="📋 Копировать"
+                                                <MenuItem Header="Копировать"
                                                           Style="{StaticResource ModernMenuItem}"
                                                           Command="{Binding PlacementTarget.Tag.CopyMessageCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
                                                           CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
-                                                <MenuItem Header="💾 Сохранить как..."
+                                                <MenuItem Header="Сохранить как..."
                                                           Style="{StaticResource ModernMenuItem}"
                                                           Command="{Binding PlacementTarget.Tag.SaveAttachmentCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
                                                           CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
@@ -880,13 +880,13 @@
                                                           Style="{StaticResource ModernMenuItem}"
                                                           Command="{Binding PlacementTarget.Tag.ForwardMessageCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
                                                           CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
-                                                <MenuItem Header="✏️ Редактировать"
+                                                <MenuItem Header="Редактировать"
                                                           Style="{StaticResource ModernMenuItem}"
                                                           Command="{Binding PlacementTarget.Tag.EditMessageCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
                                                           CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
                                                           Visibility="{Binding PlacementTarget.DataContext.IsFromMe, RelativeSource={RelativeSource AncestorType=ContextMenu}, Converter={StaticResource BoolToVis}}"/>
                                                 <Separator Background="#223145" Margin="4,3"/>
-                                                <MenuItem Header="🗑️ Удалить"
+                                                <MenuItem Header="Удалить"
                                                           Style="{StaticResource DangerMenuItem}"
                                                           Command="{Binding PlacementTarget.Tag.DeleteMessageCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
                                                           CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
@@ -1440,7 +1440,7 @@
                                     </Button>
                                 </StackPanel>
                                 <Button DockPanel.Dock="Right" Style="{StaticResource ModernButton}" Height="24" Padding="6,0" ToolTip="Закрыть панель форматирования" Command="{Binding ToggleRichFormattingCommand}">
-                                    <TextBlock Text="✕ Закрыть" Foreground="{DynamicResource TextMutedBrush}" FontSize="11"/>
+                                    <TextBlock Text="Закрыть" Foreground="{DynamicResource TextMutedBrush}" FontSize="11"/>
                                 </Button>
                             </DockPanel>
                         </Border>
@@ -1591,7 +1591,7 @@
                                 <Button Grid.Column="1" Style="{StaticResource ModernButton}" Width="32" Height="32" Padding="0" Margin="4,0,2,0"
                                         ToolTip="Смайлики и эмодзи" x:Name="BtnEmojiPickerTrigger" Click="BtnEmojiPickerTrigger_Click"
                                         VerticalAlignment="Center">
-                                    <TextBlock Text="😊" FontSize="15" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    <Path Data="{StaticResource IconSmile}" Fill="{DynamicResource TextSecondaryBrush}" Width="15" Height="15" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                 </Button>
                                 <Popup x:Name="EmojiPickerPopup" PlacementTarget="{Binding ElementName=BtnEmojiPickerTrigger}"
                                        Placement="Top" StaysOpen="False" AllowsTransparency="True" VerticalOffset="-6">
@@ -1643,10 +1643,10 @@
                 <Border Grid.Row="2" Background="{DynamicResource HeaderBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0" Padding="16,10"
                         Visibility="{Binding IsReadingMode, Converter={StaticResource BoolToVis}}">
                     <DockPanel>
-                        <Button Content="🔗 Соединиться" Style="{StaticResource AccentButton}" DockPanel.Dock="Right" Padding="14,6" Margin="12,0,0,0"
+                        <Button Content="Подключиться" Style="{StaticResource AccentButton}" DockPanel.Dock="Right" Padding="14,6" Margin="12,0,0,0"
                                 Command="{Binding ToggleReadingModeCommand}"/>
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <TextBlock Text="📖" FontSize="16" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                            <Path Data="{StaticResource IconInfo}" Fill="{DynamicResource TextSecondaryBrush}" Width="15" Height="15" Stretch="Uniform" Margin="0,0,8,0" VerticalAlignment="Center"/>
                             <StackPanel VerticalAlignment="Center">
                                 <TextBlock Text="Режим чтения включен" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold" FontSize="13"/>
                                 <TextBlock Text="Связь отключена. Чтобы отправлять сообщения, нажмите «Соединиться»." Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11"/>
@@ -1851,8 +1851,8 @@
                                         <Border Background="Transparent" IsHitTestVisible="True">
                                             <Border.ContextMenu>
                                                 <ContextMenu Style="{StaticResource ModernContextMenu}">
-                                                    <MenuItem Header="📷 Сменить аватар" Style="{StaticResource ModernMenuItem}" Command="{Binding ChangeContactAvatarCommand}"/>
-                                                    <MenuItem Header="🗑️ Удалить этот аватар из истории" Style="{StaticResource DangerMenuItem}" Command="{Binding DeleteContactAvatarCommand}" Visibility="{Binding SelectedChat.HasAvatar, Converter={StaticResource BoolToVis}}"/>
+                                                    <MenuItem Header="Сменить аватар" Style="{StaticResource ModernMenuItem}" Command="{Binding ChangeContactAvatarCommand}"/>
+                                                    <MenuItem Header="Удалить аватар из истории" Style="{StaticResource DangerMenuItem}" Command="{Binding DeleteContactAvatarCommand}" Visibility="{Binding SelectedChat.HasAvatar, Converter={StaticResource BoolToVis}}"/>
                                                 </ContextMenu>
                                             </Border.ContextMenu>
                                         </Border>
@@ -2190,14 +2190,14 @@
                                                             Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=Window}}">
                                                         <Border.ContextMenu>
                                                             <ContextMenu Style="{StaticResource ModernContextMenu}">
-                                                                <MenuItem Header="🖼️ Просмотреть" Style="{StaticResource ModernMenuItem}"
+                                                                <MenuItem Header="Просмотреть" Style="{StaticResource ModernMenuItem}"
                                                                           Command="{Binding PlacementTarget.Tag.OpenPhotoViewerCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
                                                                           CommandParameter="{Binding PlacementTarget.DataContext.FilePath, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
-                                                                <MenuItem Header="🎨 Редактировать фото" Style="{StaticResource ModernMenuItem}"
+                                                                <MenuItem Header="Редактировать фото" Style="{StaticResource ModernMenuItem}"
                                                                           Command="{Binding PlacementTarget.Tag.OpenPhotoEditorCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
                                                                           CommandParameter="{Binding PlacementTarget.DataContext.FilePath, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
                                                                           Visibility="{Binding PlacementTarget.DataContext.IsVideo, RelativeSource={RelativeSource AncestorType=ContextMenu}, Converter={StaticResource InverseBoolToVis}}"/>
-                                                                <MenuItem Header="📁 Показать в проводнике" Style="{StaticResource ModernMenuItem}"
+                                                                <MenuItem Header="Показать в проводнике" Style="{StaticResource ModernMenuItem}"
                                                                           Command="{Binding PlacementTarget.Tag.OpenFileLocationCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
                                                                           CommandParameter="{Binding PlacementTarget.DataContext.FilePath, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
                                                             </ContextMenu>
@@ -2272,10 +2272,10 @@
                                                         </Border.Style>
                                                         <Border.ContextMenu>
                                                             <ContextMenu Style="{StaticResource ModernContextMenu}">
-                                                                <MenuItem Header="📄 Открыть файл" Style="{StaticResource ModernMenuItem}"
+                                                                <MenuItem Header="Открыть файл" Style="{StaticResource ModernMenuItem}"
                                                                           Command="{Binding PlacementTarget.Tag.OpenFileCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
                                                                           CommandParameter="{Binding PlacementTarget.DataContext.FilePath, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
-                                                                <MenuItem Header="📁 Показать в Загрузках / Проводнике" Style="{StaticResource ModernMenuItem}"
+                                                                <MenuItem Header="Показать в проводнике" Style="{StaticResource ModernMenuItem}"
                                                                           Command="{Binding PlacementTarget.Tag.OpenFileLocationCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
                                                                           CommandParameter="{Binding PlacementTarget.DataContext.FilePath, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
                                                             </ContextMenu>
@@ -2380,10 +2380,10 @@
                                                         </Border.Style>
                                                         <Border.ContextMenu>
                                                             <ContextMenu Style="{StaticResource ModernContextMenu}">
-                                                                <MenuItem Header="🎵 Воспроизвести / Пауза" Style="{StaticResource ModernMenuItem}"
+                                                                <MenuItem Header="Воспроизвести / Пауза" Style="{StaticResource ModernMenuItem}"
                                                                           Command="{Binding PlacementTarget.Tag.PlayVoiceMessageCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
                                                                           CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
-                                                                <MenuItem Header="📁 Показать в проводнике" Style="{StaticResource ModernMenuItem}"
+                                                                <MenuItem Header="Показать в проводнике" Style="{StaticResource ModernMenuItem}"
                                                                           Command="{Binding PlacementTarget.Tag.OpenFileLocationCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
                                                                           CommandParameter="{Binding PlacementTarget.DataContext.FilePath, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
                                                             </ContextMenu>

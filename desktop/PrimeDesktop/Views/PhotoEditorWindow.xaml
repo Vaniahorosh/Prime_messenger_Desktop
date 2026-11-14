@@ -1,7 +1,7 @@
 <Window x:Class="PrimeDesktop.Views.PhotoEditorWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Редактор фото — Prime Desktop" Height="680" Width="920"
+        Title="Редактор фото - Prime Desktop" Height="680" Width="920"
         MinHeight="500" MinWidth="700"
         WindowStartupLocation="CenterScreen"
         Background="#0B1017" Foreground="#F0F6FC">
@@ -20,12 +20,12 @@
                     <Button Content="↩ Отмена кисти" Click="BtnUndo_Click"
                             Background="#182232" Foreground="#F0F6FC" BorderBrush="#223045" BorderThickness="1"
                             Padding="12,6" Margin="0,0,8,0" Cursor="Hand"/>
-                    <Button Content="🔄 Сброс" Click="BtnReset_Click"
+                    <Button Content="Сбросить" Click="BtnReset_Click"
                             Background="#182232" Foreground="#F0F6FC" BorderBrush="#223045" BorderThickness="1"
                             Padding="12,6" Cursor="Hand"/>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                    <TextBlock x:Name="TxtEditorHeaderTitle" Text="🎨 Фоторедактор Прайм" FontSize="15" FontWeight="Bold" Foreground="#F0F6FC"/>
+                    <TextBlock x:Name="TxtEditorHeaderTitle" Text="Фоторедактор Prime" FontSize="15" FontWeight="Bold" Foreground="#F0F6FC"/>
                     <TextBlock x:Name="TxtEditorHeaderSubtitle" Text="v0.3" FontSize="11" Foreground="#4D9FFF" Margin="8,0,0,0" VerticalAlignment="Center"/>
                 </StackPanel>
             </DockPanel>
@@ -137,10 +137,10 @@
                         Background="#182232" Foreground="#8B949E" BorderBrush="#223045" BorderThickness="1"
                         Padding="16,8" Cursor="Hand"/>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                    <Button x:Name="BtnSaveDisk" Content="💾 Сохранить на диск" Click="BtnSaveDisk_Click"
+                    <Button x:Name="BtnSaveDisk" Content="Сохранить на диск" Click="BtnSaveDisk_Click"
                             Background="#182232" Foreground="#F0F6FC" BorderBrush="#223045" BorderThickness="1"
                             Padding="16,8" Margin="0,0,10,0" Cursor="Hand"/>
-                    <Button x:Name="BtnApply" Content="✓ Применить и отправить" Click="BtnApply_Click"
+                    <Button x:Name="BtnApply" Content="Применить и отправить" Click="BtnApply_Click"
                             Background="#4D9FFF" Foreground="#FFFFFF" FontWeight="Bold" BorderThickness="0"
                             Padding="20,8" Cursor="Hand"/>
                 </StackPanel>

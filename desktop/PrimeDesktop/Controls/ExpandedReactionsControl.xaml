@@ -65,19 +65,19 @@
                             Padding="10,4" Margin="0,0,5,0" FontSize="11" FontWeight="SemiBold"
                             Background="#254E82" Foreground="White" BorderThickness="0" Cursor="Hand"
                             Click="CategoryButton_Click" Tag="all"/>
-                    <Button x:Name="BtnCatTop" Content="🔥 Топ" Style="{StaticResource ModernButton}"
+                    <Button x:Name="BtnCatTop" Content="Популярные" Style="{StaticResource ModernButton}"
                             Padding="9,4" Margin="0,0,5,0" FontSize="11" FontWeight="SemiBold"
                             Background="#182436" Foreground="{DynamicResource TextSecondaryBrush}" BorderThickness="0" Cursor="Hand"
                             Click="CategoryButton_Click" Tag="top"/>
-                    <Button x:Name="BtnCatFaces" Content="😀 Эмоции" Style="{StaticResource ModernButton}"
+                    <Button x:Name="BtnCatFaces" Content="Эмоции" Style="{StaticResource ModernButton}"
                             Padding="9,4" Margin="0,0,5,0" FontSize="11" FontWeight="SemiBold"
                             Background="#182436" Foreground="{DynamicResource TextSecondaryBrush}" BorderThickness="0" Cursor="Hand"
                             Click="CategoryButton_Click" Tag="faces"/>
-                    <Button x:Name="BtnCatHands" Content="👍 Жесты" Style="{StaticResource ModernButton}"
+                    <Button x:Name="BtnCatHands" Content="Жесты" Style="{StaticResource ModernButton}"
                             Padding="9,4" Margin="0,0,5,0" FontSize="11" FontWeight="SemiBold"
                             Background="#182436" Foreground="{DynamicResource TextSecondaryBrush}" BorderThickness="0" Cursor="Hand"
                             Click="CategoryButton_Click" Tag="hands"/>
-                    <Button x:Name="BtnCatHearts" Content="💖 Сердца" Style="{StaticResource ModernButton}"
+                    <Button x:Name="BtnCatHearts" Content="Сердца" Style="{StaticResource ModernButton}"
                             Padding="9,4" Margin="0,0,5,0" FontSize="11" FontWeight="SemiBold"
                             Background="#182436" Foreground="{DynamicResource TextSecondaryBrush}" BorderThickness="0" Cursor="Hand"
                             Click="CategoryButton_Click" Tag="hearts"/>
@@ -146,7 +146,7 @@
                         Padding="10,6" HorizontalAlignment="Stretch" Cursor="Hand" 
                         Click="BtnMoreEmojis_Click">
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                        <TextBlock Text="✨" FontSize="13" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                        
                         <TextBlock Text="Все эмодзи мессенджера..." Foreground="{DynamicResource AccentBrush}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"/>
                     </StackPanel>
                 </Button>

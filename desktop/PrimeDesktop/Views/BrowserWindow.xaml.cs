@@ -312,8 +312,7 @@ public partial class BrowserWindow : Window
         // Desktop / Mobile Mode Toggle
         _txtDesktopModeIcon = new TextBlock
         {
-            Text = "💻",
-            FontSize = 14,
+            Text = "PC", FontWeight = FontWeights.SemiBold, FontSize = 11,
             VerticalAlignment = VerticalAlignment.Center
         };
         _btnToggleDesktopMode = new Button
@@ -1809,7 +1808,7 @@ public partial class BrowserWindow : Window
     {
         if (_txtDesktopModeIcon != null)
         {
-            _txtDesktopModeIcon.Text = _isDesktopMode ? "💻" : "📱";
+            _txtDesktopModeIcon.Text = _isDesktopMode ? "PC" : "MOB";
         }
         if (_btnToggleDesktopMode != null)
         {

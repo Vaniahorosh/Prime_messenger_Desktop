@@ -1155,7 +1155,7 @@ public class MainViewModel : ViewModelBase
     private string _storageTotalText = "Занято: 0 Б (0 файлов)";
     public string StorageTotalText { get => _storageTotalText; set => SetProperty(ref _storageTotalText, value); }
 
-    private string _clearSelectedStorageText = "🧹 Очистить выбранное";
+    private string _clearSelectedStorageText = "Очистить выбранное";
     public string ClearSelectedStorageText { get => _clearSelectedStorageText; set => SetProperty(ref _clearSelectedStorageText, value); }
 
     public ICommand ToggleSelectAllStorageCommand { get; }
@@ -1883,7 +1883,7 @@ public class MainViewModel : ViewModelBase
             Settings.ThanksHeartCount++;
             OnPropertyChanged(nameof(ThanksHeartCount));
             _ = _storageService.SaveSettingsAsync(Settings);
-            StatusMessage = $"Спасибо за поддержку! ❤️ ({Settings.ThanksHeartCount})";
+            StatusMessage = $"Спасибо за поддержку ({Settings.ThanksHeartCount})";
         });
 
         OpenGithubCommand = new RelayCommand(() =>
@@ -2558,7 +2558,7 @@ public class MainViewModel : ViewModelBase
                 try
                 {
                     File.Copy(path, sfd.FileName, true);
-                    StatusMessage = $"✓ Файл сохранен: {Path.GetFileName(sfd.FileName)}";
+                    StatusMessage = $"Файл сохранен: {Path.GetFileName(sfd.FileName)}";
                 }
                 catch (Exception ex)
                 {
@@ -3392,7 +3392,7 @@ public async Task SendTextMessageAsync()
                 {
                     msg.TransferProgress = pct;
                     msg.TransferSpeedText = speed;
-                    StatusMessage = $"📤 Отправка голосового: {pct:F0}%...";
+                    StatusMessage = $"Отправка голосового: {pct:F0}%...";
                 });
             });
             RunOnUIThread(() =>
@@ -3401,7 +3401,7 @@ public async Task SendTextMessageAsync()
                 msg.IsTransferring = false;
                 msg.TransferSpeedText = string.Empty;
                 msg.IsDelivered = true;
-                StatusMessage = "✓ Голосовое сообщение отправлено";
+                StatusMessage = "Голосовое сообщение отправлено";
             });
         }
         catch (Exception ex)
@@ -3752,7 +3752,7 @@ public async Task SendTextMessageAsync()
                         {
                             message.TransferProgress = pct;
                             message.TransferSpeedText = speed;
-                            StatusMessage = $"📤 Отправка коллажа: {pct:F0}% ({sent / 1024} / {total / 1024} КБ{(!string.IsNullOrEmpty(speed) ? $", {speed}" : "")})...";
+                            StatusMessage = $"Отправка коллажа: {pct:F0}% ({sent / 1024} / {total / 1024} КБ{(!string.IsNullOrEmpty(speed) ? $", {speed}" : "")})...";
                         });
                     });
                     RunOnUIThread(() =>
@@ -3761,7 +3761,7 @@ public async Task SendTextMessageAsync()
                         message.IsTransferring = false;
                         message.TransferSpeedText = string.Empty;
                         message.IsDelivered = true;
-                        StatusMessage = "✓ Коллаж отправлен";
+                        StatusMessage = "Коллаж отправлен";
                     });
                 }
                 catch (Exception ex)
@@ -3822,7 +3822,7 @@ public async Task SendTextMessageAsync()
                         {
                             singleMsg.TransferProgress = pct;
                             singleMsg.TransferSpeedText = speed;
-                            StatusMessage = $"📤 Отправка фото: {pct:F0}% ({sent / 1024} / {total / 1024} КБ{(!string.IsNullOrEmpty(speed) ? $", {speed}" : "")})...";
+                            StatusMessage = $"Отправка фото: {pct:F0}% ({sent / 1024} / {total / 1024} КБ{(!string.IsNullOrEmpty(speed) ? $", {speed}" : "")})...";
                         });
                     });
                     RunOnUIThread(() =>
@@ -3831,7 +3831,7 @@ public async Task SendTextMessageAsync()
                         singleMsg.IsTransferring = false;
                         singleMsg.TransferSpeedText = string.Empty;
                         singleMsg.IsDelivered = true;
-                        StatusMessage = "✓ Фотография отправлена";
+                        StatusMessage = "Фотография отправлена";
                     });
                 }
                 catch (Exception ex)
@@ -3903,7 +3903,7 @@ public async Task SendTextMessageAsync()
                         {
                             singleMsg.TransferProgress = pct;
                             singleMsg.TransferSpeedText = speed;
-                            StatusMessage = $"📤 Отправка {label}: {pct:F0}% ({sent / 1024} / {total / 1024} КБ{(!string.IsNullOrEmpty(speed) ? $", {speed}" : "")})...";
+                            StatusMessage = $"Отправка {label}: {pct:F0}% ({sent / 1024} / {total / 1024} КБ{(!string.IsNullOrEmpty(speed) ? $", {speed}" : "")})...";
                         });
                     });
                     RunOnUIThread(() =>
@@ -3912,7 +3912,7 @@ public async Task SendTextMessageAsync()
                         singleMsg.IsTransferring = false;
                         singleMsg.TransferSpeedText = string.Empty;
                         singleMsg.IsDelivered = true;
-                        StatusMessage = $"✓ {char.ToUpper(label[0]) + label.Substring(1)} отправлено";
+                        StatusMessage = $"{char.ToUpper(label[0]) + label.Substring(1)} отправлено";
                     });
                 }
                 catch (Exception ex)
@@ -4421,9 +4421,9 @@ public async Task SendTextMessageAsync()
         if (CbStorageCache) { selectedBytes += _bytesCatCache; selectedCount += _storageCatCache.Count; }
 
         if (selectedCount > 0)
-            ClearSelectedStorageText = $"🧹 Очистить выбранное ({FormatStorageBytes(selectedBytes)})";
+            ClearSelectedStorageText = $"Очистить выбранное ({FormatStorageBytes(selectedBytes)})";
         else
-            ClearSelectedStorageText = "🧹 Ничего не выбрано";
+            ClearSelectedStorageText = "Ничего не выбрано";
     }
 
     public async Task CalculateStorageBreakdownAsync()
@@ -4569,7 +4569,7 @@ public async Task SendTextMessageAsync()
         }
         catch
         {
-            MediaCacheSizeText = "—";
+            MediaCacheSizeText = "-";
         }
     }
 

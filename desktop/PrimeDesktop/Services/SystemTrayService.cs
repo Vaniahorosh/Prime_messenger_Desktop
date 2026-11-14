@@ -158,14 +158,14 @@ public class SystemTrayService : IDisposable
             menu.Style = cmStyle;
         }
 
-        var openItem = new MenuItem { Header = "💬 Открыть Prime" };
+        var openItem = new MenuItem { Header = "Открыть Prime" };
         if (Application.Current.TryFindResource("ModernMenuItem") is Style miStyle)
         {
             openItem.Style = miStyle;
         }
         openItem.Click += (s, e) => RestoreWindow();
 
-        var settingsItem = new MenuItem { Header = "⚙️ Настройки" };
+        var settingsItem = new MenuItem { Header = "Настройки" };
         if (Application.Current.TryFindResource("ModernMenuItem") is Style miStyleSettings)
         {
             settingsItem.Style = miStyleSettings;
@@ -179,7 +179,7 @@ public class SystemTrayService : IDisposable
             }
         };
 
-        var browserItem = new MenuItem { Header = "🌐 Браузер Prime" };
+        var browserItem = new MenuItem { Header = "Браузер Prime" };
         if (Application.Current.TryFindResource("ModernMenuItem") is Style miStyleBrowser)
         {
             browserItem.Style = miStyleBrowser;
@@ -192,7 +192,7 @@ public class SystemTrayService : IDisposable
             }
         };
 
-        var exitItem = new MenuItem { Header = "✕ Выход из Prime" };
+        var exitItem = new MenuItem { Header = "Выход из Prime" };
         if (Application.Current.TryFindResource("DangerMenuItem") is Style dangerStyle)
         {
             exitItem.Style = dangerStyle;

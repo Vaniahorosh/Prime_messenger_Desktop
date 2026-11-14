@@ -335,8 +335,8 @@ namespace PrimeDesktop.Controls
 
         private void EmojiButton_MouseLeave(object sender, MouseEventArgs e)
         {
-            if (FooterEmojiIcon != null) FooterEmojiIcon.Text = "✨";
-            if (FooterEmojiName != null) FooterEmojiName.Text = "Prime Emojis • Выберите смайлик";
+            if (FooterEmojiIcon != null) FooterEmojiIcon.Text = "";
+            if (FooterEmojiName != null) FooterEmojiName.Text = "Выберите эмодзи для отправки";
         }
     }
 }

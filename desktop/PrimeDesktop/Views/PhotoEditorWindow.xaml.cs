@@ -32,10 +32,10 @@ public partial class PhotoEditorWindow : Window
     {
         try
         {
-            Title = "Редактор фото — Prime Desktop";
-            TxtEditorHeaderTitle.Text = "🎨 Фоторедактор Прайм";
+            Title = "Редактор фото - Prime Desktop";
+            TxtEditorHeaderTitle.Text = "Фоторедактор Prime";
             TxtEditorHeaderSubtitle.Text = "v0.3";
-            BtnApply.Content = "✓ Применить и отправить";
+            BtnApply.Content = "Применить и отправить";
             BtnSaveDisk.Visibility = Visibility.Visible;
 
             var uri = new Uri(_sourcePath);

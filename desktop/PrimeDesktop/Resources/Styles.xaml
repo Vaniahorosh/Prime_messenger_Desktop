@@ -553,11 +553,11 @@
 
     <!-- Brand ContextMenu for Text Inputs -->
     <ContextMenu x:Key="BrandTextBoxContextMenu" Style="{StaticResource ModernContextMenu}">
-        <MenuItem Command="ApplicationCommands.Cut" Header="✂️ Вырезать" Style="{StaticResource ModernMenuItem}"/>
-        <MenuItem Command="ApplicationCommands.Copy" Header="📋 Копировать" Style="{StaticResource ModernMenuItem}"/>
-        <MenuItem Command="ApplicationCommands.Paste" Header="📥 Вставить" Style="{StaticResource ModernMenuItem}"/>
+        <MenuItem Command="ApplicationCommands.Cut" Header="Вырезать" Style="{StaticResource ModernMenuItem}"/>
+        <MenuItem Command="ApplicationCommands.Copy" Header="Копировать" Style="{StaticResource ModernMenuItem}"/>
+        <MenuItem Command="ApplicationCommands.Paste" Header="Вставить" Style="{StaticResource ModernMenuItem}"/>
         <Separator/>
-        <MenuItem Command="ApplicationCommands.SelectAll" Header="🔘 Выделить всё" Style="{StaticResource ModernMenuItem}"/>
+        <MenuItem Command="ApplicationCommands.SelectAll" Header="Выделить все" Style="{StaticResource ModernMenuItem}"/>
     </ContextMenu>
 
     <!-- Implicit TextBox style -->

@@ -54,13 +54,13 @@
                                 Tag="{Binding}">
                             <Border.ContextMenu>
                                 <ContextMenu Style="{StaticResource ModernContextMenu}" Opened="TabContextMenu_Opened" Closed="TabContextMenu_Closed">
-                                    <MenuItem Header="➕ Новая вкладка" Click="MenuTabNew_Click"/>
-                                    <MenuItem Header="🔄 Перезагрузить" Click="MenuTabReload_Click"/>
-                                    <MenuItem Header="📋 Дублировать вкладку" Click="MenuTabDuplicate_Click"/>
-                                    <MenuItem Header="📌 Закрепить вкладку" Tag="pin" Click="MenuTabPin_Click"/>
+                                    <MenuItem Header="Новая вкладка" Click="MenuTabNew_Click"/>
+                                    <MenuItem Header="Перезагрузить" Click="MenuTabReload_Click"/>
+                                    <MenuItem Header="Дублировать вкладку" Click="MenuTabDuplicate_Click"/>
+                                    <MenuItem Header="Закрепить вкладку" Tag="pin" Click="MenuTabPin_Click"/>
                                     <Separator/>
-                                    <MenuItem Header="✕ Закрыть вкладку" Style="{StaticResource DangerMenuItem}" Click="MenuTabClose_Click"/>
-                                    <MenuItem Header="✕ Закрыть другие вкладки" Style="{StaticResource DangerMenuItem}" Click="MenuTabCloseOthers_Click"/>
+                                    <MenuItem Header="Закрыть вкладку" Style="{StaticResource DangerMenuItem}" Click="MenuTabClose_Click"/>
+                                    <MenuItem Header="Закрыть другие вкладки" Style="{StaticResource DangerMenuItem}" Click="MenuTabCloseOthers_Click"/>
                                 </ContextMenu>
                             </Border.ContextMenu>
                             <Border.RenderTransform>
@@ -269,13 +269,13 @@
                                 Tag="{Binding}">
                             <Border.ContextMenu>
                                 <ContextMenu Style="{StaticResource ModernContextMenu}" Opened="TabContextMenu_Opened" Closed="TabContextMenu_Closed">
-                                    <MenuItem Header="➕ Новая вкладка" Click="MenuTabNew_Click"/>
-                                    <MenuItem Header="🔄 Перезагрузить" Click="MenuTabReload_Click"/>
-                                    <MenuItem Header="📋 Дублировать вкладку" Click="MenuTabDuplicate_Click"/>
-                                    <MenuItem Header="📌 Закрепить вкладку" Tag="pin" Click="MenuTabPin_Click"/>
+                                    <MenuItem Header="Новая вкладка" Click="MenuTabNew_Click"/>
+                                    <MenuItem Header="Перезагрузить" Click="MenuTabReload_Click"/>
+                                    <MenuItem Header="Дублировать вкладку" Click="MenuTabDuplicate_Click"/>
+                                    <MenuItem Header="Закрепить вкладку" Tag="pin" Click="MenuTabPin_Click"/>
                                     <Separator/>
-                                    <MenuItem Header="✕ Закрыть вкладку" Style="{StaticResource DangerMenuItem}" Click="MenuTabClose_Click"/>
-                                    <MenuItem Header="✕ Закрыть другие вкладки" Style="{StaticResource DangerMenuItem}" Click="MenuTabCloseOthers_Click"/>
+                                    <MenuItem Header="Закрыть вкладку" Style="{StaticResource DangerMenuItem}" Click="MenuTabClose_Click"/>
+                                    <MenuItem Header="Закрыть другие вкладки" Style="{StaticResource DangerMenuItem}" Click="MenuTabCloseOthers_Click"/>
                                 </ContextMenu>
                             </Border.ContextMenu>
                             <Grid Width="18" Height="18" HorizontalAlignment="Center" VerticalAlignment="Center">
@@ -318,13 +318,13 @@
                                 Tag="{Binding}">
                             <Border.ContextMenu>
                                 <ContextMenu Style="{StaticResource ModernContextMenu}" Opened="TabContextMenu_Opened" Closed="TabContextMenu_Closed">
-                                    <MenuItem Header="➕ Новая вкладка" Click="MenuTabNew_Click"/>
-                                    <MenuItem Header="🔄 Перезагрузить" Click="MenuTabReload_Click"/>
-                                    <MenuItem Header="📋 Дублировать вкладку" Click="MenuTabDuplicate_Click"/>
-                                    <MenuItem Header="📌 Закрепить вкладку" Tag="pin" Click="MenuTabPin_Click"/>
+                                    <MenuItem Header="Новая вкладка" Click="MenuTabNew_Click"/>
+                                    <MenuItem Header="Перезагрузить" Click="MenuTabReload_Click"/>
+                                    <MenuItem Header="Дублировать вкладку" Click="MenuTabDuplicate_Click"/>
+                                    <MenuItem Header="Закрепить вкладку" Tag="pin" Click="MenuTabPin_Click"/>
                                     <Separator/>
-                                    <MenuItem Header="✕ Закрыть вкладку" Style="{StaticResource DangerMenuItem}" Click="MenuTabClose_Click"/>
-                                    <MenuItem Header="✕ Закрыть другие вкладки" Style="{StaticResource DangerMenuItem}" Click="MenuTabCloseOthers_Click"/>
+                                    <MenuItem Header="Закрыть вкладку" Style="{StaticResource DangerMenuItem}" Click="MenuTabClose_Click"/>
+                                    <MenuItem Header="Закрыть другие вкладки" Style="{StaticResource DangerMenuItem}" Click="MenuTabCloseOthers_Click"/>
                                 </ContextMenu>
                             </Border.ContextMenu>
                             <Grid>
@@ -574,13 +574,13 @@
                 <DockPanel>
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                         <Path Data="{StaticResource IconEdit}" Width="12" Height="12" Fill="{DynamicResource AccentBrush}" Stretch="Uniform" Margin="0,0,8,0"/>
-                        <TextBlock Text="Режим редактирования: перетаскивайте кнопки между панелями и строкой вкладок. 👁️ скрывает/показывает."
+                        <TextBlock Text="Режим редактирования: перетаскивайте кнопки между панелями и строкой вкладок. клик скрывает/показывает."
                                    FontSize="11" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold" VerticalAlignment="Center"/>
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                        <Button Content="➕ Добавить отступ" Style="{StaticResource ModernButton}" Padding="8,2" FontSize="11" Margin="0,0,6,0" Click="BtnAddSpacer_Click"/>
+                        <Button Content="Добавить отступ" Style="{StaticResource ModernButton}" Padding="8,2" FontSize="11" Margin="0,0,6,0" Click="BtnAddSpacer_Click"/>
                         <Button Content="Сбросить" Style="{StaticResource ModernButton}" Padding="8,2" FontSize="11" Margin="0,0,6,0" Click="BtnResetToolbar_Click"/>
-                        <Button Content="✓ Готово" Style="{StaticResource AccentButton}" Padding="12,2" FontSize="11" Click="BtnExitEditMode_Click"/>
+                        <Button Content="Готово" Style="{StaticResource AccentButton}" Padding="12,2" FontSize="11" Click="BtnExitEditMode_Click"/>
                     </StackPanel>
                 </DockPanel>
             </Border>
@@ -1026,11 +1026,11 @@
                                FontSize="13" Foreground="{DynamicResource TextSecondaryBrush}"
                                TextAlignment="Center" HorizontalAlignment="Center" Margin="0,0,0,24" LineHeight="20"/>
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                        <Button Content="➕ Добавить отступ" Style="{StaticResource ModernButton}"
+                        <Button Content="Добавить отступ" Style="{StaticResource ModernButton}"
                                 Padding="14,8" Margin="0,0,8,0" Click="BtnAddSpacer_Click"/>
                         <Button Content="Сбросить панели" Style="{StaticResource ModernButton}"
                                 Padding="14,8" Margin="0,0,8,0" Click="BtnResetToolbar_Click"/>
-                        <Button Content="✓ Готово" Style="{StaticResource AccentButton}"
+                        <Button Content="Готово" Style="{StaticResource AccentButton}"
                                 Padding="18,8" FontWeight="SemiBold" Click="BtnExitEditMode_Click"/>
                     </StackPanel>
                 </StackPanel>
@@ -1192,7 +1192,7 @@
                             CornerRadius="8"
                             Padding="10,6">
                         <DockPanel>
-                            <TextBlock Text="⚡" FontSize="12" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            
                             <TextBlock x:Name="TxtPreviewRam"
                                        Text="Память: ~45 МБ"
                                        FontSize="11" FontWeight="SemiBold"
@@ -1318,7 +1318,7 @@
                         </Button>
                     </StackPanel>
 
-                    <TextBlock x:Name="TxtStartSavedNotification" Text="✓ Настройка сохранена!"
+                    <TextBlock x:Name="TxtStartSavedNotification" Text="Настройка сохранена"
                                FontSize="11" Foreground="{DynamicResource AccentBrush}"
                                HorizontalAlignment="Center" Margin="0,8,0,0" Visibility="Collapsed"/>
                 </StackPanel>
@@ -1443,7 +1443,7 @@
                     </Button>
 
                     <!-- Clear Browsing Data Button -->
-                    <Button Content="🧹 Очистить кэш и данные"
+                    <Button Content="Очистить кэш и данные"
                             Style="{StaticResource ModernButton}"
                             Padding="10,6"
                             HorizontalAlignment="Stretch"
@@ -1550,19 +1550,19 @@
 
                     <!-- Header -->
                     <DockPanel Grid.Row="0" Margin="0,0,0,10">
-                        <TextBlock Text="🧩 РАСШИРЕНИЯ CHROME" FontSize="13" FontWeight="Bold"
+                        <TextBlock Text="Расширения Chrome" FontSize="13" FontWeight="Bold"
                                    Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center"/>
                     </DockPanel>
 
                     <!-- Action Bar: Add Extension (.crx, .zip, folder) & Chrome Store -->
                     <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,12">
-                        <Button Content="➕ Установить расширение"
+                        <Button Content="Установить расширение"
                                 Style="{StaticResource AccentButton}"
                                 Padding="10,6" Margin="0,0,8,0"
                                 ToolTip="Установить файл расширения .crx, .zip или распакованную папку"
                                 Click="BtnInstallExtension_Click"/>
 
-                        <Button Content="🌐 Chrome Web Store"
+                        <Button Content="Chrome Web Store"
                                 Style="{StaticResource ModernButton}"
                                 Padding="10,6"
                                 ToolTip="Перейти в официальный каталог расширений Google Chrome"
