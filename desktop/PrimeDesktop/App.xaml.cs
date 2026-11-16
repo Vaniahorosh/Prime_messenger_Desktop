@@ -83,6 +83,16 @@ public partial class App : Application
         DispatcherUnhandledException += (s, args) =>
         {
             Log($"[FATAL DispatcherException] {args.Exception}");
+            if (MainWindow == null || !MainWindow.IsLoaded)
+            {
+                try
+                {
+                    _instanceMutex?.ReleaseMutex();
+                    _instanceMutex?.Dispose();
+                }
+                catch { }
+                Shutdown(-1);
+            }
             args.Handled = true;
         };
 

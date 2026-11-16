@@ -622,7 +622,7 @@
                                 <iconPacks:PackIconLucide Kind="Info" Foreground="{StaticResource TextMutedBrush}" Width="15" Height="15" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Button>
                             <Button x:Name="BtnChatHeaderMore" Style="{StaticResource ModernButton}" ToolTip="Действия с чатом" Width="36" Height="34" Padding="0" Click="BtnChatHeaderMore_Click">
-                                <iconPacks:PackIconLucide Kind="MoreVertical" Foreground="{StaticResource TextMutedBrush}" Width="15" Height="15" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                <iconPacks:PackIconLucide Kind="EllipsisVertical" Foreground="{StaticResource TextMutedBrush}" Width="15" Height="15" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                 <Button.ContextMenu>
                                     <ContextMenu Style="{StaticResource ModernContextMenu}">
                                         <MenuItem Header="Отключить уведомления"
