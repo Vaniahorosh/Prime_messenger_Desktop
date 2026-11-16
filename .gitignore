@@ -1,9 +1,12 @@
 # Build & Output
 bin/
 obj/
+desktop/bin/
 desktop/**/bin/
 desktop/**/obj/
+desktop/PrimeNative/target/
 desktop/PrimeSetup/Payload/app_files.zip
+*.pdb
 
 # Visual Studio & IDE
 .vs/

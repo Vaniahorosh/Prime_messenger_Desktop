@@ -9,6 +9,7 @@
         xmlns:conv="clr-namespace:PrimeDesktop.Converters"
         xmlns:controls="clr-namespace:PrimeDesktop.Controls"
         xmlns:emoji="clr-namespace:Emoji.Wpf;assembly=Emoji.Wpf"
+        xmlns:iconPacks="http://metro.mahapps.com/winfx/xaml/iconpacks"
 
         Title="Prime Desktop" Icon="Assets/prime.ico" Height="720" Width="1100"
 
@@ -297,7 +298,7 @@
                                 <Button x:Name="BtnDeviceDiscovery" Style="{StaticResource ModernButton}" 
                                         ToolTip="Поиск устройств Prime" Command="{Binding OpenDeviceDiscoveryCommand}" 
                                         DockPanel.Dock="Right" Width="34" Height="34" Padding="0">
-                                    <Path Data="{StaticResource IconRefresh}" Fill="{DynamicResource TextSecondaryBrush}" Width="15" Height="15" Stretch="Uniform"/>
+                                    <iconPacks:PackIconLucide Kind="RefreshCw" Foreground="{DynamicResource TextSecondaryBrush}" Width="15" Height="15" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                 </Button>
 
                                 <!-- Left: Profile Avatar & Name (Click to open settings) -->
@@ -342,7 +343,7 @@
                                             Background="Transparent" BorderThickness="0"
                                             Width="34" Height="34" Padding="0"
                                             HorizontalAlignment="Right" VerticalAlignment="Center">
-                                        <Path Data="{StaticResource IconSearch}" Fill="{DynamicResource TextSecondaryBrush}" Width="15" Height="15" Stretch="Uniform"/>
+                                        <iconPacks:PackIconLucide Kind="Search" Foreground="{DynamicResource TextSecondaryBrush}" Width="15" Height="15" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                     </Button>
 
                                     <!-- Expanded Bar State: Search Icon, TextBox, Close Button (✕) -->
@@ -355,8 +356,8 @@
                                         </Grid.ColumnDefinitions>
 
                                         <!-- Search Icon at left of input -->
-                                        <Path Grid.Column="0" Data="{StaticResource IconSearch}" Fill="{DynamicResource TextSecondaryBrush}" 
-                                              Width="14" Height="14" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False"/>
+                                        <iconPacks:PackIconLucide Grid.Column="0" Kind="Search" Foreground="{DynamicResource TextSecondaryBrush}" 
+                                              Width="14" Height="14" HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False"/>
 
                                         <!-- Clean Search Input: standard caret, no invisible padding/margins! -->
                                         <TextBox Grid.Column="1" x:Name="SearchTextBox" 
@@ -611,15 +612,17 @@
                             <Button Style="{StaticResource ModernButton}" Command="{Binding ToggleMuteChatCommand}" CommandParameter="{Binding SelectedChat}"
                                     ToolTip="Включить / отключить уведомления" Width="36" Height="34" Padding="0" Margin="0,0,6,0">
                                 <Grid>
-                                    <Path Data="{StaticResource IconBell}" Fill="{StaticResource TextMutedBrush}" Width="15" Height="15" Stretch="Uniform"
+                                    <iconPacks:PackIconLucide Kind="Bell" Foreground="{StaticResource TextMutedBrush}" Width="15" Height="15" HorizontalAlignment="Center" VerticalAlignment="Center"
                                           Visibility="{Binding SelectedChat.IsMuted, Converter={StaticResource InverseBoolToVis}}"/>
-                                    <Path Data="{StaticResource IconBellOff}" Fill="#FF6B6B" Width="15" Height="15" Stretch="Uniform"
+                                    <iconPacks:PackIconLucide Kind="BellOff" Foreground="#FF6B6B" Width="15" Height="15" HorizontalAlignment="Center" VerticalAlignment="Center"
                                           Visibility="{Binding SelectedChat.IsMuted, Converter={StaticResource BoolToVis}}"/>
                                 </Grid>
                             </Button>
-                            <Button Content="ℹ" Style="{StaticResource ModernButton}" Command="{Binding ToggleMediaDrawerCommand}" ToolTip="Профиль и медиа" Width="36" Height="34" Padding="0" Margin="0,0,6,0"/>
+                            <Button Style="{StaticResource ModernButton}" Command="{Binding ToggleMediaDrawerCommand}" ToolTip="Профиль и медиа" Width="36" Height="34" Padding="0" Margin="0,0,6,0">
+                                <iconPacks:PackIconLucide Kind="Info" Foreground="{StaticResource TextMutedBrush}" Width="15" Height="15" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Button>
                             <Button x:Name="BtnChatHeaderMore" Style="{StaticResource ModernButton}" ToolTip="Действия с чатом" Width="36" Height="34" Padding="0" Click="BtnChatHeaderMore_Click">
-                                <Path Data="{StaticResource IconMoreVertical}" Fill="{StaticResource TextMutedBrush}" Width="14" Height="14" Stretch="Uniform"/>
+                                <iconPacks:PackIconLucide Kind="MoreVertical" Foreground="{StaticResource TextMutedBrush}" Width="15" Height="15" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                 <Button.ContextMenu>
                                     <ContextMenu Style="{StaticResource ModernContextMenu}">
                                         <MenuItem Header="Отключить уведомления"
@@ -1503,7 +1506,7 @@
                                                     ToolTip="Отправить фото или видео (коллаж)">
                                                 <StackPanel Orientation="Horizontal" Margin="8,5">
                                                     <Border Background="{DynamicResource AccentSoftBrush}" CornerRadius="8" Width="26" Height="26" Margin="0,0,8,0">
-                                                        <Path Data="{StaticResource IconPhoto}" Fill="{DynamicResource AccentBrush}" Width="14" Height="14" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                        <iconPacks:PackIconLucide Kind="Image" Foreground="{DynamicResource AccentBrush}" Width="14" Height="14" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                     </Border>
                                                     <TextBlock Text="Медиа" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"/>
                                                 </StackPanel>
@@ -1515,7 +1518,7 @@
                                                     ToolTip="Отправить документ или файл">
                                                 <StackPanel Orientation="Horizontal" Margin="8,5">
                                                     <Border Background="#1E26A69A" CornerRadius="8" Width="26" Height="26" Margin="0,0,8,0">
-                                                        <Path Data="{StaticResource IconFile}" Fill="#26A69A" Width="14" Height="14" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                        <iconPacks:PackIconLucide Kind="FileText" Foreground="#26A69A" Width="14" Height="14" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                     </Border>
                                                     <TextBlock Text="Файл" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"/>
                                                 </StackPanel>
@@ -1542,7 +1545,7 @@
                                                     ToolTip="Открыть фоторедактор и холст">
                                                 <StackPanel Orientation="Horizontal" Margin="8,5">
                                                     <Border Background="#1EFFB74D" CornerRadius="8" Width="26" Height="26" Margin="0,0,8,0">
-                                                        <Path Data="{StaticResource IconBrush}" Fill="#FFB74D" Width="13" Height="13" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                        <iconPacks:PackIconLucide Kind="Paintbrush" Foreground="#FFB74D" Width="13" Height="13" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                     </Border>
                                                     <TextBlock Text="Редактор" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"/>
                                                 </StackPanel>
@@ -1591,7 +1594,7 @@
                                 <Button Grid.Column="1" Style="{StaticResource ModernButton}" Width="32" Height="32" Padding="0" Margin="4,0,2,0"
                                         ToolTip="Смайлики и эмодзи" x:Name="BtnEmojiPickerTrigger" Click="BtnEmojiPickerTrigger_Click"
                                         VerticalAlignment="Center">
-                                    <Path Data="{StaticResource IconSmile}" Fill="{DynamicResource TextSecondaryBrush}" Width="15" Height="15" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    <iconPacks:PackIconLucide Kind="Smile" Foreground="{DynamicResource TextSecondaryBrush}" Width="16" Height="16" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                 </Button>
                                 <Popup x:Name="EmojiPickerPopup" PlacementTarget="{Binding ElementName=BtnEmojiPickerTrigger}"
                                        Placement="Top" StaysOpen="False" AllowsTransparency="True" VerticalOffset="-6">
@@ -1615,10 +1618,10 @@
                                         Command="{Binding ToggleVoiceRecordCommand}" Width="40" Height="36" Padding="0"
                                         Visibility="{Binding CanSendMessage, Converter={StaticResource InverseBoolToVis}}">
                                     <Grid>
-                                        <Path Data="{StaticResource IconMic}" Fill="{DynamicResource TextSecondaryBrush}" Width="15" Height="15" Stretch="Uniform"
+                                        <iconPacks:PackIconLucide Kind="Mic" Foreground="{DynamicResource TextSecondaryBrush}" Width="16" Height="16"
                                               Visibility="{Binding IsRecordingVoice, Converter={StaticResource InverseBoolToVis}}"
                                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                        <Path Data="{StaticResource IconStop}" Fill="#FF5252" Width="14" Height="14" Stretch="Uniform"
+                                        <iconPacks:PackIconLucide Kind="Square" Foreground="#FF5252" Width="14" Height="14"
                                               Visibility="{Binding IsRecordingVoice, Converter={StaticResource BoolToVis}}"
                                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                     </Grid>
@@ -1626,7 +1629,7 @@
                                 <Button Style="{StaticResource AccentButton}" ToolTip="Отправить (Enter)"
                                         Command="{Binding SendMessageCommand}" Width="40" Height="36" Padding="0"
                                         Visibility="{Binding CanSendMessage, Converter={StaticResource BoolToVis}}">
-                                    <Path Data="{StaticResource IconSend}" Fill="White" Width="16" Height="16" Stretch="Uniform"/>
+                                    <iconPacks:PackIconLucide Kind="Send" Foreground="White" Width="15" Height="15" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                 </Button>
                             </StackPanel>
 
