@@ -127,15 +127,11 @@ public class BluetoothRfcommService : IPrimeNetworkService
     /// <summary>
     /// Role arbitration matching Android BluetoothConnectionManager.isClientInitiator
     /// Prevents simultaneous RFCOMM connection collisions.
+    /// Handled in high-performance Rust core (prime_native.dll) with managed fallback.
     /// </summary>
     public static bool IsClientInitiator(string localName, string remoteName)
     {
-        if (string.IsNullOrWhiteSpace(localName) || string.IsNullOrWhiteSpace(remoteName)) return true;
-        string loc = localName.Trim().ToUpperInvariant();
-        string rem = remoteName.Trim().ToUpperInvariant();
-        int comp = string.Compare(loc, rem, StringComparison.Ordinal);
-        if (comp != 0) return comp > 0;
-        return JavaStringHashCode(loc) >= JavaStringHashCode(rem);
+        return PrimeDesktop.Services.PrimeNativeCore.IsClientInitiator(localName, remoteName);
     }
 
     private static int JavaStringHashCode(string s)

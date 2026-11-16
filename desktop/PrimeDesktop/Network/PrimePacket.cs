@@ -7,6 +7,7 @@ using System.IO;
 using System.Text;
 
 using PrimeDesktop.Models;
+using PrimeDesktop.Services;
 
 namespace PrimeDesktop.Network;
 
@@ -210,27 +211,8 @@ public class PrimePacket
     // ==========================================
 
     public static byte[] BuildTextPayload(string msgId, string text, string? replyToId = null, string? replyToSender = null, string? replyToText = null)
-
     {
-        var sb = new StringBuilder();
-
-        sb.Append(msgId).Append(":::").Append(text);
-
-        if (!string.IsNullOrEmpty(replyToId))
-
-        {
-            sb.Append(":::REPLY:::")
-
-              .Append(replyToId).Append(":::")
-
-              .Append(replyToSender ?? "").Append(":::")
-
-              .Append(replyToText ?? "");
-
-        }
-
-        return Encoding.UTF8.GetBytes(sb.ToString());
-
+        return PrimeNativeCore.BuildTextPayload(msgId, text, replyToId, replyToSender, replyToText);
     }
 
     public static (string msgId, string realText, string? replyToId, string? replyToSender, string? replyToText) ParseTextPayload(byte[] payload)
@@ -279,16 +261,9 @@ public class PrimePacket
     }
 
     // Reaction format: msgId:::emoji:::authorLogin (or msgId:::REMOVE:::authorLogin)
-
     public static byte[] BuildReactionPayload(string msgId, string? reaction, string authorLogin)
-
     {
-        string rx = string.IsNullOrWhiteSpace(reaction) ? "REMOVE" : reaction;
-
-        string data = $"{msgId}:::{rx}:::{authorLogin}";
-
-        return Encoding.UTF8.GetBytes(data);
-
+        return PrimeNativeCore.BuildReactionPayload(msgId, reaction, authorLogin);
     }
 
     public static (string msgId, string? reaction, string authorLogin) ParseReactionPayload(byte[] payload)
@@ -349,19 +324,17 @@ public class PrimePacket
     }
 
     public static byte[] BuildHandshakePayload(string displayName, string username, bool isAck = false)
-
     {
-        string prefix = isAck ? "HANDSHAKE_ACK:" : "HANDSHAKE:";
-
-        string content = $"{prefix}name={displayName};login={username};version=100;features=vn;presence=ONLINE;device=pc;platform=desktop";
-
-        return Encoding.UTF8.GetBytes(content);
-
+        return PrimeNativeCore.BuildHandshakePayload(displayName, username, isAck);
     }
 
     public static (string? displayName, string? username, string? presence, bool isAck) ParseHandshakePayload(byte[] payload)
-
     {
+        if (PrimeNativeCore.TryParseHandshake(payload, out string? nativeName, out string? nativeLogin, out string? nativePresence, out bool nativeAck))
+        {
+            return (nativeName, nativeLogin, nativePresence, nativeAck);
+        }
+
         string text = Encoding.UTF8.GetString(payload);
 
         bool isAck = text.StartsWith("HANDSHAKE_ACK:", StringComparison.OrdinalIgnoreCase);
@@ -658,7 +631,7 @@ public class PrimePacket
         => Encoding.UTF8.GetBytes(state);
 
     public static byte[] BuildEditMessagePayload(string msgId, string newText)
-        => Encoding.UTF8.GetBytes($"{msgId}:::{newText}");
+        => PrimeNativeCore.BuildEditPayload(msgId, newText);
 
     public static (string msgId, string newText) ParseEditMessagePayload(byte[] payload)
     {

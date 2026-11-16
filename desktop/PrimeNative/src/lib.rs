@@ -10,7 +10,7 @@ use anonymizer::{get_opaque_peer_id, is_hardware_identifier};
 use crypto::PrimeCrypto;
 use protocol::PrimeProtocol;
 
-static VERSION: &str = "1.0.0-rust-native\0";
+static VERSION: &str = "1.1.0-rust-native\0";
 
 /// Returns native core version string
 #[no_mangle]
@@ -263,5 +263,293 @@ pub extern "C" fn prime_is_hardware_identifier(identifier: *const c_char) -> i32
     match c_str.to_str() {
         Ok(s) => if is_hardware_identifier(s) { 1 } else { 0 },
         Err(_) => 0,
+    }
+}
+
+/// Role arbitration: returns 1 if local device should initiate connection, 0 otherwise
+#[no_mangle]
+pub extern "C" fn prime_protocol_is_client_initiator(
+    local_name: *const c_char,
+    remote_name: *const c_char,
+) -> i32 {
+    if local_name.is_null() || remote_name.is_null() {
+        return 1;
+    }
+    let loc = match unsafe { CStr::from_ptr(local_name) }.to_str() {
+        Ok(s) => s,
+        Err(_) => return 1,
+    };
+    let rem = match unsafe { CStr::from_ptr(remote_name) }.to_str() {
+        Ok(s) => s,
+        Err(_) => return 1,
+    };
+    if PrimeProtocol::is_client_initiator(loc, rem) { 1 } else { 0 }
+}
+
+/// Formats text message payload with optional quoted reply preview
+#[no_mangle]
+pub extern "C" fn prime_protocol_build_text_payload(
+    msg_id: *const c_char,
+    text: *const c_char,
+    reply_to_id: *const c_char,
+    reply_to_sender: *const c_char,
+    reply_to_text: *const c_char,
+    out_buf: *mut u8,
+    out_buf_max: usize,
+    out_len: *mut usize,
+) -> i32 {
+    if msg_id.is_null() || text.is_null() || out_buf.is_null() || out_len.is_null() {
+        return -1;
+    }
+    let m_id = match unsafe { CStr::from_ptr(msg_id) }.to_str() {
+        Ok(s) => s,
+        Err(_) => return -2,
+    };
+    let t = match unsafe { CStr::from_ptr(text) }.to_str() {
+        Ok(s) => s,
+        Err(_) => return -2,
+    };
+    let r_id = if reply_to_id.is_null() { None } else { unsafe { CStr::from_ptr(reply_to_id) }.to_str().ok() };
+    let r_sender = if reply_to_sender.is_null() { None } else { unsafe { CStr::from_ptr(reply_to_sender) }.to_str().ok() };
+    let r_text = if reply_to_text.is_null() { None } else { unsafe { CStr::from_ptr(reply_to_text) }.to_str().ok() };
+
+    let payload = PrimeProtocol::build_text_payload(m_id, t, r_id, r_sender, r_text);
+    if payload.len() > out_buf_max {
+        return -3;
+    }
+    unsafe {
+        std::ptr::copy_nonoverlapping(payload.as_ptr(), out_buf, payload.len());
+        *out_len = payload.len();
+    }
+    0
+}
+
+/// Formats reaction payload
+#[no_mangle]
+pub extern "C" fn prime_protocol_build_reaction_payload(
+    msg_id: *const c_char,
+    reaction: *const c_char,
+    author_login: *const c_char,
+    out_buf: *mut u8,
+    out_buf_max: usize,
+    out_len: *mut usize,
+) -> i32 {
+    if msg_id.is_null() || author_login.is_null() || out_buf.is_null() || out_len.is_null() {
+        return -1;
+    }
+    let m_id = match unsafe { CStr::from_ptr(msg_id) }.to_str() {
+        Ok(s) => s,
+        Err(_) => return -2,
+    };
+    let auth = match unsafe { CStr::from_ptr(author_login) }.to_str() {
+        Ok(s) => s,
+        Err(_) => return -2,
+    };
+    let rx = if reaction.is_null() { None } else { unsafe { CStr::from_ptr(reaction) }.to_str().ok() };
+
+    let payload = PrimeProtocol::build_reaction_payload(m_id, rx, auth);
+    if payload.len() > out_buf_max {
+        return -3;
+    }
+    unsafe {
+        std::ptr::copy_nonoverlapping(payload.as_ptr(), out_buf, payload.len());
+        *out_len = payload.len();
+    }
+    0
+}
+
+/// Formats edit message payload
+#[no_mangle]
+pub extern "C" fn prime_protocol_build_edit_payload(
+    msg_id: *const c_char,
+    new_text: *const c_char,
+    out_buf: *mut u8,
+    out_buf_max: usize,
+    out_len: *mut usize,
+) -> i32 {
+    if msg_id.is_null() || new_text.is_null() || out_buf.is_null() || out_len.is_null() {
+        return -1;
+    }
+    let m_id = match unsafe { CStr::from_ptr(msg_id) }.to_str() {
+        Ok(s) => s,
+        Err(_) => return -2,
+    };
+    let txt = match unsafe { CStr::from_ptr(new_text) }.to_str() {
+        Ok(s) => s,
+        Err(_) => return -2,
+    };
+    let payload = PrimeProtocol::build_edit_payload(m_id, txt);
+    if payload.len() > out_buf_max {
+        return -3;
+    }
+    unsafe {
+        std::ptr::copy_nonoverlapping(payload.as_ptr(), out_buf, payload.len());
+        *out_len = payload.len();
+    }
+    0
+}
+
+/// Formats handshake payload
+#[no_mangle]
+pub extern "C" fn prime_protocol_build_handshake_payload(
+    display_name: *const c_char,
+    username: *const c_char,
+    is_ack: i32,
+    out_buf: *mut u8,
+    out_buf_max: usize,
+    out_len: *mut usize,
+) -> i32 {
+    if display_name.is_null() || username.is_null() || out_buf.is_null() || out_len.is_null() {
+        return -1;
+    }
+    let name = match unsafe { CStr::from_ptr(display_name) }.to_str() {
+        Ok(s) => s,
+        Err(_) => return -2,
+    };
+    let login = match unsafe { CStr::from_ptr(username) }.to_str() {
+        Ok(s) => s,
+        Err(_) => return -2,
+    };
+    let payload = PrimeProtocol::build_handshake_payload(name, login, is_ack != 0);
+    if payload.len() > out_buf_max {
+        return -3;
+    }
+    unsafe {
+        std::ptr::copy_nonoverlapping(payload.as_ptr(), out_buf, payload.len());
+        *out_len = payload.len();
+    }
+    0
+}
+
+/// Parses handshake payload extracting name, login, presence, and ACK status
+#[no_mangle]
+pub extern "C" fn prime_protocol_parse_handshake_payload(
+    payload: *const u8,
+    payload_len: usize,
+    out_name: *mut c_char,
+    out_name_max: usize,
+    out_login: *mut c_char,
+    out_login_max: usize,
+    out_presence: *mut c_char,
+    out_presence_max: usize,
+    out_is_ack: *mut i32,
+) -> i32 {
+    if payload.is_null() || out_name.is_null() || out_login.is_null() || out_presence.is_null() || out_is_ack.is_null() {
+        return -1;
+    }
+    let bytes = unsafe { slice::from_raw_parts(payload, payload_len) };
+    match PrimeProtocol::parse_handshake_payload(bytes) {
+        Some(info) => {
+            let c_name = CString::new(info.display_name).unwrap_or_default();
+            let c_login = CString::new(info.username).unwrap_or_default();
+            let c_pres = CString::new(info.presence).unwrap_or_default();
+
+            if c_name.as_bytes_with_nul().len() > out_name_max
+                || c_login.as_bytes_with_nul().len() > out_login_max
+                || c_pres.as_bytes_with_nul().len() > out_presence_max
+            {
+                return -3;
+            }
+
+            unsafe {
+                std::ptr::copy_nonoverlapping(c_name.as_ptr(), out_name, c_name.as_bytes_with_nul().len());
+                std::ptr::copy_nonoverlapping(c_login.as_ptr(), out_login, c_login.as_bytes_with_nul().len());
+                std::ptr::copy_nonoverlapping(c_pres.as_ptr(), out_presence, c_pres.as_bytes_with_nul().len());
+                *out_is_ack = if info.is_ack { 1 } else { 0 };
+            }
+            0
+        }
+        None => -2,
+    }
+}
+
+/// Parses photo payload to extract metadata, caption, and photo data offsets
+#[no_mangle]
+pub extern "C" fn prime_protocol_parse_photo_meta(
+    payload: *const u8,
+    payload_len: usize,
+    out_msg_id: *mut c_char,
+    out_msg_id_max: usize,
+    out_caption: *mut c_char,
+    out_caption_max: usize,
+    out_is_collage: *mut i32,
+    out_photo_offset: *mut usize,
+    out_photo_len: *mut usize,
+) -> i32 {
+    if payload.is_null() || out_msg_id.is_null() || out_caption.is_null() || out_is_collage.is_null()
+        || out_photo_offset.is_null() || out_photo_len.is_null()
+    {
+        return -1;
+    }
+    let bytes = unsafe { slice::from_raw_parts(payload, payload_len) };
+    let meta = PrimeProtocol::parse_photo_meta(bytes);
+
+    let c_id = CString::new(meta.msg_id).unwrap_or_default();
+    let c_cap = CString::new(meta.caption).unwrap_or_default();
+
+    if c_id.as_bytes_with_nul().len() > out_msg_id_max || c_cap.as_bytes_with_nul().len() > out_caption_max {
+        return -3;
+    }
+
+    unsafe {
+        std::ptr::copy_nonoverlapping(c_id.as_ptr(), out_msg_id, c_id.as_bytes_with_nul().len());
+        std::ptr::copy_nonoverlapping(c_cap.as_ptr(), out_caption, c_cap.as_bytes_with_nul().len());
+        *out_is_collage = if meta.is_collage { 1 } else { 0 };
+        *out_photo_offset = meta.photo_offset;
+        *out_photo_len = meta.photo_length;
+    }
+    0
+}
+
+/// Parses file payload header and offsets
+#[no_mangle]
+pub extern "C" fn prime_protocol_parse_file_header(
+    payload: *const u8,
+    payload_len: usize,
+    out_msg_id: *mut c_char,
+    out_msg_id_max: usize,
+    out_file_name: *mut c_char,
+    out_file_name_max: usize,
+    out_duration: *mut c_char,
+    out_duration_max: usize,
+    out_is_voice: *mut i32,
+    out_caption: *mut c_char,
+    out_caption_max: usize,
+    out_file_offset: *mut usize,
+    out_file_len: *mut usize,
+) -> i32 {
+    if payload.is_null() || out_msg_id.is_null() || out_file_name.is_null() || out_duration.is_null()
+        || out_is_voice.is_null() || out_caption.is_null() || out_file_offset.is_null() || out_file_len.is_null()
+    {
+        return -1;
+    }
+    let bytes = unsafe { slice::from_raw_parts(payload, payload_len) };
+    match PrimeProtocol::parse_file_header(bytes) {
+        Some(hdr) => {
+            let c_id = CString::new(hdr.msg_id).unwrap_or_default();
+            let c_name = CString::new(hdr.file_name).unwrap_or_default();
+            let c_dur = CString::new(hdr.duration).unwrap_or_default();
+            let c_cap = CString::new(hdr.caption).unwrap_or_default();
+
+            if c_id.as_bytes_with_nul().len() > out_msg_id_max
+                || c_name.as_bytes_with_nul().len() > out_file_name_max
+                || c_dur.as_bytes_with_nul().len() > out_duration_max
+                || c_cap.as_bytes_with_nul().len() > out_caption_max
+            {
+                return -3;
+            }
+
+            unsafe {
+                std::ptr::copy_nonoverlapping(c_id.as_ptr(), out_msg_id, c_id.as_bytes_with_nul().len());
+                std::ptr::copy_nonoverlapping(c_name.as_ptr(), out_file_name, c_name.as_bytes_with_nul().len());
+                std::ptr::copy_nonoverlapping(c_dur.as_ptr(), out_duration, c_dur.as_bytes_with_nul().len());
+                std::ptr::copy_nonoverlapping(c_cap.as_ptr(), out_caption, c_cap.as_bytes_with_nul().len());
+                *out_is_voice = if hdr.is_voice { 1 } else { 0 };
+                *out_file_offset = hdr.body_start_offset;
+                *out_file_len = hdr.file_length;
+            }
+            0
+        }
+        None => -2,
     }
 }
