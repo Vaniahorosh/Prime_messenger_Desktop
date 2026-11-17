@@ -785,9 +785,15 @@
 
         <!-- Bottom Actions Bar -->
         <Border Grid.Row="2" Background="{DynamicResource HeaderBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0" Padding="16,10">
-            <DockPanel>
-                <Button Content="Закрыть" Style="{StaticResource ModernButton}" Click="BtnClose_Click" Padding="18,7"/>
-                <Button x:Name="BtnApplySettings" Content="Применить" Style="{StaticResource AccentButton}" Click="BtnApply_Click" DockPanel.Dock="Right" Padding="20,7"/>
+            <DockPanel LastChildFill="False">
+                <Button Content="Закрыть" Style="{StaticResource ModernButton}" Click="BtnClose_Click" Padding="18,7" DockPanel.Dock="Left"/>
+                <Button x:Name="BtnApplySettings"
+                        Content="Применить"
+                        Style="{StaticResource AccentButton}"
+                        Click="BtnApply_Click"
+                        DockPanel.Dock="Right"
+                        Padding="20,7"
+                        Visibility="{Binding HasPendingSettingsChanges, Converter={StaticResource BoolToVis}}"/>
             </DockPanel>
         </Border>
     </Grid>

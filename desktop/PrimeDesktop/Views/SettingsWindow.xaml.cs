@@ -10,8 +10,6 @@ namespace PrimeDesktop.Views;
 
 public partial class SettingsWindow : Window
 {
-    private bool _isApplied = false;
-
     public SettingsWindow()
     {
         InitializeComponent();
@@ -26,11 +24,15 @@ public partial class SettingsWindow : Window
     {
         ThemeManager.ApplyGlassToWindow(this);
         WindowUtils.EnableWindowMinMaxHook(this);
+        if (DataContext is MainViewModel vm)
+        {
+            vm.CaptureSettingsSnapshot();
+        }
     }
 
     private void Window_Closing(object? sender, System.ComponentModel.CancelEventArgs e)
     {
-        if (!_isApplied && DataContext is MainViewModel vm)
+        if (DataContext is MainViewModel vm && vm.HasPendingSettingsChanges)
         {
             vm.RevertSettingsToSnapshot();
         }
@@ -76,7 +78,7 @@ public partial class SettingsWindow : Window
 
     public void CancelAndClose()
     {
-        if (!_isApplied && DataContext is MainViewModel vm)
+        if (DataContext is MainViewModel vm && vm.HasPendingSettingsChanges)
         {
             vm.RevertSettingsToSnapshot();
         }
@@ -85,17 +87,23 @@ public partial class SettingsWindow : Window
 
     private async void BtnApply_Click(object sender, RoutedEventArgs e)
     {
-        _isApplied = true;
         if (DataContext is MainViewModel vm)
         {
-            await vm.ApplyAndSaveSettingsAsync();
-
-            if (sender is Button btn)
+            var btn = sender as Button;
+            string originalText = btn?.Content?.ToString() ?? "Применить";
+            if (btn != null)
             {
-                string originalText = btn.Content?.ToString() ?? "Применить";
                 btn.Content = "✓ Применено!";
                 btn.IsEnabled = false;
-                await Task.Delay(800);
+            }
+
+            await vm.ApplyAndSaveSettingsAsync(updateSnapshot: false);
+            await Task.Delay(650);
+
+            vm.CaptureSettingsSnapshot();
+
+            if (btn != null)
+            {
                 btn.Content = originalText;
                 btn.IsEnabled = true;
             }

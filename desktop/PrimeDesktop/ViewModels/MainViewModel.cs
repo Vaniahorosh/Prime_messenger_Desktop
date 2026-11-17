@@ -595,10 +595,13 @@ public class MainViewModel : ViewModelBase
     public void CaptureSettingsSnapshot()
     {
         _initialSettingsSnapshot = GetSettingsSnapshot();
-        HasPendingSettingsChanges = false;
+        RunOnUIThread(() =>
+        {
+            HasPendingSettingsChanges = false;
+        });
     }
 
-    public async Task ApplyAndSaveSettingsAsync()
+    public async Task ApplyAndSaveSettingsAsync(bool updateSnapshot = true)
     {
         try
         {
@@ -640,7 +643,11 @@ public class MainViewModel : ViewModelBase
             OnPropertyChanged(nameof(IsDarkTheme));
             OnPropertyChanged(nameof(LaunchAtStartup));
 
-            CaptureSettingsSnapshot();
+            if (updateSnapshot)
+            {
+                CaptureSettingsSnapshot();
+            }
+
             _ = Task.Run(async () =>
             {
                 try { await BroadcastMyProfileAndAvatarAsync(); } catch { }
@@ -657,7 +664,12 @@ public class MainViewModel : ViewModelBase
     public void CheckForPendingSettingsChanges()
     {
         string current = GetSettingsSnapshot();
-        HasPendingSettingsChanges = !string.Equals(_initialSettingsSnapshot, current, StringComparison.Ordinal);
+        bool changed = !string.IsNullOrEmpty(_initialSettingsSnapshot) &&
+                       !string.Equals(_initialSettingsSnapshot, current, StringComparison.Ordinal);
+        RunOnUIThread(() =>
+        {
+            HasPendingSettingsChanges = changed;
+        });
     }
 
     public void RevertSettingsToSnapshot()
