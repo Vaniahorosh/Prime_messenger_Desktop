@@ -463,6 +463,55 @@ pub extern "C" fn prime_protocol_parse_handshake_payload(
     }
 }
 
+/// Parses handshake payload extracting name, login, presence, platform, version, and ACK status
+#[no_mangle]
+pub extern "C" fn prime_protocol_parse_handshake_ex(
+    payload: *const u8,
+    payload_len: usize,
+    out_name: *mut c_char,
+    out_name_max: usize,
+    out_login: *mut c_char,
+    out_login_max: usize,
+    out_presence: *mut c_char,
+    out_presence_max: usize,
+    out_platform: *mut c_char,
+    out_platform_max: usize,
+    out_version: *mut i32,
+    out_is_ack: *mut i32,
+) -> i32 {
+    if payload.is_null() || out_name.is_null() || out_login.is_null() || out_presence.is_null() || out_platform.is_null() || out_version.is_null() || out_is_ack.is_null() {
+        return -1;
+    }
+    let bytes = unsafe { slice::from_raw_parts(payload, payload_len) };
+    match PrimeProtocol::parse_handshake_payload(bytes) {
+        Some(info) => {
+            let c_name = CString::new(info.display_name).unwrap_or_default();
+            let c_login = CString::new(info.username).unwrap_or_default();
+            let c_pres = CString::new(info.presence).unwrap_or_default();
+            let c_plat = CString::new(info.platform).unwrap_or_default();
+
+            if c_name.as_bytes_with_nul().len() > out_name_max
+                || c_login.as_bytes_with_nul().len() > out_login_max
+                || c_pres.as_bytes_with_nul().len() > out_presence_max
+                || c_plat.as_bytes_with_nul().len() > out_platform_max
+            {
+                return -3;
+            }
+
+            unsafe {
+                std::ptr::copy_nonoverlapping(c_name.as_ptr(), out_name, c_name.as_bytes_with_nul().len());
+                std::ptr::copy_nonoverlapping(c_login.as_ptr(), out_login, c_login.as_bytes_with_nul().len());
+                std::ptr::copy_nonoverlapping(c_pres.as_ptr(), out_presence, c_pres.as_bytes_with_nul().len());
+                std::ptr::copy_nonoverlapping(c_plat.as_ptr(), out_platform, c_plat.as_bytes_with_nul().len());
+                *out_version = info.version;
+                *out_is_ack = if info.is_ack { 1 } else { 0 };
+            }
+            0
+        }
+        None => -2,
+    }
+}
+
 /// Parses photo payload to extract metadata, caption, and photo data offsets
 #[no_mangle]
 pub extern "C" fn prime_protocol_parse_photo_meta(

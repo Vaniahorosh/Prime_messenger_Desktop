@@ -8,6 +8,8 @@ pub struct HandshakeInfo {
     pub username: String,
     pub presence: String,
     pub is_ack: bool,
+    pub platform: String,
+    pub version: i32,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -175,8 +177,10 @@ impl PrimeProtocol {
         let mut name = String::new();
         let mut login = String::new();
         let mut presence = "ONLINE".to_string();
+        let mut platform = "unknown".to_string();
+        let mut version = 1;
 
-        if data.contains("login=") || data.contains("name=") || data.contains("presence=") {
+        if data.contains("login=") || data.contains("name=") || data.contains("presence=") || data.contains("platform=") || data.contains("device=") {
             for part in data.split(';') {
                 let part = part.trim();
                 if let Some(val) = part.strip_prefix("name=") {
@@ -185,6 +189,21 @@ impl PrimeProtocol {
                     login = val.trim().to_string();
                 } else if let Some(val) = part.strip_prefix("presence=") {
                     presence = val.trim().to_string();
+                } else if let Some(val) = part.strip_prefix("platform=") {
+                    let p = val.trim().to_lowercase();
+                    if p == "android" || p == "desktop" {
+                        platform = p;
+                    } else {
+                        platform = p;
+                    }
+                } else if let Some(val) = part.strip_prefix("device=") {
+                    if val.trim().eq_ignore_ascii_case("pc") {
+                        platform = "desktop".to_string();
+                    }
+                } else if let Some(val) = part.strip_prefix("version=") {
+                    if let Ok(v) = val.trim().parse::<i32>() {
+                        version = v;
+                    }
                 }
             }
         } else {
@@ -196,6 +215,8 @@ impl PrimeProtocol {
             username: login,
             presence,
             is_ack,
+            platform,
+            version,
         })
     }
 
@@ -457,11 +478,14 @@ mod tests {
         assert_eq!(parsed.display_name, "DeskUser");
         assert_eq!(parsed.username, "desk_login");
         assert_eq!(parsed.presence, "ONLINE");
+        assert_eq!(parsed.platform, "desktop");
+        assert_eq!(parsed.version, 100);
         assert!(!parsed.is_ack);
 
         let ack = PrimeProtocol::build_handshake_payload("DeskUser", "desk_login", true);
         let parsed_ack = PrimeProtocol::parse_handshake_payload(&ack).unwrap();
         assert!(parsed_ack.is_ack);
+        assert_eq!(parsed_ack.platform, "desktop");
     }
 
     #[test]

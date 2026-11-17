@@ -328,62 +328,56 @@ public class PrimePacket
         return PrimeNativeCore.BuildHandshakePayload(displayName, username, isAck);
     }
 
-    public static (string? displayName, string? username, string? presence, bool isAck) ParseHandshakePayload(byte[] payload)
+    public static (string? displayName, string? username, string? presence, string? platform, int version, bool isAck) ParseHandshakePayload(byte[] payload)
     {
-        if (PrimeNativeCore.TryParseHandshake(payload, out string? nativeName, out string? nativeLogin, out string? nativePresence, out bool nativeAck))
+        if (PrimeNativeCore.TryParseHandshakeEx(payload, out string? nativeName, out string? nativeLogin, out string? nativePresence, out string? nativePlatform, out int nativeVer, out bool nativeAck))
         {
-            return (nativeName, nativeLogin, nativePresence, nativeAck);
+            return (nativeName, nativeLogin, nativePresence, nativePlatform, nativeVer, nativeAck);
         }
 
         string text = Encoding.UTF8.GetString(payload);
-
         bool isAck = text.StartsWith("HANDSHAKE_ACK:", StringComparison.OrdinalIgnoreCase);
-
         string prefix = isAck ? "HANDSHAKE_ACK:" : "HANDSHAKE:";
 
         if (!text.StartsWith("HANDSHAKE:", StringComparison.OrdinalIgnoreCase) && !text.StartsWith("HANDSHAKE_ACK:", StringComparison.OrdinalIgnoreCase))
-
-            return (null, null, null, false);
+            return (null, null, null, "unknown", 1, false);
 
         string data = text.Substring(prefix.Length).Trim();
-
         string? name = null;
-
         string? login = null;
-
         string? presence = null;
+        string? platform = "unknown";
+        int version = 1;
 
         if (data.Contains("login=", StringComparison.OrdinalIgnoreCase) || 
-
             data.Contains("name=", StringComparison.OrdinalIgnoreCase) || 
-
-            data.Contains("presence=", StringComparison.OrdinalIgnoreCase))
-
+            data.Contains("presence=", StringComparison.OrdinalIgnoreCase) ||
+            data.Contains("platform=", StringComparison.OrdinalIgnoreCase) ||
+            data.Contains("device=", StringComparison.OrdinalIgnoreCase))
         {
             string[] parts = data.Split(';');
-
             foreach (var p in parts)
-
             {
                 if (p.StartsWith("login=", StringComparison.OrdinalIgnoreCase)) login = p.Substring(6).Trim();
-
                 else if (p.StartsWith("name=", StringComparison.OrdinalIgnoreCase)) name = p.Substring(5).Trim();
-
                 else if (p.StartsWith("presence=", StringComparison.OrdinalIgnoreCase)) presence = p.Substring(9).Trim();
-
+                else if (p.StartsWith("platform=", StringComparison.OrdinalIgnoreCase)) platform = p.Substring(9).Trim();
+                else if (p.StartsWith("device=", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (p.Substring(7).Trim().Equals("pc", StringComparison.OrdinalIgnoreCase)) platform = "desktop";
+                }
+                else if (p.StartsWith("version=", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (int.TryParse(p.Substring(8).Trim(), out int v)) version = v;
+                }
             }
-
         }
-
         else
-
         {
             name = data;
-
         }
 
-        return (name, login, presence, isAck);
-
+        return (name, login, presence, platform, version, isAck);
     }
 
     public static byte[] BuildFilePayload(string msgId, string fileName, byte[] fileBytes, string duration = "00:00", bool isVoice = false, string caption = "")

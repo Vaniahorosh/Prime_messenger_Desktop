@@ -136,12 +136,15 @@ public class MainViewModel : ViewModelBase
                     OnPropertyChanged(nameof(SharedMediaList));
                     OnPropertyChanged(nameof(SharedFiles));
                     OnPropertyChanged(nameof(SharedFileList));
+                    OnPropertyChanged(nameof(SharedGifsList));
                     OnPropertyChanged(nameof(SharedAudio));
                     OnPropertyChanged(nameof(SharedMediaCount));
                     OnPropertyChanged(nameof(SharedFilesCount));
+                    OnPropertyChanged(nameof(SharedGifsCount));
                     OnPropertyChanged(nameof(SharedAudioCount));
                     OnPropertyChanged(nameof(HasSharedMedia));
                     OnPropertyChanged(nameof(HasSharedFiles));
+                    OnPropertyChanged(nameof(HasSharedGifs));
                     OnPropertyChanged(nameof(HasSharedAudio));
 
                     _ = _storageService.SaveChatsAsync(_allChats);
@@ -797,11 +800,14 @@ public class MainViewModel : ViewModelBase
                 OnPropertyChanged(nameof(ReadingModeButtonText));
                 OnPropertyChanged(nameof(ReadingModeButtonIcon));
                 OnPropertyChanged(nameof(ReadingModeToolTip));
+                OnPropertyChanged(nameof(ReadingModeLucideKind));
             }
         }
     }
     public string ReadingModeButtonText => IsReadingMode ? "Соединиться" : "Чтение";
     public string ReadingModeButtonIcon => IsReadingMode ? "🔗" : "📖";
+    public MahApps.Metro.IconPacks.PackIconLucideKind ReadingModeLucideKind =>
+        IsReadingMode ? MahApps.Metro.IconPacks.PackIconLucideKind.Unlink : MahApps.Metro.IconPacks.PackIconLucideKind.BookOpen;
     public string ReadingModeToolTip => IsReadingMode ? "Восстановить соединение с собеседником" : "Режим чтения (принудительно отключить связь)";
     public ICommand ToggleReadingModeCommand { get; }
 
@@ -1438,6 +1444,7 @@ public class MainViewModel : ViewModelBase
             {
                 OnPropertyChanged(nameof(IsMediaTabSelected));
                 OnPropertyChanged(nameof(IsFilesTabSelected));
+                OnPropertyChanged(nameof(IsGifsTabSelected));
                 OnPropertyChanged(nameof(IsAudioTabSelected));
             }
         }
@@ -1445,7 +1452,8 @@ public class MainViewModel : ViewModelBase
 
     public bool IsMediaTabSelected => SelectedProfileTab == 0;
     public bool IsFilesTabSelected => SelectedProfileTab == 1;
-    public bool IsAudioTabSelected => SelectedProfileTab == 2;
+    public bool IsGifsTabSelected => SelectedProfileTab == 2;
+    public bool IsAudioTabSelected => SelectedProfileTab == 3;
 
     private int _profileGridColumns = 3;
     public int ProfileGridColumns
@@ -1478,7 +1486,7 @@ public class MainViewModel : ViewModelBase
     }
 
     public System.Collections.Generic.IEnumerable<ChatMessage> SharedMedia =>
-        SelectedChat?.Messages.Where(m => m.IsPhoto || m.IsVideo || m.IsVideoNote) ?? Enumerable.Empty<ChatMessage>();
+        SelectedChat?.Messages.Where(m => (m.IsPhoto || m.IsVideo || m.IsVideoNote) && (string.IsNullOrEmpty(m.FilePath) || !m.FilePath.EndsWith(".gif", StringComparison.OrdinalIgnoreCase))) ?? Enumerable.Empty<ChatMessage>();
 
     public System.Collections.Generic.IEnumerable<SharedMediaItem> SharedMediaList
     {
@@ -1491,7 +1499,7 @@ public class MainViewModel : ViewModelBase
                 {
                     foreach (var cp in msg.CollagePaths)
                     {
-                        if (File.Exists(cp))
+                        if (File.Exists(cp) && !cp.EndsWith(".gif", StringComparison.OrdinalIgnoreCase))
                         {
                             yield return new SharedMediaItem
                             {
@@ -1504,7 +1512,7 @@ public class MainViewModel : ViewModelBase
                         }
                     }
                 }
-                else if (msg.IsPhoto && !string.IsNullOrEmpty(msg.FilePath) && File.Exists(msg.FilePath))
+                else if (msg.IsPhoto && !string.IsNullOrEmpty(msg.FilePath) && File.Exists(msg.FilePath) && !msg.FilePath.EndsWith(".gif", StringComparison.OrdinalIgnoreCase))
                 {
                     yield return new SharedMediaItem
                     {
@@ -1560,15 +1568,42 @@ public class MainViewModel : ViewModelBase
         }
     }
 
+    public System.Collections.Generic.IEnumerable<SharedMediaItem> SharedGifsList
+    {
+        get
+        {
+            if (SelectedChat == null) yield break;
+            foreach (var msg in SelectedChat.Messages)
+            {
+                if (!string.IsNullOrEmpty(msg.FilePath) && File.Exists(msg.FilePath) &&
+                    (msg.FilePath.EndsWith(".gif", StringComparison.OrdinalIgnoreCase) ||
+                     (msg.FileName != null && msg.FileName.EndsWith(".gif", StringComparison.OrdinalIgnoreCase))))
+                {
+                    yield return new SharedMediaItem
+                    {
+                        FilePath = msg.FilePath,
+                        IsVideo = false,
+                        DurationText = "GIF",
+                        FormattedTime = msg.FormattedTime,
+                        Sender = msg.Sender,
+                        SourceMessage = msg
+                    };
+                }
+            }
+        }
+    }
+
     public System.Collections.Generic.IEnumerable<ChatMessage> SharedAudio =>
         SelectedChat?.Messages.Where(m => (m.IsVoice || m.IsMusic) && !m.IsPhoto && !m.IsVideo && !m.IsVideoNote) ?? Enumerable.Empty<ChatMessage>();
 
     public int SharedMediaCount => SharedMediaList.Count();
     public int SharedFilesCount => SharedFileList.Count();
+    public int SharedGifsCount => SharedGifsList.Count();
     public int SharedAudioCount => SharedAudio.Count();
 
     public bool HasSharedMedia => SharedMediaCount > 0;
     public bool HasSharedFiles => SharedFilesCount > 0;
+    public bool HasSharedGifs => SharedGifsCount > 0;
     public bool HasSharedAudio => SharedAudioCount > 0;
 
     public MainViewModel()
@@ -4893,18 +4928,22 @@ public async Task SendTextMessageAsync()
                     string rawText = System.Text.Encoding.UTF8.GetString(payload);
 
                     if (rawText.StartsWith("HANDSHAKE:", StringComparison.OrdinalIgnoreCase) ||
-
                         rawText.StartsWith("HANDSHAKE_ACK:", StringComparison.OrdinalIgnoreCase))
-
                     {
-                        var (hName, hLogin, hPresence, isAck) = PrimePacket.ParseHandshakePayload(payload);
+                        var (hName, hLogin, hPresence, hPlatform, hVersion, isAck) = PrimePacket.ParseHandshakePayload(payload);
 
                         if (!string.IsNullOrEmpty(hName)) chat.DisplayName = DeviceAnonymizer.SanitizeDisplayName(hName, fromAddress);
-
                         if (!string.IsNullOrEmpty(hLogin)) chat.Username = DeviceAnonymizer.SanitizeUsername(hLogin, fromAddress);
+                        if (!string.IsNullOrEmpty(hPlatform) && !hPlatform.Equals("unknown", StringComparison.OrdinalIgnoreCase))
+                        {
+                            chat.ClientPlatform = hPlatform;
+                        }
+                        if (hVersion > 0)
+                        {
+                            chat.RemoteVersion = hVersion;
+                        }
 
                         chat.IsOnline = true;
-
                         chat.ConnectionState = DeviceConnectionState.Connected;
 
                         // Auto-reply to Handshake if passive peer
@@ -5180,12 +5219,15 @@ public async Task SendTextMessageAsync()
                     OnPropertyChanged(nameof(SharedMediaList));
                     OnPropertyChanged(nameof(SharedFiles));
                     OnPropertyChanged(nameof(SharedFileList));
+                    OnPropertyChanged(nameof(SharedGifsList));
                     OnPropertyChanged(nameof(SharedAudio));
                     OnPropertyChanged(nameof(SharedMediaCount));
                     OnPropertyChanged(nameof(SharedFilesCount));
+                    OnPropertyChanged(nameof(SharedGifsCount));
                     OnPropertyChanged(nameof(SharedAudioCount));
                     OnPropertyChanged(nameof(HasSharedMedia));
                     OnPropertyChanged(nameof(HasSharedFiles));
+                    OnPropertyChanged(nameof(HasSharedGifs));
                     OnPropertyChanged(nameof(HasSharedAudio));
 
                     _ = Task.Run(async () =>

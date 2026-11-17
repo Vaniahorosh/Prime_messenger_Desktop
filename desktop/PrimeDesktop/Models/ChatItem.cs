@@ -50,6 +50,8 @@ public class ChatItem : INotifyPropertyChanged
     private bool _isMuted;
     private int _currentAvatarIndex;
     private ObservableCollection<string> _avatarHistory = new();
+    private string _clientPlatform = "unknown";
+    private int _remoteVersion = 1;
 
     public string Id { get; set; } = Guid.NewGuid().ToString();
 
@@ -527,6 +529,43 @@ public class ChatItem : INotifyPropertyChanged
         }
     }
 
+    public string ClientPlatform
+    {
+        get => _clientPlatform;
+        set
+        {
+            if (SetField(ref _clientPlatform, value ?? "unknown"))
+            {
+                OnPropertyChanged(nameof(IsDesktopPlatform));
+                OnPropertyChanged(nameof(IsMobilePlatform));
+                OnPropertyChanged(nameof(HasPlatformBadge));
+                OnPropertyChanged(nameof(PlatformDisplayName));
+                OnPropertyChanged(nameof(PlatformBadgeKind));
+            }
+        }
+    }
+
+    public int RemoteVersion
+    {
+        get => _remoteVersion;
+        set => SetField(ref _remoteVersion, value);
+    }
+
+    [JsonIgnore]
+    public bool IsDesktopPlatform => _clientPlatform.Equals("desktop", StringComparison.OrdinalIgnoreCase) || _clientPlatform.Equals("pc", StringComparison.OrdinalIgnoreCase);
+
+    [JsonIgnore]
+    public bool IsMobilePlatform => _clientPlatform.Equals("android", StringComparison.OrdinalIgnoreCase) || _clientPlatform.Equals("mobile", StringComparison.OrdinalIgnoreCase);
+
+    [JsonIgnore]
+    public bool HasPlatformBadge => IsDesktopPlatform || IsMobilePlatform;
+
+    [JsonIgnore]
+    public string PlatformDisplayName => IsDesktopPlatform ? "Prime Desktop (ПК)" : (IsMobilePlatform ? "Prime Messenger (Android)" : "Prime Client");
+
+    [JsonIgnore]
+    public MahApps.Metro.IconPacks.PackIconLucideKind PlatformBadgeKind => IsDesktopPlatform ? MahApps.Metro.IconPacks.PackIconLucideKind.Laptop : MahApps.Metro.IconPacks.PackIconLucideKind.Smartphone;
+
     public ChatItem CloneSnapshot()
     {
         var clone = new ChatItem
@@ -542,7 +581,9 @@ public class ChatItem : INotifyPropertyChanged
             IsOnline = this.IsOnline,
             IsBluetoothDevice = this.IsBluetoothDevice,
             IsMuted = this.IsMuted,
-            AvatarPath = this.AvatarPath
+            AvatarPath = this.AvatarPath,
+            ClientPlatform = this.ClientPlatform,
+            RemoteVersion = this.RemoteVersion
         };
 
         if (this.AvatarHistory != null && this.AvatarHistory.Count > 0)

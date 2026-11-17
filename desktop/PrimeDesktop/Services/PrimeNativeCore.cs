@@ -117,6 +117,21 @@ public static class PrimeNativeCore
         UIntPtr outPresenceMax,
         out int outIsAck);
 
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl, EntryPoint = "prime_protocol_parse_handshake_ex")]
+    private static extern int NativeParseHandshakeEx(
+        byte[] payload,
+        UIntPtr payloadLen,
+        StringBuilder outName,
+        UIntPtr outNameMax,
+        StringBuilder outLogin,
+        UIntPtr outLoginMax,
+        StringBuilder outPresence,
+        UIntPtr outPresenceMax,
+        StringBuilder outPlatform,
+        UIntPtr outPlatformMax,
+        out int outVersion,
+        out int outIsAck);
+
     [DllImport(DllName, CallingConvention = CallingConvention.Cdecl, EntryPoint = "prime_protocol_parse_photo_meta")]
     private static extern int NativeParsePhotoMeta(
         byte[] payload,
@@ -545,6 +560,72 @@ public static class PrimeNativeCore
         }
 
         return false;
+    }
+
+    public static bool TryParseHandshakeEx(byte[] payload, out string? displayName, out string? username, out string? presence, out string? platform, out int version, out bool isAck)
+    {
+        displayName = null;
+        username = null;
+        presence = null;
+        platform = "unknown";
+        version = 1;
+        isAck = false;
+        if (payload == null || payload.Length == 0) return false;
+
+        if (IsAvailable)
+        {
+            try
+            {
+                var sbName = new StringBuilder(256);
+                var sbLogin = new StringBuilder(256);
+                var sbPres = new StringBuilder(64);
+                var sbPlat = new StringBuilder(64);
+                if (NativeParseHandshakeEx(payload, (UIntPtr)payload.Length, sbName, (UIntPtr)256, sbLogin, (UIntPtr)256, sbPres, (UIntPtr)64, sbPlat, (UIntPtr)64, out int verVal, out int ackVal) == 0)
+                {
+                    displayName = sbName.ToString();
+                    username = sbLogin.ToString();
+                    presence = sbPres.ToString();
+                    platform = sbPlat.ToString();
+                    version = verVal;
+                    isAck = ackVal == 1;
+                    return true;
+                }
+            }
+            catch { }
+        }
+
+        try
+        {
+            string text = Encoding.UTF8.GetString(payload);
+            isAck = text.StartsWith("HANDSHAKE_ACK:", StringComparison.OrdinalIgnoreCase);
+            string prefix = isAck ? "HANDSHAKE_ACK:" : "HANDSHAKE:";
+            if (!text.StartsWith("HANDSHAKE:", StringComparison.OrdinalIgnoreCase) && !text.StartsWith("HANDSHAKE_ACK:", StringComparison.OrdinalIgnoreCase))
+                return false;
+
+            string data = text.Substring(prefix.Length).Trim();
+            if (data.Contains("login=") || data.Contains("name=") || data.Contains("presence=") || data.Contains("platform="))
+            {
+                foreach (var part in data.Split(';'))
+                {
+                    var p = part.Trim();
+                    if (p.StartsWith("name=")) displayName = p.Substring(5).Trim();
+                    else if (p.StartsWith("login=")) username = p.Substring(6).Trim();
+                    else if (p.StartsWith("presence=")) presence = p.Substring(9).Trim();
+                    else if (p.StartsWith("platform=")) platform = p.Substring(9).Trim();
+                    else if (p.StartsWith("device=")) { if (p.Substring(7).Trim().Equals("pc", StringComparison.OrdinalIgnoreCase)) platform = "desktop"; }
+                    else if (p.StartsWith("version=")) { if (int.TryParse(p.Substring(8).Trim(), out int v)) version = v; }
+                }
+            }
+            else
+            {
+                displayName = data;
+            }
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     public static bool TryParsePhotoMeta(byte[] payload, out string msgId, out string caption, out bool isCollage, out int photoOffset, out int photoLen)

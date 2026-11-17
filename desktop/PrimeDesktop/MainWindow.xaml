@@ -536,7 +536,7 @@
                                         <StackPanel Grid.Column="2" HorizontalAlignment="Right" VerticalAlignment="Center"
                                                     Visibility="{Binding DataContext.IsSidebarRailMode, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource InverseBoolToVis}}">
                                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                                                <Path Data="{StaticResource IconBellOff}" Fill="{StaticResource TextMutedBrush}" Width="10" Height="10" Stretch="Uniform"
+                                                <iconPacks:PackIconLucide Kind="BellOff" Foreground="{StaticResource TextMutedBrush}" Width="11" Height="11"
                                                       Margin="0,0,4,0" VerticalAlignment="Center"
                                                       Visibility="{Binding IsMuted, Converter={StaticResource BoolToVis}}" ToolTip="Уведомления отключены"/>
                                                 <TextBlock Text="{Binding LastMessageTime}" Foreground="{StaticResource TextMutedBrush}" FontSize="11"/>
@@ -655,45 +655,47 @@
                                 <TextBlock Text="‹" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,-4,1,0"/>
                             </Button>
 
-                            <Border Width="38" Height="38" CornerRadius="{Binding HeaderAvatarCornerRadius}" Background="{DynamicResource CardBrush}" Margin="0,0,12,0">
-
-                                <Grid>
-
-                                    <TextBlock Text="{Binding SelectedChat.Initials}" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"
-
-                                               Visibility="{Binding SelectedChat.HasAvatar, Converter={StaticResource InverseBoolToVis}}"/>
-
-                                    <Border CornerRadius="{Binding HeaderAvatarCornerRadius}" Visibility="{Binding SelectedChat.HasAvatar, Converter={StaticResource BoolToVis}}">
-
-                                        <Border.Background>
-
-                                            <ImageBrush ImageSource="{Binding SelectedChat.AvatarPath, Converter={StaticResource NonLockingImgConverter}}" Stretch="UniformToFill"/>
-
-                                        </Border.Background>
-
+                            <!-- Clickable Header Profile Area -->
+                            <Border Background="Transparent" Cursor="Hand" ToolTip="Информация о собеседнике и медиа" VerticalAlignment="Center">
+                                <Border.InputBindings>
+                                    <MouseBinding Gesture="LeftClick" Command="{Binding ToggleMediaDrawerCommand}"/>
+                                </Border.InputBindings>
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <Border Width="38" Height="38" CornerRadius="{Binding HeaderAvatarCornerRadius}" Background="{DynamicResource CardBrush}" Margin="0,0,12,0">
+                                        <Grid>
+                                            <TextBlock Text="{Binding SelectedChat.Initials}" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                       Visibility="{Binding SelectedChat.HasAvatar, Converter={StaticResource InverseBoolToVis}}"/>
+                                            <Border CornerRadius="{Binding HeaderAvatarCornerRadius}" Visibility="{Binding SelectedChat.HasAvatar, Converter={StaticResource BoolToVis}}">
+                                                <Border.Background>
+                                                    <ImageBrush ImageSource="{Binding SelectedChat.AvatarPath, Converter={StaticResource NonLockingImgConverter}}" Stretch="UniformToFill"/>
+                                                </Border.Background>
+                                            </Border>
+                                        </Grid>
                                     </Border>
 
-                                </Grid>
-
-                            </Border>
-
-                            <StackPanel VerticalAlignment="Center">
-
-                                <TextBlock Text="{Binding SelectedChat.DisplayName}" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="Bold" FontSize="14"/>
-
-                                <StackPanel Orientation="Horizontal" Margin="0,2,0,0" VerticalAlignment="Center">
-
-                                    <Ellipse Width="7" Height="7" Margin="0,0,5,0" VerticalAlignment="Center"
-                                             Fill="{Binding SelectedChat.StatusColorHex, Converter={StaticResource HexToBrush}}"
-                                             Visibility="{Binding SelectedChat.IsOnlineIndicatorVisible, Converter={StaticResource BoolToVis}}"/>
-
-                                    <controls:AnimatedTextTransitionControl Text="{Binding SelectedChat.StatusText}"
-                                               Foreground="{Binding SelectedChat.StatusColorHex, Converter={StaticResource HexToBrush}}"
-                                               FontSize="11" FontWeight="SemiBold"/>
-
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding SelectedChat.DisplayName}" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="Bold" FontSize="14"/>
+                                        <StackPanel Orientation="Horizontal" Margin="0,2,0,0" VerticalAlignment="Center">
+                                            <Ellipse Width="7" Height="7" Margin="0,0,5,0" VerticalAlignment="Center"
+                                                     Fill="{Binding SelectedChat.StatusColorHex, Converter={StaticResource HexToBrush}}"
+                                                     Visibility="{Binding SelectedChat.IsOnlineIndicatorVisible, Converter={StaticResource BoolToVis}}"/>
+                                            <controls:AnimatedTextTransitionControl Text="{Binding SelectedChat.StatusText}"
+                                                       Foreground="{Binding SelectedChat.StatusColorHex, Converter={StaticResource HexToBrush}}"
+                                                       FontSize="11" FontWeight="SemiBold"/>
+                                            <!-- Platform Device Badge (PC vs Smartphone) -->
+                                            <Border Margin="8,0,0,0" Padding="5,1" CornerRadius="6" Background="#182230" BorderBrush="#26364A" BorderThickness="1"
+                                                    ToolTip="{Binding SelectedChat.PlatformDisplayName}"
+                                                    Visibility="{Binding SelectedChat.HasPlatformBadge, Converter={StaticResource BoolToVis}}"
+                                                    VerticalAlignment="Center">
+                                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                    <iconPacks:PackIconLucide Kind="{Binding SelectedChat.PlatformBadgeKind}" Foreground="{DynamicResource AccentBrush}" Width="10" Height="10" VerticalAlignment="Center"/>
+                                                    <TextBlock Text="{Binding SelectedChat.ClientPlatform}" Foreground="{StaticResource TextMutedBrush}" FontSize="9.5" FontWeight="SemiBold" Margin="4,0,0,0" VerticalAlignment="Center"/>
+                                                </StackPanel>
+                                            </Border>
+                                        </StackPanel>
+                                    </StackPanel>
                                 </StackPanel>
-
-                            </StackPanel>
+                            </Border>
 
                         </StackPanel>
 
@@ -831,7 +833,7 @@
                                                                             Click="BtnOpenMoreReactions_Click"
                                                                             VerticalAlignment="Center">
                                                                         <Border Background="{DynamicResource AccentSoftBrush}" CornerRadius="14" Width="26" Height="26">
-                                                                            <Path Data="{StaticResource IconPlus}" Width="11" Height="11" Fill="{DynamicResource AccentBrush}" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                                            <iconPacks:PackIconLucide Kind="Plus" Width="13" Height="13" Foreground="{DynamicResource AccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                                         </Border>
                                                                     </Button>
 
@@ -978,10 +980,10 @@
                                                             Style="{StaticResource ModernButton}" Width="36" Height="36" Padding="0" Margin="0,0,10,0">
                                                         <Grid>
                                                             <Border Width="36" Height="36" CornerRadius="18" Background="{DynamicResource AccentBrush}" Opacity="0.18"/>
-                                                            <Path Data="{StaticResource IconPlay}" Fill="{DynamicResource AccentBrush}" Width="14" Height="14" Stretch="Uniform"
+                                                            <iconPacks:PackIconLucide Kind="Play" Foreground="{DynamicResource AccentBrush}" Width="14" Height="14"
                                                                   Margin="2,0,0,0"
                                                                   Visibility="{Binding IsPlaying, Converter={StaticResource InverseBoolToVis}}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                                            <Path Data="{StaticResource IconPause}" Fill="{DynamicResource AccentBrush}" Width="14" Height="14" Stretch="Uniform"
+                                                            <iconPacks:PackIconLucide Kind="Pause" Foreground="{DynamicResource AccentBrush}" Width="14" Height="14"
                                                                   Visibility="{Binding IsPlaying, Converter={StaticResource BoolToVis}}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                         </Grid>
                                                     </Button>
@@ -1317,8 +1319,8 @@
                                 <Border.Effect>
                                     <DropShadowEffect BlurRadius="8" ShadowDepth="2" Direction="270" Opacity="0.4"/>
                                 </Border.Effect>
-                                <Path Data="{StaticResource IconChevronDown}" Fill="{DynamicResource AccentBrush}"
-                                      Width="16" Height="16" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                <iconPacks:PackIconLucide Kind="ChevronDown" Foreground="{DynamicResource AccentBrush}"
+                                      Width="18" Height="18" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Border>
                             <ControlTemplate.Triggers>
                                 <Trigger Property="IsMouseOver" Value="True">
@@ -1471,20 +1473,18 @@
                                               Style="{StaticResource RoundIconToggleButton}"
                                               ToolTip="Прикрепить (Медиа, Файл, GIF)"
                                               Width="36" Height="36">
-                                    <Path Data="{StaticResource IconAttach}"
-                                          Fill="{DynamicResource TextSecondaryBrush}"
-                                          Width="16" Height="16" Stretch="Uniform"
-                                          RenderTransformOrigin="0.5,0.5">
-                                        <Path.Style>
-                                            <Style TargetType="Path">
+                                    <iconPacks:PackIconLucide Kind="Paperclip" Width="18" Height="18" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                        <iconPacks:PackIconLucide.Style>
+                                            <Style TargetType="iconPacks:PackIconLucide">
+                                                <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
                                                 <Style.Triggers>
                                                     <DataTrigger Binding="{Binding IsAttachmentTrayOpen}" Value="True">
-                                                        <Setter Property="Fill" Value="{DynamicResource AccentBrush}"/>
+                                                        <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
                                                     </DataTrigger>
                                                 </Style.Triggers>
                                             </Style>
-                                        </Path.Style>
-                                    </Path>
+                                        </iconPacks:PackIconLucide.Style>
+                                    </iconPacks:PackIconLucide>
                                 </ToggleButton>
 
                                 <Popup IsOpen="{Binding IsAttachmentTrayOpen, Mode=TwoWay}"
@@ -1649,7 +1649,7 @@
                         <Button Content="Подключиться" Style="{StaticResource AccentButton}" DockPanel.Dock="Right" Padding="14,6" Margin="12,0,0,0"
                                 Command="{Binding ToggleReadingModeCommand}"/>
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <Path Data="{StaticResource IconInfo}" Fill="{DynamicResource TextSecondaryBrush}" Width="15" Height="15" Stretch="Uniform" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                            <iconPacks:PackIconLucide Kind="Info" Foreground="{DynamicResource TextSecondaryBrush}" Width="16" Height="16" Margin="0,0,8,0" VerticalAlignment="Center"/>
                             <StackPanel VerticalAlignment="Center">
                                 <TextBlock Text="Режим чтения включен" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold" FontSize="13"/>
                                 <TextBlock Text="Связь отключена. Чтобы отправлять сообщения, нажмите «Соединиться»." Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11"/>
@@ -1778,7 +1778,7 @@
                                         <Button Style="{StaticResource AndroidProfileActionButton}"
                                                 Command="{Binding ToggleMediaDrawerCommand}"
                                                 ToolTip="Назад">
-                                            <Path Data="{StaticResource IconArrowLeft}" Fill="{DynamicResource TextPrimaryBrush}" Width="18" Height="18" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            <iconPacks:PackIconLucide Kind="ArrowLeft" Foreground="{DynamicResource TextPrimaryBrush}" Width="20" Height="20" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                         </Button>
                                         <TextBlock Text="Назад" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,4,0,0"/>
                                     </StackPanel>
@@ -1789,7 +1789,7 @@
                                                 Command="{Binding OpenPhotoViewerCommand}"
                                                 CommandParameter="{Binding SelectedChat.CurrentAvatarDisplayPath}"
                                                 ToolTip="Просмотр фото">
-                                            <Path Data="{StaticResource IconPhoto}" Fill="{DynamicResource TextPrimaryBrush}" Width="18" Height="18" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            <iconPacks:PackIconLucide Kind="Image" Foreground="{DynamicResource TextPrimaryBrush}" Width="20" Height="20" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                         </Button>
                                         <TextBlock Text="Фото" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,4,0,0"/>
                                     </StackPanel>
@@ -1799,7 +1799,7 @@
                                         <Button Style="{StaticResource AndroidProfileActionButton}"
                                                 Command="{Binding ToggleReadingModeCommand}"
                                                 ToolTip="{Binding ReadingModeToolTip}">
-                                            <Path Data="{StaticResource IconEye}" Fill="{DynamicResource TextPrimaryBrush}" Width="18" Height="18" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            <iconPacks:PackIconLucide Kind="{Binding ReadingModeLucideKind}" Foreground="{DynamicResource TextPrimaryBrush}" Width="20" Height="20" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                         </Button>
                                         <controls:AnimatedTextTransitionControl Text="{Binding ReadingModeButtonText}" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,4,0,0"/>
                                     </StackPanel>
@@ -1809,7 +1809,7 @@
                                         <Button Style="{StaticResource AndroidProfileDangerActionButton}"
                                                 Command="{Binding DeleteSelectedChatCommand}"
                                                 ToolTip="Удалить чат">
-                                            <Path Data="{StaticResource IconTrash}" Fill="#EF4444" Width="18" Height="18" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            <iconPacks:PackIconLucide Kind="Trash2" Foreground="#EF4444" Width="20" Height="20" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                         </Button>
                                         <TextBlock Text="Удалить" Foreground="#EF4444" FontSize="10" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,4,0,0"/>
                                     </StackPanel>
@@ -1920,7 +1920,7 @@
                                         </Button>
 
                                         <!-- Bottom Gradient Overlay with Contact Info -->
-                                        <Border VerticalAlignment="Bottom" Height="80" IsHitTestVisible="False">
+                                        <Border VerticalAlignment="Bottom" Height="86" IsHitTestVisible="False">
                                             <Border.Background>
                                                 <LinearGradientBrush StartPoint="0.5,0" EndPoint="0.5,1">
                                                     <GradientStop Color="#000B1017" Offset="0.0"/>
@@ -1928,11 +1928,23 @@
                                                     <GradientStop Color="#F50B1017" Offset="1.0"/>
                                                 </LinearGradientBrush>
                                             </Border.Background>
-                                            <StackPanel VerticalAlignment="Bottom" Margin="14,0,14,12">
+                                            <StackPanel VerticalAlignment="Bottom" Margin="14,0,14,10">
                                                 <TextBlock Text="{Binding SelectedChat.DisplayName}" Foreground="White" FontSize="16" FontWeight="Bold" TextTrimming="CharacterEllipsis"/>
-                                                <StackPanel Orientation="Horizontal" Margin="0,3,0,0">
+                                                <TextBlock Text="{Binding SelectedChat.Username, StringFormat='@{0}'}" Foreground="#99FFFFFF" FontSize="11" FontWeight="Medium"
+                                                           Visibility="{Binding SelectedChat.Username, Converter={StaticResource NotNullToVis}}" Margin="0,1,0,2"/>
+                                                <StackPanel Orientation="Horizontal" Margin="0,2,0,0" VerticalAlignment="Center">
                                                     <Ellipse Width="8" Height="8" Fill="{Binding SelectedChat.StatusColorHex, Converter={StaticResource HexToBrush}}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                                                     <controls:AnimatedTextTransitionControl Text="{Binding SelectedChat.StatusText}" Foreground="{Binding SelectedChat.StatusColorHex, Converter={StaticResource HexToBrush}}" FontSize="11" FontWeight="SemiBold"/>
+                                                    <!-- Platform Badge in Drawer -->
+                                                    <Border Margin="8,0,0,0" Padding="5,1" CornerRadius="6" Background="#CC121A24" BorderBrush="#44324960" BorderThickness="1"
+                                                            ToolTip="{Binding SelectedChat.PlatformDisplayName}"
+                                                            Visibility="{Binding SelectedChat.HasPlatformBadge, Converter={StaticResource BoolToVis}}"
+                                                            VerticalAlignment="Center">
+                                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                            <iconPacks:PackIconLucide Kind="{Binding SelectedChat.PlatformBadgeKind}" Foreground="{DynamicResource AccentBrush}" Width="10" Height="10" VerticalAlignment="Center"/>
+                                                            <TextBlock Text="{Binding SelectedChat.PlatformDisplayName}" Foreground="#E6FFFFFF" FontSize="9.5" FontWeight="SemiBold" Margin="4,0,0,0" VerticalAlignment="Center"/>
+                                                        </StackPanel>
+                                                    </Border>
                                                 </StackPanel>
                                             </StackPanel>
                                         </Border>
@@ -1940,17 +1952,18 @@
                                 </Border>
                             </Grid>
 
-                            <!-- 7.3. Android Category Tabs: Медиа | Файлы | Аудио (Android scrollCategoryTabs) -->
+                            <!-- 7.3. Android Category Tabs: Медиа | Файлы | GIF | Аудио (Android scrollCategoryTabs) -->
                             <Border Margin="0,0,0,12">
                                 <Grid>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*"/>
                                         <ColumnDefinition Width="*"/>
                                         <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
 
                                     <!-- Tab 0: Фото и видео -->
-                                    <Border Grid.Column="0" Margin="0,0,4,0" CornerRadius="14" Cursor="Hand" Padding="6,8">
+                                    <Border Grid.Column="0" Margin="0,0,3,0" CornerRadius="12" Cursor="Hand" Padding="4,7">
                                         <Border.Style>
                                             <Style TargetType="Border">
                                                 <Setter Property="Background" Value="Transparent"/>
@@ -1978,19 +1991,19 @@
                                             <MouseBinding Gesture="LeftClick" Command="{Binding SelectProfileTabCommand}" CommandParameter="0"/>
                                         </Border.InputBindings>
                                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
-                                            <Path Data="{StaticResource IconPhoto}" Width="15" Height="15" Stretch="Uniform" Margin="0,0,5,0" VerticalAlignment="Center">
-                                                <Path.Style>
-                                                    <Style TargetType="Path">
-                                                        <Setter Property="Fill" Value="{DynamicResource TextSecondaryBrush}"/>
+                                            <iconPacks:PackIconLucide Kind="Image" Width="14" Height="14" Margin="0,0,4,0" VerticalAlignment="Center">
+                                                <iconPacks:PackIconLucide.Style>
+                                                    <Style TargetType="iconPacks:PackIconLucide">
+                                                        <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
                                                         <Style.Triggers>
                                                             <DataTrigger Binding="{Binding IsMediaTabSelected}" Value="True">
-                                                                <Setter Property="Fill" Value="{DynamicResource AccentBrush}"/>
+                                                                <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
                                                             </DataTrigger>
                                                         </Style.Triggers>
                                                     </Style>
-                                                </Path.Style>
-                                            </Path>
-                                            <TextBlock Text="Медиа" FontSize="12" VerticalAlignment="Center">
+                                                </iconPacks:PackIconLucide.Style>
+                                            </iconPacks:PackIconLucide>
+                                            <TextBlock Text="Медиа" FontSize="11.5" VerticalAlignment="Center">
                                                 <TextBlock.Style>
                                                     <Style TargetType="TextBlock">
                                                         <Setter Property="FontWeight" Value="Medium"/>
@@ -2004,7 +2017,7 @@
                                                     </Style>
                                                 </TextBlock.Style>
                                             </TextBlock>
-                                            <TextBlock Text="{Binding SharedMediaCount}" FontSize="11" Margin="4,0,0,0" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding SharedMediaCount}" FontSize="10.5" Margin="3,0,0,0" VerticalAlignment="Center">
                                                 <TextBlock.Style>
                                                     <Style TargetType="TextBlock">
                                                         <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
@@ -2021,7 +2034,7 @@
                                     </Border>
 
                                     <!-- Tab 1: Файлы -->
-                                    <Border Grid.Column="1" Margin="2,0,2,0" CornerRadius="14" Cursor="Hand" Padding="6,8">
+                                    <Border Grid.Column="1" Margin="2,0,2,0" CornerRadius="12" Cursor="Hand" Padding="4,7">
                                         <Border.Style>
                                             <Style TargetType="Border">
                                                 <Setter Property="Background" Value="Transparent"/>
@@ -2049,19 +2062,19 @@
                                             <MouseBinding Gesture="LeftClick" Command="{Binding SelectProfileTabCommand}" CommandParameter="1"/>
                                         </Border.InputBindings>
                                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
-                                            <Path Data="{StaticResource IconFile}" Width="15" Height="15" Stretch="Uniform" Margin="0,0,5,0" VerticalAlignment="Center">
-                                                <Path.Style>
-                                                    <Style TargetType="Path">
-                                                        <Setter Property="Fill" Value="{DynamicResource TextSecondaryBrush}"/>
+                                            <iconPacks:PackIconLucide Kind="FileText" Width="14" Height="14" Margin="0,0,4,0" VerticalAlignment="Center">
+                                                <iconPacks:PackIconLucide.Style>
+                                                    <Style TargetType="iconPacks:PackIconLucide">
+                                                        <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
                                                         <Style.Triggers>
                                                             <DataTrigger Binding="{Binding IsFilesTabSelected}" Value="True">
-                                                                <Setter Property="Fill" Value="{DynamicResource AccentBrush}"/>
+                                                                <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
                                                             </DataTrigger>
                                                         </Style.Triggers>
                                                     </Style>
-                                                </Path.Style>
-                                            </Path>
-                                            <TextBlock Text="Файлы" FontSize="12" VerticalAlignment="Center">
+                                                </iconPacks:PackIconLucide.Style>
+                                            </iconPacks:PackIconLucide>
+                                            <TextBlock Text="Файлы" FontSize="11.5" VerticalAlignment="Center">
                                                 <TextBlock.Style>
                                                     <Style TargetType="TextBlock">
                                                         <Setter Property="FontWeight" Value="Medium"/>
@@ -2075,7 +2088,7 @@
                                                     </Style>
                                                 </TextBlock.Style>
                                             </TextBlock>
-                                            <TextBlock Text="{Binding SharedFilesCount}" FontSize="11" Margin="4,0,0,0" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding SharedFilesCount}" FontSize="10.5" Margin="3,0,0,0" VerticalAlignment="Center">
                                                 <TextBlock.Style>
                                                     <Style TargetType="TextBlock">
                                                         <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
@@ -2091,8 +2104,79 @@
                                         </StackPanel>
                                     </Border>
 
-                                    <!-- Tab 2: Аудио -->
-                                    <Border Grid.Column="2" Margin="4,0,0,0" CornerRadius="14" Cursor="Hand" Padding="6,8">
+                                    <!-- Tab 2: GIF -->
+                                    <Border Grid.Column="2" Margin="2,0,2,0" CornerRadius="12" Cursor="Hand" Padding="4,7">
+                                        <Border.Style>
+                                            <Style TargetType="Border">
+                                                <Setter Property="Background" Value="Transparent"/>
+                                                <Setter Property="BorderThickness" Value="1"/>
+                                                <Setter Property="BorderBrush" Value="Transparent"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsGifsTabSelected}" Value="True">
+                                                        <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}"/>
+                                                        <Setter Property="BorderBrush" Value="{DynamicResource AccentBorderBrush}"/>
+                                                    </DataTrigger>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter Property="Background" Value="{DynamicResource CardHoverBrush}"/>
+                                                    </Trigger>
+                                                    <MultiDataTrigger>
+                                                        <MultiDataTrigger.Conditions>
+                                                            <Condition Binding="{Binding IsGifsTabSelected}" Value="True"/>
+                                                            <Condition Binding="{Binding IsMouseOver, RelativeSource={RelativeSource Self}}" Value="True"/>
+                                                        </MultiDataTrigger.Conditions>
+                                                        <Setter Property="Background" Value="{DynamicResource AccentHoverBrush}"/>
+                                                    </MultiDataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Border.Style>
+                                        <Border.InputBindings>
+                                            <MouseBinding Gesture="LeftClick" Command="{Binding SelectProfileTabCommand}" CommandParameter="2"/>
+                                        </Border.InputBindings>
+                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                            <iconPacks:PackIconLucide Kind="Film" Width="14" Height="14" Margin="0,0,4,0" VerticalAlignment="Center">
+                                                <iconPacks:PackIconLucide.Style>
+                                                    <Style TargetType="iconPacks:PackIconLucide">
+                                                        <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsGifsTabSelected}" Value="True">
+                                                                <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </iconPacks:PackIconLucide.Style>
+                                            </iconPacks:PackIconLucide>
+                                            <TextBlock Text="GIF" FontSize="11.5" VerticalAlignment="Center">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="FontWeight" Value="Medium"/>
+                                                        <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsGifsTabSelected}" Value="True">
+                                                                <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+                                                                <Setter Property="FontWeight" Value="SemiBold"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                            <TextBlock Text="{Binding SharedGifsCount}" FontSize="10.5" Margin="3,0,0,0" VerticalAlignment="Center">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsGifsTabSelected}" Value="True">
+                                                                <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+                                                                <Setter Property="FontWeight" Value="Bold"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                        </StackPanel>
+                                    </Border>
+
+                                    <!-- Tab 3: Аудио -->
+                                    <Border Grid.Column="3" Margin="3,0,0,0" CornerRadius="12" Cursor="Hand" Padding="4,7">
                                         <Border.Style>
                                             <Style TargetType="Border">
                                                 <Setter Property="Background" Value="Transparent"/>
@@ -2117,22 +2201,22 @@
                                             </Style>
                                         </Border.Style>
                                         <Border.InputBindings>
-                                            <MouseBinding Gesture="LeftClick" Command="{Binding SelectProfileTabCommand}" CommandParameter="2"/>
+                                            <MouseBinding Gesture="LeftClick" Command="{Binding SelectProfileTabCommand}" CommandParameter="3"/>
                                         </Border.InputBindings>
                                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
-                                            <Path Data="{StaticResource IconAudio}" Width="15" Height="15" Stretch="Uniform" Margin="0,0,5,0" VerticalAlignment="Center">
-                                                <Path.Style>
-                                                    <Style TargetType="Path">
-                                                        <Setter Property="Fill" Value="{DynamicResource TextSecondaryBrush}"/>
+                                            <iconPacks:PackIconLucide Kind="Music" Width="14" Height="14" Margin="0,0,4,0" VerticalAlignment="Center">
+                                                <iconPacks:PackIconLucide.Style>
+                                                    <Style TargetType="iconPacks:PackIconLucide">
+                                                        <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
                                                         <Style.Triggers>
                                                             <DataTrigger Binding="{Binding IsAudioTabSelected}" Value="True">
-                                                                <Setter Property="Fill" Value="{DynamicResource AccentBrush}"/>
+                                                                <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
                                                             </DataTrigger>
                                                         </Style.Triggers>
                                                     </Style>
-                                                </Path.Style>
-                                            </Path>
-                                            <TextBlock Text="Аудио" FontSize="12" VerticalAlignment="Center">
+                                                </iconPacks:PackIconLucide.Style>
+                                            </iconPacks:PackIconLucide>
+                                            <TextBlock Text="Аудио" FontSize="11.5" VerticalAlignment="Center">
                                                 <TextBlock.Style>
                                                     <Style TargetType="TextBlock">
                                                         <Setter Property="FontWeight" Value="Medium"/>
@@ -2146,7 +2230,7 @@
                                                     </Style>
                                                 </TextBlock.Style>
                                             </TextBlock>
-                                            <TextBlock Text="{Binding SharedAudioCount}" FontSize="11" Margin="4,0,0,0" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding SharedAudioCount}" FontSize="10.5" Margin="3,0,0,0" VerticalAlignment="Center">
                                                 <TextBlock.Style>
                                                     <Style TargetType="TextBlock">
                                                         <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
@@ -2173,7 +2257,7 @@
                                         <!-- Section Header (Android style) -->
                                         <Grid Margin="2,0,2,12">
                                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                                <Path Data="{StaticResource IconPhoto}" Fill="{DynamicResource AccentBrush}" Width="16" Height="16" Stretch="Uniform" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                                <iconPacks:PackIconLucide Kind="Image" Foreground="{DynamicResource AccentBrush}" Width="16" Height="16" Margin="0,0,8,0" VerticalAlignment="Center"/>
                                                 <TextBlock Text="Фото и видео" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
                                             </StackPanel>
                                             <TextBlock HorizontalAlignment="Right" VerticalAlignment="Center" Text="{Binding SharedMediaCount}" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" FontWeight="SemiBold"/>
@@ -2227,7 +2311,7 @@
                                                                 </Border>
                                                                 <StackPanel Orientation="Horizontal" VerticalAlignment="Bottom" HorizontalAlignment="Left" Margin="6,0,0,5">
                                                                     <Border Width="16" Height="16" CornerRadius="8" Background="#CC000000" Margin="0,0,4,0">
-                                                                        <Path Data="{StaticResource IconPlay}" Fill="White" Width="7" Height="7" Stretch="Uniform" Margin="1,0,0,0" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                                        <iconPacks:PackIconLucide Kind="Play" Foreground="White" Width="8" Height="8" Margin="1,0,0,0" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                                     </Border>
                                                                     <TextBlock Text="{Binding DurationText}" Foreground="White" FontSize="10" FontWeight="SemiBold" VerticalAlignment="Center"/>
                                                                 </StackPanel>
@@ -2248,7 +2332,7 @@
                                         <!-- Section Header (Android style) -->
                                         <Grid Margin="2,0,2,12">
                                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                                <Path Data="{StaticResource IconFile}" Fill="{DynamicResource AccentBrush}" Width="16" Height="16" Stretch="Uniform" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                                <iconPacks:PackIconLucide Kind="FileText" Foreground="{DynamicResource AccentBrush}" Width="16" Height="16" Margin="0,0,8,0" VerticalAlignment="Center"/>
                                                 <TextBlock Text="Файлы" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
                                             </StackPanel>
                                             <TextBlock HorizontalAlignment="Right" VerticalAlignment="Center" Text="{Binding SharedFilesCount}" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" FontWeight="SemiBold"/>
@@ -2335,7 +2419,7 @@
                                                                                   Command="{Binding DataContext.OpenFileLocationCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                                                                   CommandParameter="{Binding FilePath}"/>
                                                                 </Border.InputBindings>
-                                                                <Path Data="{StaticResource IconOpenInNew}" Fill="{DynamicResource TextSecondaryBrush}" Width="14" Height="14" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                                <iconPacks:PackIconLucide Kind="ExternalLink" Foreground="{DynamicResource TextSecondaryBrush}" Width="14" Height="14" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                             </Border>
                                                         </Grid>
                                                     </Border>
@@ -2348,12 +2432,71 @@
                                                    Visibility="{Binding HasSharedFiles, Converter={StaticResource InverseBoolToVis}}"/>
                                     </StackPanel>
 
-                                    <!-- ==================== Tab 2: Аудио (Android item_person_music_row style) ==================== -->
+                                    <!-- ==================== Tab 2: GIF (Android item_person_gif style) ==================== -->
                                     <StackPanel Visibility="{Binding SelectedProfileTab, Converter={StaticResource EqualityToVis}, ConverterParameter=2}">
                                         <!-- Section Header (Android style) -->
                                         <Grid Margin="2,0,2,12">
                                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                                <Path Data="{StaticResource IconAudio}" Fill="{DynamicResource AccentBrush}" Width="16" Height="16" Stretch="Uniform" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                                <iconPacks:PackIconLucide Kind="Film" Foreground="{DynamicResource AccentBrush}" Width="16" Height="16" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                                <TextBlock Text="GIF-анимации" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                            <TextBlock HorizontalAlignment="Right" VerticalAlignment="Center" Text="{Binding SharedGifsCount}" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" FontWeight="SemiBold"/>
+                                        </Grid>
+
+                                        <!-- GIF Grid -->
+                                        <ItemsControl ItemsSource="{Binding SharedGifsList}" Visibility="{Binding HasSharedGifs, Converter={StaticResource BoolToVis}}">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <UniformGrid Columns="{Binding DataContext.ProfileGridColumns, RelativeSource={RelativeSource AncestorType=Window}}"/>
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Border Height="95" Margin="2.5" CornerRadius="10" ClipToBounds="True" Background="#141C28" Cursor="Hand"
+                                                            BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                                                            Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=Window}}">
+                                                        <Border.ContextMenu>
+                                                            <ContextMenu Style="{StaticResource ModernContextMenu}">
+                                                                <MenuItem Header="Просмотреть" Style="{StaticResource ModernMenuItem}"
+                                                                          Command="{Binding PlacementTarget.Tag.OpenPhotoViewerCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                                                          CommandParameter="{Binding PlacementTarget.DataContext.FilePath, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                                                                <MenuItem Header="Показать в проводнике" Style="{StaticResource ModernMenuItem}"
+                                                                          Command="{Binding PlacementTarget.Tag.OpenFileLocationCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                                                          CommandParameter="{Binding PlacementTarget.DataContext.FilePath, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                                                            </ContextMenu>
+                                                        </Border.ContextMenu>
+                                                        <Border.InputBindings>
+                                                            <MouseBinding Gesture="LeftClick"
+                                                                          Command="{Binding DataContext.OpenPhotoViewerCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                          CommandParameter="{Binding FilePath}"/>
+                                                        </Border.InputBindings>
+                                                        <Grid>
+                                                            <!-- Photo / Thumbnail -->
+                                                            <Image Source="{Binding FilePath, Converter={StaticResource NonLockingImgConverter}}"
+                                                                   Stretch="UniformToFill" RenderOptions.BitmapScalingMode="HighQuality"/>
+
+                                                            <!-- GIF Indicator Overlay -->
+                                                            <Border HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,6,6"
+                                                                    Background="#B3000000" CornerRadius="4" Padding="5,1">
+                                                                <TextBlock Text="GIF" Foreground="White" FontSize="9" FontWeight="Bold"/>
+                                                            </Border>
+                                                        </Grid>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+
+                                        <!-- Empty placeholder if no gifs -->
+                                        <TextBlock Text="Нет сохраненных GIF" Foreground="{StaticResource TextMutedBrush}" FontSize="12.5" HorizontalAlignment="Center" Margin="0,24,0,20"
+                                                   Visibility="{Binding HasSharedGifs, Converter={StaticResource InverseBoolToVis}}"/>
+                                    </StackPanel>
+
+                                    <!-- ==================== Tab 3: Аудио (Android item_person_music_row style) ==================== -->
+                                    <StackPanel Visibility="{Binding SelectedProfileTab, Converter={StaticResource EqualityToVis}, ConverterParameter=3}">
+                                        <!-- Section Header (Android style) -->
+                                        <Grid Margin="2,0,2,12">
+                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                <iconPacks:PackIconLucide Kind="Music" Foreground="{DynamicResource AccentBrush}" Width="16" Height="16" Margin="0,0,8,0" VerticalAlignment="Center"/>
                                                 <TextBlock Text="Аудио и музыка" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
                                             </StackPanel>
                                             <TextBlock HorizontalAlignment="Right" VerticalAlignment="Center" Text="{Binding SharedAudioCount}" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" FontWeight="SemiBold"/>
@@ -2402,7 +2545,7 @@
                                                             <Border Grid.Column="0" Width="40" Height="40" CornerRadius="10"
                                                                     Background="{DynamicResource AccentSoftBrush}"
                                                                     VerticalAlignment="Center">
-                                                                <Path Data="{StaticResource IconAudio}" Fill="{DynamicResource AccentBrush}" Width="18" Height="18" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                                <iconPacks:PackIconLucide Kind="Headphones" Foreground="{DynamicResource AccentBrush}" Width="18" Height="18" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                             </Border>
 
                                                             <!-- Middle Info (Android tvMusicTitle & tvMusicArtist) -->
@@ -2457,11 +2600,11 @@
                                                                 </Border.InputBindings>
                                                                 <Grid>
                                                                     <!-- Play Icon -->
-                                                                    <Path Data="{StaticResource IconPlay}" Fill="{DynamicResource AccentBrush}" Width="13" Height="13" Stretch="Uniform"
+                                                                    <iconPacks:PackIconLucide Kind="Play" Foreground="{DynamicResource AccentBrush}" Width="13" Height="13"
                                                                           Margin="2,0,0,0" HorizontalAlignment="Center" VerticalAlignment="Center"
                                                                           Visibility="{Binding IsPlaying, Converter={StaticResource InverseBoolToVis}}"/>
                                                                     <!-- Pause Icon -->
-                                                                    <Path Data="{StaticResource IconPause}" Fill="White" Width="13" Height="13" Stretch="Uniform"
+                                                                    <iconPacks:PackIconLucide Kind="Pause" Foreground="White" Width="13" Height="13"
                                                                           HorizontalAlignment="Center" VerticalAlignment="Center"
                                                                           Visibility="{Binding IsPlaying, Converter={StaticResource BoolToVis}}"/>
                                                                 </Grid>
