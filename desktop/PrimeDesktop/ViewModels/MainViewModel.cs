@@ -2170,7 +2170,7 @@ public class MainViewModel : ViewModelBase
             var chat = param as ChatItem ?? SelectedChat;
             if (chat != null)
             {
-                string info = !string.IsNullOrEmpty(chat.Username) ? $"@{chat.Username}" : chat.DisplayName;
+                string info = chat.DisplayName;
                 if (!string.IsNullOrEmpty(info))
                 {
                     try

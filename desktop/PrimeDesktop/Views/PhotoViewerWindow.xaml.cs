@@ -232,7 +232,7 @@ namespace PrimeDesktop.Views
             {
                 // VIDEO MODE
                 PhotoScrollViewer.Visibility = Visibility.Collapsed;
-                PhotoZoomPanel.Visibility = Visibility.Collapsed;
+                SetPhotoActionsVisibility(Visibility.Collapsed);
 
                 VideoContainer.Visibility = Visibility.Visible;
                 VideoControlBar.Visibility = Visibility.Visible;
@@ -264,7 +264,7 @@ namespace PrimeDesktop.Views
                 VideoControlBar.Visibility = Visibility.Collapsed;
 
                 PhotoScrollViewer.Visibility = Visibility.Visible;
-                PhotoZoomPanel.Visibility = Visibility.Visible;
+                SetPhotoActionsVisibility(Visibility.Visible);
 
                 try
                 {
@@ -560,7 +560,7 @@ namespace PrimeDesktop.Views
             if (ImageRotate != null) ImageRotate.Angle = 0;
             ImageTranslate.X = 0;
             ImageTranslate.Y = 0;
-            BtnZoomReset.Content = "100%";
+            if (TxtZoomValue != null) TxtZoomValue.Text = "Масштаб: 100%";
         }
 
         private void ApplyZoom(double newZoom)
@@ -572,7 +572,7 @@ namespace PrimeDesktop.Views
             ImageScale.CenterY = TargetImage.ActualHeight / 2.0;
             ImageScale.ScaleX = newZoom;
             ImageScale.ScaleY = newZoom;
-            BtnZoomReset.Content = $"{Math.Round(newZoom * 100)}%";
+            if (TxtZoomValue != null) TxtZoomValue.Text = $"Масштаб: {Math.Round(newZoom * 100)}%";
 
             if (newZoom <= 1.0)
             {
@@ -792,50 +792,26 @@ namespace PrimeDesktop.Views
             Close();
         }
 
-        #region Bottom Action Tray Hover & Animations
+        #region Actions Dropdown Menu
 
-        private void BottomActionTray_MouseEnter(object sender, MouseEventArgs e)
+        private void BtnActionsDropdown_Click(object sender, RoutedEventArgs e)
         {
-            TrayExpandedContent.Visibility = Visibility.Visible;
-
-            var duration = TimeSpan.FromMilliseconds(260);
-            var backEase = new System.Windows.Media.Animation.BackEase { EasingMode = System.Windows.Media.Animation.EasingMode.EaseOut, Amplitude = 0.3 };
-            var cubicEase = new System.Windows.Media.Animation.CubicEase { EasingMode = System.Windows.Media.Animation.EasingMode.EaseOut };
-
-            // 1. Expand opacity
-            var fadeAnim = new System.Windows.Media.Animation.DoubleAnimation(0.0, 1.0, duration) { EasingFunction = cubicEase };
-            TrayExpandedContent.BeginAnimation(UIElement.OpacityProperty, fadeAnim);
-
-            // 2. Scale Tray up slightly from bottom-left corner
-            var scaleXAnim = new System.Windows.Media.Animation.DoubleAnimation(0.92, 1.0, duration) { EasingFunction = backEase };
-            var scaleYAnim = new System.Windows.Media.Animation.DoubleAnimation(0.92, 1.0, duration) { EasingFunction = backEase };
-            TrayScale.BeginAnimation(System.Windows.Media.ScaleTransform.ScaleXProperty, scaleXAnim);
-            TrayScale.BeginAnimation(System.Windows.Media.ScaleTransform.ScaleYProperty, scaleYAnim);
-
-            // 3. Upward flyout translate
-            var transYAnim = new System.Windows.Media.Animation.DoubleAnimation(6.0, 0.0, duration) { EasingFunction = cubicEase };
-            TrayTranslate.BeginAnimation(System.Windows.Media.TranslateTransform.YProperty, transYAnim);
+            if (BtnActionsDropdown.ContextMenu != null)
+            {
+                BtnActionsDropdown.ContextMenu.PlacementTarget = BtnActionsDropdown;
+                BtnActionsDropdown.ContextMenu.Placement = System.Windows.Controls.Primitives.PlacementMode.Top;
+                BtnActionsDropdown.ContextMenu.IsOpen = true;
+            }
         }
 
-        private void BottomActionTray_MouseLeave(object sender, MouseEventArgs e)
+        private void SetPhotoActionsVisibility(Visibility visibility)
         {
-            var duration = TimeSpan.FromMilliseconds(180);
-            var cubicEase = new System.Windows.Media.Animation.CubicEase { EasingMode = System.Windows.Media.Animation.EasingMode.EaseIn };
-
-            var fadeAnim = new System.Windows.Media.Animation.DoubleAnimation(1.0, 0.0, duration) { EasingFunction = cubicEase };
-            fadeAnim.Completed += (s, args) =>
-            {
-                if (!BottomActionTray.IsMouseOver)
-                {
-                    TrayExpandedContent.Visibility = Visibility.Collapsed;
-                }
-            };
-            TrayExpandedContent.BeginAnimation(UIElement.OpacityProperty, fadeAnim);
-
-            var scaleXAnim = new System.Windows.Media.Animation.DoubleAnimation(1.0, 0.96, duration) { EasingFunction = cubicEase };
-            var scaleYAnim = new System.Windows.Media.Animation.DoubleAnimation(1.0, 0.96, duration) { EasingFunction = cubicEase };
-            TrayScale.BeginAnimation(System.Windows.Media.ScaleTransform.ScaleXProperty, scaleXAnim);
-            TrayScale.BeginAnimation(System.Windows.Media.ScaleTransform.ScaleYProperty, scaleYAnim);
+            if (MenuZoomIn != null) MenuZoomIn.Visibility = visibility;
+            if (MenuZoomOut != null) MenuZoomOut.Visibility = visibility;
+            if (MenuZoom100 != null) MenuZoom100.Visibility = visibility;
+            if (MenuZoomFit != null) MenuZoomFit.Visibility = visibility;
+            if (MenuRotate != null) MenuRotate.Visibility = visibility;
+            if (SeparatorZoom != null) SeparatorZoom.Visibility = visibility;
         }
 
         #endregion

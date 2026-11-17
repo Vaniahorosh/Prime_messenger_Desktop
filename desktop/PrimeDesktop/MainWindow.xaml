@@ -1930,8 +1930,6 @@
                                             </Border.Background>
                                             <StackPanel VerticalAlignment="Bottom" Margin="14,0,14,10">
                                                 <TextBlock Text="{Binding SelectedChat.DisplayName}" Foreground="White" FontSize="16" FontWeight="Bold" TextTrimming="CharacterEllipsis"/>
-                                                <TextBlock Text="{Binding SelectedChat.Username, StringFormat='@{0}'}" Foreground="#99FFFFFF" FontSize="11" FontWeight="Medium"
-                                                           Visibility="{Binding SelectedChat.Username, Converter={StaticResource NotNullToVis}}" Margin="0,1,0,2"/>
                                                 <StackPanel Orientation="Horizontal" Margin="0,2,0,0" VerticalAlignment="Center">
                                                     <Ellipse Width="8" Height="8" Fill="{Binding SelectedChat.StatusColorHex, Converter={StaticResource HexToBrush}}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                                                     <controls:AnimatedTextTransitionControl Text="{Binding SelectedChat.StatusText}" Foreground="{Binding SelectedChat.StatusColorHex, Converter={StaticResource HexToBrush}}" FontSize="11" FontWeight="SemiBold"/>

@@ -2,6 +2,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:controls="clr-namespace:PrimeDesktop.Controls"
+        xmlns:iconPacks="http://metro.mahapps.com/winfx/xaml/iconpacks"
         Title="Просмотр медиа - Прайм"
         Icon="../Assets/prime.ico"
         Height="760" Width="1060"
@@ -17,12 +18,46 @@
                 <ResourceDictionary Source="/PrimeDesktop;component/Resources/PrimeIcons.xaml"/>
                 <ResourceDictionary Source="/PrimeDesktop;component/Resources/Styles.xaml"/>
             </ResourceDictionary.MergedDictionaries>
+
+            <!-- Dropdown Button Pill Style -->
+            <Style x:Key="ActionButtonDropdownStyle" TargetType="Button">
+                <Setter Property="Background" Value="#D81E232A"/>
+                <Setter Property="Foreground" Value="White"/>
+                <Setter Property="BorderBrush" Value="#40FFFFFF"/>
+                <Setter Property="BorderThickness" Value="1"/>
+                <Setter Property="Padding" Value="14,8"/>
+                <Setter Property="Cursor" Value="Hand"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="Bd"
+                                    Background="{TemplateBinding Background}"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                    CornerRadius="20"
+                                    Padding="{TemplateBinding Padding}"
+                                    SnapsToDevicePixels="True">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="Bd" Property="Background" Value="#E82C3440"/>
+                                    <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                </Trigger>
+                                <Trigger Property="IsPressed" Value="True">
+                                    <Setter TargetName="Bd" Property="Background" Value="#F8202832"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
         </ResourceDictionary>
     </Window.Resources>
 
-    <!-- Translucent Dark Backdrop -->
+    <!-- Translucent Grey Backdrop -->
     <Border x:Name="PART_Backdrop"
-            Background="#D0060910"
+            Background="#B0383838"
             MouseLeftButtonDown="Backdrop_MouseLeftButtonDown">
         <Border.ContextMenu>
             <ContextMenu Style="{StaticResource ModernContextMenu}">
@@ -194,62 +229,101 @@
                     </Button>
                 </Border>
 
-                <!-- Bottom-Left Auto-Expanding Action Tray Island (Панель функций) -->
-                <Border x:Name="BottomActionTray"
-                        HorizontalAlignment="Left" VerticalAlignment="Bottom"
+                <!-- Bottom-Left Actions Dropdown Menu Button (Выпадающий список действий) -->
+                <Border HorizontalAlignment="Left" VerticalAlignment="Bottom"
                         Margin="24,0,0,24"
-                        Panel.ZIndex="25"
-                        Background="#E0111927"
-                        BorderBrush="#40FFFFFF"
-                        BorderThickness="1"
-                        CornerRadius="20"
-                        Padding="8"
-                        RenderTransformOrigin="0,1"
-                        MouseEnter="BottomActionTray_MouseEnter"
-                        MouseLeave="BottomActionTray_MouseLeave">
-
+                        Panel.ZIndex="25">
                     <Border.Effect>
-                        <DropShadowEffect BlurRadius="30" ShadowDepth="6" Direction="270" Opacity="0.55" Color="#000000"/>
+                        <DropShadowEffect BlurRadius="20" ShadowDepth="4" Direction="270" Opacity="0.4" Color="#000000"/>
                     </Border.Effect>
-
-                    <Border.RenderTransform>
-                        <TransformGroup>
-                            <ScaleTransform x:Name="TrayScale" ScaleX="1.0" ScaleY="1.0"/>
-                            <TranslateTransform x:Name="TrayTranslate" X="0" Y="0"/>
-                        </TransformGroup>
-                    </Border.RenderTransform>
-
-                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                        <!-- Tray Icon / Indicator Badge -->
-                        <Border x:Name="TrayBadge"
-                                Width="36" Height="36" CornerRadius="18"
-                                Background="{DynamicResource AccentSoftBrush}"
-                                Cursor="Hand" Margin="0,0,6,0">
-                            <Path Data="{StaticResource IconSettings}"
-                                  Fill="{DynamicResource AccentBrush}"
-                                  Width="18" Height="18"
-                                  Stretch="Uniform"
-                                  HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-
-                        <!-- Expandable Container of Action Buttons -->
-                        <StackPanel x:Name="TrayExpandedContent"
-                                    Orientation="Horizontal"
-                                    VerticalAlignment="Center"
-                                    Visibility="Collapsed"
-                                    Opacity="0">
-                            <!-- Photo Zoom Controls (hidden for video) -->
-                            <StackPanel x:Name="PhotoZoomPanel" Orientation="Horizontal" Margin="0,0,8,0">
-                                <Button Content="-" Style="{StaticResource ModernButton}" Click="BtnZoomOut_Click" ToolTip="Уменьшить" Padding="8,4" Margin="0,0,4,0" Background="#35000000"/>
-                                <Button x:Name="BtnZoomReset" Content="100%" Style="{StaticResource ModernButton}" Click="BtnZoom100_Click" ToolTip="Масштаб 1:1" Padding="8,4" Margin="0,0,4,0" Background="#35000000"/>
-                                <Button Content="+" Style="{StaticResource ModernButton}" Click="BtnZoomIn_Click" ToolTip="Увеличить" Padding="8,4" Margin="0,0,4,0" Background="#35000000"/>
-                                <Button Content="↔ По окну" Style="{StaticResource ModernButton}" Click="BtnZoomFit_Click" ToolTip="Вписать" Padding="8,4" Margin="0,0,4,0" Background="#35000000"/>
-                            </StackPanel>
-
-                            <Button Content="Копировать" Style="{StaticResource ModernButton}" Click="BtnCopy_Click" ToolTip="Копировать (Ctrl+C)" Padding="10,4" Margin="0,0,6,0" Background="#35000000"/>
-                            <Button Content="Сохранить" Style="{StaticResource AccentButton}" Click="BtnSave_Click" ToolTip="Сохранить файл (Ctrl+S)" Padding="12,4"/>
+                    <Button x:Name="BtnActionsDropdown"
+                            Style="{StaticResource ActionButtonDropdownStyle}"
+                            Click="BtnActionsDropdown_Click"
+                            ToolTip="Меню действий">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <iconPacks:PackIconLucide Kind="SlidersHorizontal" Width="15" Height="15" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                            <TextBlock Text="Действия" Foreground="White" FontSize="12.5" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                            <iconPacks:PackIconLucide Kind="ChevronUp" Width="13" Height="13" Foreground="#AAFFFFFF" VerticalAlignment="Center" Margin="8,0,0,0"/>
                         </StackPanel>
-                    </StackPanel>
+                        <Button.ContextMenu>
+                            <ContextMenu x:Name="ActionsContextMenu" Style="{StaticResource ModernContextMenu}">
+                                <MenuItem x:Name="MenuZoomIn" Click="BtnZoomIn_Click" Style="{StaticResource ModernMenuItem}">
+                                    <MenuItem.Header>
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                            <iconPacks:PackIconLucide Kind="ZoomIn" Width="15" Height="15" Foreground="{DynamicResource AccentBrush}" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                                            <TextBlock Text="Увеличить (+)" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </MenuItem.Header>
+                                </MenuItem>
+                                <MenuItem x:Name="MenuZoomOut" Click="BtnZoomOut_Click" Style="{StaticResource ModernMenuItem}">
+                                    <MenuItem.Header>
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                            <iconPacks:PackIconLucide Kind="ZoomOut" Width="15" Height="15" Foreground="{DynamicResource AccentBrush}" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                                            <TextBlock Text="Уменьшить (-)" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </MenuItem.Header>
+                                </MenuItem>
+                                <MenuItem x:Name="MenuZoom100" Click="BtnZoom100_Click" Style="{StaticResource ModernMenuItem}">
+                                    <MenuItem.Header>
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                            <iconPacks:PackIconLucide Kind="Maximize2" Width="15" Height="15" Foreground="{DynamicResource AccentBrush}" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                                            <TextBlock x:Name="TxtZoomValue" Text="Масштаб: 100%" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </MenuItem.Header>
+                                </MenuItem>
+                                <MenuItem x:Name="MenuZoomFit" Click="BtnZoomFit_Click" Style="{StaticResource ModernMenuItem}">
+                                    <MenuItem.Header>
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                            <iconPacks:PackIconLucide Kind="Minimize2" Width="15" Height="15" Foreground="{DynamicResource AccentBrush}" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                                            <TextBlock Text="По размеру окна" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </MenuItem.Header>
+                                </MenuItem>
+                                <MenuItem x:Name="MenuRotate" Click="MenuRotateClockwise_Click" Style="{StaticResource ModernMenuItem}">
+                                    <MenuItem.Header>
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                            <iconPacks:PackIconLucide Kind="RotateCw" Width="15" Height="15" Foreground="{DynamicResource AccentBrush}" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                                            <TextBlock Text="Повернуть по часовой (R)" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </MenuItem.Header>
+                                </MenuItem>
+                                <Separator x:Name="SeparatorZoom"/>
+                                <MenuItem Click="BtnCopy_Click" Style="{StaticResource ModernMenuItem}">
+                                    <MenuItem.Header>
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                            <iconPacks:PackIconLucide Kind="Copy" Width="15" Height="15" Foreground="{DynamicResource AccentBrush}" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                                            <TextBlock Text="Копировать (Ctrl+C)" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </MenuItem.Header>
+                                </MenuItem>
+                                <MenuItem Click="BtnSave_Click" Style="{StaticResource ModernMenuItem}">
+                                    <MenuItem.Header>
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                            <iconPacks:PackIconLucide Kind="Download" Width="15" Height="15" Foreground="{DynamicResource AccentBrush}" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                                            <TextBlock Text="Сохранить как... (Ctrl+S)" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </MenuItem.Header>
+                                </MenuItem>
+                                <MenuItem Click="MenuOpenFolder_Click" Style="{StaticResource ModernMenuItem}">
+                                    <MenuItem.Header>
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                            <iconPacks:PackIconLucide Kind="FolderOpen" Width="15" Height="15" Foreground="{DynamicResource AccentBrush}" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                                            <TextBlock Text="Показать в проводнике" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </MenuItem.Header>
+                                </MenuItem>
+                                <Separator/>
+                                <MenuItem Click="MenuClose_Click" Style="{StaticResource DangerMenuItem}">
+                                    <MenuItem.Header>
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                            <iconPacks:PackIconLucide Kind="X" Width="15" Height="15" Foreground="#EF4444" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                                            <TextBlock Text="Закрыть просмотр (Esc)" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </MenuItem.Header>
+                                </MenuItem>
+                            </ContextMenu>
+                        </Button.ContextMenu>
+                    </Button>
                 </Border>
 
                 <!-- Bottom-Right Info Badge (От кого + Номер фото/видео) -->
